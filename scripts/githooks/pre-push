@@ -1,0 +1,43 @@
+#!/bin/bash
+# =================================================================
+# Pre-push Hook — Full test suite + entropy check before push
+# Install: git config core.hooksPath scripts/githooks
+# Skip (emergency only): git push --no-verify
+# =================================================================
+
+set -e
+
+echo "============================================"
+echo "  Pre-push: Full verification"
+echo "============================================"
+echo ""
+
+echo "=== [1/3] Running all tests (including ArchUnit) ==="
+mvn test -B -q 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "FAIL: Tests failed. Please fix before pushing."
+    exit 1
+fi
+echo "PASS: All tests passed."
+echo ""
+
+echo "=== [2/3] Checkstyle check ==="
+mvn checkstyle:check -B -q 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "FAIL: Checkstyle violations found. Please fix before pushing."
+    exit 1
+fi
+echo "PASS: Checkstyle passed."
+echo ""
+
+echo "=== [3/3] Entropy check ==="
+./scripts/entropy-check.sh
+if [ $? -ne 0 ]; then
+    echo "FAIL: Entropy check failed. Please fix before pushing."
+    exit 1
+fi
+echo ""
+
+echo "============================================"
+echo "  Pre-push checks passed. Pushing..."
+echo "============================================"

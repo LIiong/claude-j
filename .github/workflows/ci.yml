@@ -1,0 +1,263 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & Compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Compile all modules
+        run: mvn compile -q -B
+
+  unit-tests:
+    name: Unit Tests (Domain + Application)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run domain & application tests
+        run: mvn test -pl claude-j-domain,claude-j-application -B
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
+          path: |
+            claude-j-domain/target/surefire-reports/
+            claude-j-application/target/surefire-reports/
+
+  integration-tests:
+    name: Integration Tests (Infra + Adapter + Start)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run integration & ArchUnit tests
+        run: mvn test -pl claude-j-infrastructure,claude-j-adapter,claude-j-start -B
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-reports
+          path: |
+            claude-j-infrastructure/target/surefire-reports/
+            claude-j-adapter/target/surefire-reports/
+            claude-j-start/target/surefire-reports/
+
+  checkstyle:
+    name: Checkstyle
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run checkstyle
+        run: mvn checkstyle:check -B
+
+  entropy-check:
+    name: Entropy Check
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run entropy check
+        run: |
+          chmod +x scripts/entropy-check.sh
+          ./scripts/entropy-check.sh
+
+  coverage:
+    name: Code Coverage (JaCoCo)
+    needs: [ unit-tests, integration-tests ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Generate coverage report
+        run: mvn verify -B
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-reports
+          path: |
+            claude-j-domain/target/site/jacoco/
+            claude-j-application/target/site/jacoco/
+            claude-j-infrastructure/target/site/jacoco/
+            claude-j-adapter/target/site/jacoco/
+
+  test-summary:
+    name: Test & Coverage Summary
+    needs: [ unit-tests, integration-tests, coverage ]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download test reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-test-reports'
+          merge-multiple: true
+          path: test-reports/
+
+      - name: Download coverage reports
+        uses: actions/download-artifact@v4
+        with:
+          name: jacoco-reports
+          path: jacoco-reports/
+
+      - name: Generate PR summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Parse surefire reports for test counts
+            let totalTests = 0, totalFailures = 0, totalErrors = 0, totalSkipped = 0;
+            const testReportDir = 'test-reports';
+            if (fs.existsSync(testReportDir)) {
+              const xmlFiles = [];
+              const walkDir = (dir) => {
+                if (!fs.existsSync(dir)) return;
+                fs.readdirSync(dir).forEach(f => {
+                  const full = path.join(dir, f);
+                  if (fs.statSync(full).isDirectory()) walkDir(full);
+                  else if (f.startsWith('TEST-') && f.endsWith('.xml')) xmlFiles.push(full);
+                });
+              };
+              walkDir(testReportDir);
+              for (const file of xmlFiles) {
+                const content = fs.readFileSync(file, 'utf8');
+                const tests = content.match(/tests="(\d+)"/);
+                const failures = content.match(/failures="(\d+)"/);
+                const errors = content.match(/errors="(\d+)"/);
+                const skipped = content.match(/skipped="(\d+)"/);
+                if (tests) totalTests += parseInt(tests[1]);
+                if (failures) totalFailures += parseInt(failures[1]);
+                if (errors) totalErrors += parseInt(errors[1]);
+                if (skipped) totalSkipped += parseInt(skipped[1]);
+              }
+            }
+
+            // Parse JaCoCo CSV for coverage
+            const layers = ['domain', 'application', 'infrastructure', 'adapter'];
+            const coverageData = [];
+            for (const layer of layers) {
+              const csvPath = `jacoco-reports/claude-j-${layer}/target/site/jacoco/jacoco.csv`;
+              if (fs.existsSync(csvPath)) {
+                const csv = fs.readFileSync(csvPath, 'utf8');
+                const lines = csv.trim().split('\n').slice(1);
+                let missed = 0, covered = 0;
+                for (const line of lines) {
+                  const cols = line.split(',');
+                  // INSTRUCTION_MISSED, INSTRUCTION_COVERED (cols 3,4)
+                  if (cols.length > 4) {
+                    missed += parseInt(cols[3]) || 0;
+                    covered += parseInt(cols[4]) || 0;
+                  }
+                }
+                const total = missed + covered;
+                const pct = total > 0 ? ((covered / total) * 100).toFixed(1) : 'N/A';
+                coverageData.push({ layer, pct });
+              }
+            }
+
+            const testStatus = totalFailures + totalErrors > 0 ? '❌' : '✅';
+            let body = `## CI Summary\n\n`;
+            body += `### Test Results ${testStatus}\n`;
+            body += `| Metric | Count |\n|---|---|\n`;
+            body += `| Total | ${totalTests} |\n`;
+            body += `| Passed | ${totalTests - totalFailures - totalErrors - totalSkipped} |\n`;
+            body += `| Failed | ${totalFailures} |\n`;
+            body += `| Errors | ${totalErrors} |\n`;
+            body += `| Skipped | ${totalSkipped} |\n\n`;
+
+            if (coverageData.length > 0) {
+              const thresholds = { domain: 90, application: 80, infrastructure: 70, adapter: 70 };
+              body += `### Code Coverage\n`;
+              body += `| Layer | Coverage | Threshold |\n|---|---|---|\n`;
+              for (const { layer, pct } of coverageData) {
+                const threshold = thresholds[layer] || 70;
+                const icon = pct !== 'N/A' && parseFloat(pct) >= threshold ? '✅' : '⚠️';
+                body += `| ${layer} | ${pct}% ${icon} | ${threshold}% |\n`;
+              }
+            }
+
+            // Find existing comment to update
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            const botComment = comments.find(c => c.body.includes('## CI Summary'));
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }

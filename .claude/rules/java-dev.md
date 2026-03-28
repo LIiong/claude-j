@@ -1,0 +1,1 @@
+../../docs/standards/java-dev.md

@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn test:*)",
+      "Bash(find /Users/macro.li/aiProject/claude-j/claude-j-adapter -type f -name *Controller.java)",
+      "Bash(xargs -I {} basename {})",
+      "WebFetch(domain:openai.com)",
+      "WebSearch",
+      "WebFetch(domain:www.infoq.com)",
+      "WebFetch(domain:www.nxcode.io)",
+      "WebFetch(domain:www.theneuron.ai)",
+      "Bash(mvn checkstyle:check -q)",
+      "Bash(chmod +x /Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh)",
+      "Bash(/Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh)",
+      "Bash(./scripts/entropy-check.sh)",
+      "WebFetch(domain:x.com)",
+      "WebFetch(domain:www.humanlayer.dev)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:muraco.ai)",
+      "Bash(mv docs/decisions/* docs/architecture/decisions/)",
+      "Bash(cp .claude/rules/java-dev.md docs/standards/java-dev.md)",
+      "Bash(cp .claude/rules/java-test.md docs/standards/java-test.md)",
+      "Bash(rm .claude/rules/java-dev.md .claude/rules/java-test.md)",
+      "Bash(ln -sf ../../docs/standards/java-dev.md .claude/rules/java-dev.md)",
+      "Bash(ln -sf ../../docs/standards/java-test.md .claude/rules/java-test.md)",
+      "Bash(chmod +x /Users/macro.li/aiProject/claude-j/scripts/githooks/pre-commit)",
+      "Bash(mvn clean:*)",
+      "Bash(mvn checkstyle:check -B)",
+      "Bash(grep -rn \"docs/architecture\\\\.md\\\\|docs/checkstyle\\\\.xml\\\\|docs/quality-assurance\\\\.md\\\\|docs/development-guide\\\\.md\\\\|docs/decisions/\" --include=*.md --include=*.xml --include=*.yml /Users/macro.li/aiProject/claude-j/)",
+      "Bash(git config:*)",
+      "WebFetch(domain:martinfowler.com)",
+      "Bash(git init:*)",
+      "Bash(git branch:*)",
+      "Bash(chmod +x /Users/macro.li/aiProject/claude-j/scripts/githooks/commit-msg)",
+      "Bash(chmod +x /Users/macro.li/aiProject/claude-j/scripts/setup.sh /Users/macro.li/aiProject/claude-j/scripts/quick-check.sh)",
+      "Bash(git remote:*)",
+      "Bash(gh auth:*)",
+      "Bash(gh repo:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

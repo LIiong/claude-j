@@ -1,0 +1,61 @@
+#!/bin/bash
+# =================================================================
+# Commit-msg Hook — Enforce Conventional Commits format
+# Format: {type}({scope}): {description}
+# Install: git config core.hooksPath scripts/githooks
+# =================================================================
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Skip merge commits
+if echo "$COMMIT_MSG" | grep -qE "^Merge "; then
+    exit 0
+fi
+
+# Allowed types
+TYPES="feat|fix|refactor|test|docs|chore|style|perf"
+
+# Allowed scopes
+SCOPES="domain|application|infrastructure|adapter|start|docs|ci"
+
+# Pattern: type(scope): description  OR  type: description
+PATTERN="^($TYPES)(\(($SCOPES)\))?: .{1,}"
+
+if ! echo "$COMMIT_MSG" | head -1 | grep -qE "$PATTERN"; then
+    echo ""
+    echo "=========================================="
+    echo "  COMMIT MESSAGE FORMAT ERROR"
+    echo "=========================================="
+    echo ""
+    echo "  Expected format:"
+    echo "    {type}({scope}): {description}"
+    echo ""
+    echo "  Allowed types:"
+    echo "    feat, fix, refactor, test, docs, chore, style, perf"
+    echo ""
+    echo "  Allowed scopes:"
+    echo "    domain, application, infrastructure, adapter, start, docs, ci"
+    echo ""
+    echo "  Examples:"
+    echo "    feat(domain): add Order aggregate root"
+    echo "    fix(infrastructure): fix OrderRepository query"
+    echo "    docs: update DevOps guide"
+    echo ""
+    echo "  Your message:"
+    echo "    $(head -1 "$COMMIT_MSG_FILE")"
+    echo ""
+    echo "=========================================="
+    exit 1
+fi
+
+# Check first line length (max 72 chars)
+FIRST_LINE=$(head -1 "$COMMIT_MSG_FILE")
+if [ ${#FIRST_LINE} -gt 72 ]; then
+    echo ""
+    echo "FAIL: Commit message first line exceeds 72 characters (${#FIRST_LINE} chars)."
+    echo "Please shorten the summary line."
+    exit 1
+fi
+
+exit 0

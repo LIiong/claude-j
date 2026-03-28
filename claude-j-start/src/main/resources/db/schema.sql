@@ -1,0 +1,43 @@
+-- Order table
+CREATE TABLE IF NOT EXISTS t_order (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id VARCHAR(64) NOT NULL COMMENT '订单号',
+    customer_id VARCHAR(64) NOT NULL COMMENT '客户ID',
+    status VARCHAR(32) NOT NULL DEFAULT 'CREATED' COMMENT '订单状态',
+    total_amount DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '订单总金额',
+    currency VARCHAR(8) NOT NULL DEFAULT 'CNY' COMMENT '币种',
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted INT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    UNIQUE KEY uk_order_id (order_id)
+);
+
+-- Order item table
+CREATE TABLE IF NOT EXISTS t_order_item (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id VARCHAR(64) NOT NULL COMMENT '订单号',
+    product_id VARCHAR(64) NOT NULL COMMENT '商品ID',
+    product_name VARCHAR(256) NOT NULL COMMENT '商品名称',
+    quantity INT NOT NULL COMMENT '数量',
+    unit_price DECIMAL(12,2) NOT NULL COMMENT '单价',
+    currency VARCHAR(8) NOT NULL DEFAULT 'CNY' COMMENT '币种',
+    subtotal DECIMAL(12,2) NOT NULL COMMENT '小计',
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted INT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    KEY idx_order_id (order_id)
+);
+
+-- Short link table (designed for 10M+ records)
+CREATE TABLE IF NOT EXISTS t_short_link (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    short_code VARCHAR(6) COMMENT '短链接码',
+    original_url VARCHAR(2048) NOT NULL COMMENT '原始URL',
+    original_url_hash VARCHAR(64) NOT NULL COMMENT '原始URL的SHA-256哈希，用于去重',
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    expire_time TIMESTAMP NULL COMMENT '过期时间',
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted INT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    UNIQUE KEY uk_short_code (short_code),
+    KEY idx_original_url_hash (original_url_hash)
+);

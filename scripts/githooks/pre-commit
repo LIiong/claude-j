@@ -1,0 +1,27 @@
+#!/bin/bash
+# =================================================================
+# Pre-commit Hook — Quick compile + checkstyle before commit
+# Install: git config core.hooksPath scripts/githooks
+# =================================================================
+
+set -e
+
+echo "=== Pre-commit: Compile check ==="
+mvn compile -q -B 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "FAIL: Compilation failed. Please fix errors before committing."
+    exit 1
+fi
+echo "PASS: Compilation successful."
+
+echo ""
+echo "=== Pre-commit: Checkstyle check ==="
+mvn checkstyle:check -q -B 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "FAIL: Checkstyle violations found. Please fix before committing."
+    exit 1
+fi
+echo "PASS: Checkstyle passed."
+
+echo ""
+echo "Pre-commit checks passed."
