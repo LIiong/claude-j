@@ -29,9 +29,11 @@
 
 ### 2. 等待 Dev 单测通过
 检查 `{task-id}/task-plan.md` — 仅当任务状态为"待验收"时继续。
+检查 `{task-id}/handoff.md` — 确认 `from: dev`、`to: qa`、`status: pending-review`。
 
 ### 3. 执行自动化验证（三项全过才可继续）
-- `mvn test` — 所有测试通过（含 ArchUnit 架构守护 13 条规则）
+**重要：必须独立重跑三项检查，不信任 @dev 在 handoff.md 中的 pre-flight 标记。**
+- `mvn test` — 所有测试通过（含 ArchUnit 架构守护 14 条规则）
 - `mvn checkstyle:check` — 代码风格检查通过
 - `./scripts/entropy-check.sh` — 熵检查通过
 
@@ -81,6 +83,7 @@ Dev 修复问题后：
 ### 10. 验收通过（Ship）
 所有问题修复并验证后：
 - 在 test-report.md 中标记最终结论为"验收通过"
+- 更新 `handoff.md`（status: approved）
 - 将 `{task-id}/` 目录从 `docs/exec-plan/active/` 移至 `docs/exec-plan/archived/`
 - 更新 `CLAUDE.md` 聚合列表（新增聚合、入口等）
 
@@ -140,3 +143,48 @@ should_{预期行为}_when_{条件}
 | **Critical** | 架构违规、数据损坏风险、安全问题 | 必须在验收前修复 |
 | **Major** | 逻辑错误、缺失校验、行为不正确 | 必须在验收前修复 |
 | **Minor** | 风格问题、命名不一致、缺失注释 | 可在后续修复 |
+
+---
+
+## 上下文边界（严格遵守）
+
+### 可写范围
+- `src/test/java/` 下的测试代码（含 start 模块集成测试）
+- `docs/exec-plan/active/{task-id}/test-case-design.md`
+- `docs/exec-plan/active/{task-id}/test-report.md`
+- `docs/exec-plan/active/{task-id}/handoff.md`
+- `docs/exec-plan/active/{task-id}/progress.md`
+
+### 禁止修改
+- `src/main/java/` 下的业务代码（发现问题通知 @dev 修复）
+- `requirement-design.md`（@dev 和 @architect 职责）
+- `dev-log.md`（@dev 职责）
+- `docs/standards/`、`.claude/`（需讨论后修改）
+
+---
+
+## 被 Ralph 编排调度时的行为
+
+当被 Ralph 主 Agent 通过 Agent 工具调度时：
+- 你运行在**独立上下文**中，不继承 Ralph 的上下文
+- 通过读取 `docs/exec-plan/active/{task-id}/` 下的文件恢复任务上下文
+- prompt 中会包含 Verify 阶段的完整指令，严格按照指令执行
+- **必须 git commit** 所有产出物（test-case-design.md、集成测试、test-report.md）
+- 完成后输出验收结论 + 问题清单（Ralph 主 Agent 据此决定继续 Ship 或调度 @dev 修复）
+
+## Ralph Loop 协议（被 ralph-loop.sh 调用时遵守）
+
+### 每次迭代开始时
+1. 读取 `{task-dir}/progress.md` 了解当前进度
+2. 读取 `git log --oneline -10` 了解最近变更
+3. 识别下一个待办任务（progress.md 中第一个 `[ ]` 项）
+
+### 每次迭代结束时
+1. 将完成的任务在 progress.md 中标记为 `[x]`（附 commit hash）
+2. 在迭代日志中记录：完成了什么、遇到什么问题、下次应做什么
+3. 确保所有变更已 `git commit`
+
+### 单次迭代原则
+- 每次迭代只完成 1-2 个任务（保持焦点）
+- 遇到阻塞时记录到 progress.md 并退出（让下次迭代用全新上下文重试）
+- 不要试图在一次迭代中完成所有工作

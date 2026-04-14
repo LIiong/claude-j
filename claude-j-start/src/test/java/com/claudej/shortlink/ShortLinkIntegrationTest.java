@@ -174,7 +174,7 @@ class ShortLinkIntegrationTest {
     // ==================== 全链路一致性 ====================
 
     @Test
-    void should_roundTrip_createThenRedirect() throws Exception {
+    void should_redirectToOriginalUrl_when_shortLinkCreatedAndAccessed() throws Exception {
         String originalUrl = "https://github.com/anthropics/claude-code";
 
         // Step 1: 创建短链

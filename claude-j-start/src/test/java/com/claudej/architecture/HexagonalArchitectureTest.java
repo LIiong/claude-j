@@ -1,8 +1,12 @@
 package com.claudej.architecture;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.lang.ArchCondition;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -131,6 +135,48 @@ class HexagonalArchitectureTest {
                     .that().resideInAPackage("com.claudej.domain..")
                     .should().dependOnClassesThat().resideInAPackage("javax.persistence..")
                     .check(allClasses);
+        }
+    }
+
+    // ==================== 测试方法命名守护 ====================
+
+    @Nested
+    @DisplayName("测试方法命名: should_xxx_when_yyy")
+    class TestMethodNaming {
+
+        private static JavaClasses testClasses;
+
+        @BeforeAll
+        static void importTestClasses() {
+            testClasses = new ClassFileImporter()
+                    .withImportOption(ImportOption.Predefined.ONLY_INCLUDE_TESTS)
+                    .importPackages("com.claudej");
+        }
+
+        @Test
+        @DisplayName("业务测试方法必须符合 should_xxx_when_yyy 命名规范")
+        void test_methods_should_follow_naming_convention() {
+            classes()
+                    .that().resideInAPackage("com.claudej..")
+                    .and().haveSimpleNameEndingWith("Test")
+                    .and().doNotHaveSimpleName("HexagonalArchitectureTest")
+                    .should(new ArchCondition<com.tngtech.archunit.core.domain.JavaClass>("have test methods following should_xxx_when_yyy naming") {
+                        @Override
+                        public void check(com.tngtech.archunit.core.domain.JavaClass javaClass, ConditionEvents events) {
+                            for (JavaMethod method : javaClass.getMethods()) {
+                                boolean isTestMethod = method.isAnnotatedWith(Test.class);
+                                if (isTestMethod) {
+                                    String name = method.getName();
+                                    if (!name.startsWith("should_") || !name.contains("_when_")) {
+                                        events.add(SimpleConditionEvent.violated(method,
+                                                String.format("测试方法 %s.%s() 不符合 should_xxx_when_yyy 命名规范",
+                                                        javaClass.getSimpleName(), name)));
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .check(testClasses);
         }
     }
 

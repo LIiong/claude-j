@@ -47,6 +47,13 @@
 - 执行顺序
 - 状态流转：`待办` → `进行中` → `单测通过` → `待验收` → `验收通过` / `待修复`
 
+### 5.5 提交架构评审
+- 创建 `handoff.md`（from: dev, to: architect, status: pending-review）
+- 附上 requirement-design.md 作为评审材料
+- 等待 @architect 评审结果
+- 若 `status: changes-requested` → 根据评审意见修改设计 → 重新提交评审
+- 若 `status: approved` → 继续步骤 6
+
 ### 6. 编写单元测试（TDD）
 在编码之前先写测试，按以下顺序：
 - 领域层测试（JUnit 5 + AssertJ，禁止 Spring 上下文）
@@ -75,6 +82,8 @@
 ### 11. 通知 QA
 三项验证全部通过后：
 - 在 task-plan.md 中标记任务为"待验收"
+- 更新 `handoff.md`（from: dev, to: qa, status: pending-review）
+- 在 handoff.md 中记录三项预飞检查结果（mvn-test / checkstyle / entropy-check: pass）
 - 通知 @qa 开始验收测试
 
 ### 12. 处理 QA 反馈
@@ -163,3 +172,51 @@ Request/Response（adapter）↔ DTO（application）↔ Domain（domain）↔ D
 - 禁止 text blocks
 - 禁止 switch 表达式
 - 谨慎使用 `Optional`，禁止作为方法参数
+
+---
+
+## 上下文边界（严格遵守）
+
+### 可写范围
+- `src/main/java/` 下所有业务代码
+- `src/test/java/` 下对应模块的单元测试
+- `docs/exec-plan/active/{task-id}/requirement-design.md`
+- `docs/exec-plan/active/{task-id}/task-plan.md`
+- `docs/exec-plan/active/{task-id}/dev-log.md`
+- `docs/exec-plan/active/{task-id}/handoff.md`
+- `docs/exec-plan/active/{task-id}/progress.md`
+- `docs/architecture/decisions/` 下的 ADR 文件
+- `claude-j-start/src/main/resources/db/schema.sql`
+
+### 禁止修改
+- `test-case-design.md` / `test-report.md`（@qa 职责）
+- `docs/standards/`（标准文档，需讨论后修改）
+- `.claude/`（配置文件，需讨论后修改）
+
+---
+
+## 被 Ralph 编排调度时的行为
+
+当被 Ralph 主 Agent 通过 Agent 工具调度时：
+- 你运行在**独立上下文**中，不继承 Ralph 的上下文
+- 通过读取 `docs/exec-plan/active/{task-id}/` 下的文件恢复任务上下文
+- prompt 中会包含具体的阶段指令（Spec 或 Build），严格按照指令执行
+- **必须 git commit** 所有产出物，这是与 Ralph 主 Agent 传递状态的唯一方式
+- 完成后输出简要摘要（Ralph 主 Agent 需要据此判断是否进入下一阶段）
+
+## Ralph Loop 协议（被 ralph-loop.sh 调用时遵守）
+
+### 每次迭代开始时
+1. 读取 `{task-dir}/progress.md` 了解当前进度
+2. 读取 `git log --oneline -10` 了解最近变更
+3. 识别下一个待办任务（progress.md 中第一个 `[ ]` 项）
+
+### 每次迭代结束时
+1. 将完成的任务在 progress.md 中标记为 `[x]`（附 commit hash）
+2. 在迭代日志中记录：完成了什么、遇到什么问题、下次应做什么
+3. 确保所有变更已 `git commit`
+
+### 单次迭代原则
+- 每次迭代只完成 1-2 个任务（保持焦点）
+- 遇到阻塞时记录到 progress.md 并退出（让下次迭代用全新上下文重试）
+- 不要试图在一次迭代中完成所有工作

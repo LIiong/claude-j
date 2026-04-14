@@ -34,3 +34,6 @@ application-local.yml
 # Package
 *.tar.gz
 *.zip
+
+# Claude Code runtime
+.claude-current-role

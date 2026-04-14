@@ -22,7 +22,7 @@ echo "============================================"
 echo ""
 
 # ------ 1. Domain 层纯净性 ------
-echo "--- [1/10] Domain 层纯净性 ---"
+echo "--- [1/12] Domain 层纯净性 ---"
 
 SPRING_IN_DOMAIN=$(grep -r "import org.springframework" claude-j-domain/src/main/java/ 2>/dev/null | wc -l | tr -d ' ')
 if [ "$SPRING_IN_DOMAIN" -gt 0 ]; then
@@ -43,7 +43,7 @@ fi
 echo ""
 
 # ------ 2. 依赖方向 ------
-echo "--- [2/10] 依赖方向检查 ---"
+echo "--- [2/12] 依赖方向检查 ---"
 
 # adapter 不应 import infrastructure
 ADAPTER_INFRA=$(grep -r "import com.claudej.infrastructure" claude-j-adapter/src/main/java/ 2>/dev/null | wc -l | tr -d ' ')
@@ -74,7 +74,7 @@ fi
 echo ""
 
 # ------ 3. Java 8 兼容性 ------
-echo "--- [3/10] Java 8 兼容性 ---"
+echo "--- [3/12] Java 8 兼容性 ---"
 
 VAR_USAGE=$(grep -rn "^\s*var " claude-j-*/src/main/java/ 2>/dev/null | wc -l | tr -d ' ')
 if [ "$VAR_USAGE" -gt 0 ]; then
@@ -95,7 +95,7 @@ fi
 echo ""
 
 # ------ 4. DO 泄漏检查 ------
-echo "--- [4/10] DO 对象泄漏检查 ---"
+echo "--- [4/12] DO 对象泄漏检查 ---"
 
 DO_IN_APP=$(grep -rn "import com.claudej.infrastructure.*dataobject" claude-j-application/src/main/java/ 2>/dev/null | wc -l | tr -d ' ')
 DO_IN_ADAPTER=$(grep -rn "import com.claudej.infrastructure.*dataobject" claude-j-adapter/src/main/java/ 2>/dev/null | wc -l | tr -d ' ')
@@ -110,7 +110,7 @@ fi
 echo ""
 
 # ------ 5. 未使用 import ------
-echo "--- [5/10] 代码整洁度 ---"
+echo "--- [5/12] 代码整洁度 ---"
 
 STAR_IMPORTS=$(grep -rn "import .*\.\*;" claude-j-*/src/main/java/ 2>/dev/null | wc -l | tr -d ' ')
 if [ "$STAR_IMPORTS" -gt 0 ]; then
@@ -122,7 +122,7 @@ fi
 echo ""
 
 # ------ 6. 文档同步检查 ------
-echo "--- [6/10] 文档同步检查 ---"
+echo "--- [6/12] 文档同步检查 ---"
 
 # 检查 schema.sql 中的表是否在 CLAUDE.md 中有记录
 TABLES_IN_SQL=$(grep -c "CREATE TABLE" claude-j-start/src/main/resources/db/schema.sql 2>/dev/null || echo 0)
@@ -137,7 +137,7 @@ fi
 echo ""
 
 # ------ 7. 测试覆盖 ------
-echo "--- [7/10] 测试文件存在性 ---"
+echo "--- [7/12] 测试文件存在性 ---"
 
 # 检查每个 main 下的 Service/Repository 是否有对应测试
 MISSING_TESTS=0
@@ -155,7 +155,7 @@ fi
 echo ""
 
 # ------ 8. 死代码检测 ------
-echo "--- [8/10] 死代码检测 ---"
+echo "--- [8/12] 死代码检测 ---"
 
 DEAD_CLASSES=0
 for JAVA_FILE in $(find claude-j-*/src/main/java -name "*.java" 2>/dev/null); do
@@ -178,7 +178,7 @@ fi
 echo ""
 
 # ------ 9. ADR 一致性 ------
-echo "--- [9/10] ADR 一致性 ---"
+echo "--- [9/12] ADR 一致性 ---"
 
 ADR_DIR="docs/architecture/decisions"
 ADR_ISSUES=0
@@ -211,7 +211,7 @@ fi
 echo ""
 
 # ------ 10. 知识库一致性 ------
-echo "--- [10/10] 知识库一致性 ---"
+echo "--- [10/12] 知识库一致性 ---"
 
 KB_ISSUES=0
 # Scan file path references in key docs and verify they exist
@@ -240,6 +240,53 @@ done
 
 if [ "$KB_ISSUES" -eq 0 ]; then
     echo -e "${GREEN}PASS${NC}: 知识库文件引用一致"
+fi
+echo ""
+
+# ------ 11. 过期活跃任务检测 ------
+echo "--- [11/12] 过期活跃任务检测 ---"
+
+STALE_TASKS=0
+for REPORT in docs/exec-plan/active/*/test-report.md; do
+    if [ ! -f "$REPORT" ]; then
+        continue
+    fi
+    if grep -q "验收通过" "$REPORT" 2>/dev/null; then
+        TASK_NAME=$(dirname "$REPORT" | xargs basename)
+        echo -e "${YELLOW}WARN${NC}: 任务 $TASK_NAME 已验收通过但未归档到 archived/"
+        STALE_TASKS=$((STALE_TASKS + 1))
+        WARNINGS=$((WARNINGS + 1))
+    fi
+done
+if [ "$STALE_TASKS" -eq 0 ]; then
+    echo -e "${GREEN}PASS${NC}: 无过期活跃任务"
+fi
+echo ""
+
+# ------ 12. 聚合列表同步检查 ------
+echo "--- [12/12] 聚合列表同步检查 ---"
+
+AGG_ISSUES=0
+if [ -d "claude-j-domain/src/main/java/com/claudej/domain" ]; then
+    for AGG_DIR in claude-j-domain/src/main/java/com/claudej/domain/*/; do
+        if [ ! -d "$AGG_DIR" ]; then
+            continue
+        fi
+        AGG_NAME=$(basename "$AGG_DIR")
+        # 跳过 common 包（非聚合）
+        if [ "$AGG_NAME" = "common" ]; then
+            continue
+        fi
+        # 检查 CLAUDE.md 中是否有该聚合的记录
+        if ! grep -q "$AGG_NAME" CLAUDE.md 2>/dev/null; then
+            echo -e "${YELLOW}WARN${NC}: 聚合 $AGG_NAME 在 domain 层存在但未在 CLAUDE.md 聚合列表中记录"
+            AGG_ISSUES=$((AGG_ISSUES + 1))
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    done
+fi
+if [ "$AGG_ISSUES" -eq 0 ]; then
+    echo -e "${GREEN}PASS${NC}: 聚合列表与代码同步"
 fi
 echo ""
 
