@@ -1,9 +1,9 @@
 ---
 task-id: "006-coupon-service"
-from: dev
+from: qa
 to: qa
-status: pending-review
-timestamp: "2026-04-14T15:00:00"
+status: approved
+timestamp: "2026-04-14T16:00:00"
 pre-flight:
   mvn-test: pass
   checkstyle: pass
@@ -12,7 +12,9 @@ artifacts:
   - requirement-design.md
   - task-plan.md
   - dev-log.md
-summary: "优惠券服务 Build 阶段完成：Domain/Application/Infrastructure/Adapter 四层开发 + 测试，310 tests passed，等待 QA 验收"
+  - test-case-design.md
+  - test-report.md
+summary: "优惠券服务 QA 验收通过：86 个测试用例全部通过，架构合规，代码风格良好，可归档"
 ---
 
 # 交接文档
@@ -20,10 +22,39 @@ summary: "优惠券服务 Build 阶段完成：Domain/Application/Infrastructure
 > 每次 Agent 间交接时更新此文件。
 > 状态流转：pending-review → approved / changes-requested
 
-## 交接说明
-Build 阶段开发完成，提交 QA 验收。
+## 验收结论
 
-**完成范围**：
+**评审人**：@qa
+**日期**：2026-04-14
+**结论**：✅ **验收通过**
+
+### 测试执行结果
+- **分层测试**：81 个测试用例通过（Domain 49 + Application 7 + Infrastructure 11 + Adapter 9）
+- **集成测试**：5 个全链路测试用例通过
+- **总计**：86 个测试用例，0 失败
+
+### 代码审查结果
+- 依赖方向正确 ✅
+- Domain 层纯净（零 Spring/MyBatis import）✅
+- 聚合根封装业务不变量 ✅
+- 值对象不可变，equals/hashCode 正确 ✅
+- Repository 接口与实现分离 ✅
+- 对象转换链完整 ✅
+- Controller 无业务逻辑 ✅
+
+### 代码风格检查
+- Checkstyle 通过 ✅
+- Java 8 兼容 ✅
+- Lombok 使用规范 ✅
+- 测试命名规范 ✅
+
+### 问题清单
+- 0 个阻塞性问题
+- 1 个改进建议（Minor）：CreateCouponRequest.minOrderAmount 的 @Positive 注解建议改为 @PositiveOrZero，以允许最小订单金额为 0
+
+---
+
+## Build 阶段完成范围
 1. **Domain 层**（claude-j-domain）
    - Coupon 聚合根：封装优惠券全生命周期（创建、使用、懒过期）
    - 值对象：CouponId、DiscountType、DiscountValue、CouponStatus
@@ -52,6 +83,7 @@ Build 阶段开发完成，提交 QA 验收。
 
 5. **Start 模块**
    - schema.sql：添加 t_coupon 表 DDL（claude-j-start 和 infrastructure test 资源）
+   - 集成测试：CouponIntegrationTest（5 个全链路测试）
 
 **API 清单**：
 - `POST /api/v1/coupons` - 创建优惠券
@@ -60,19 +92,13 @@ Build 阶段开发完成，提交 QA 验收。
 - `GET /api/v1/coupons/available?userId=xxx` - 按用户查询可用优惠券
 - `POST /api/v1/coupons/{couponId}/use` - 使用优惠券
 
-**预飞检查**：
-- [x] `mvn clean test` - 310 个测试全部通过
-- [x] `mvn checkstyle:check` - 代码风格检查通过
-- [x] `./scripts/entropy-check.sh` - 熵检查通过（0 错误，3 警告）
-
-**注意事项**：
-1. 懒过期策略在查询时触发，查询路径有副作用（自动更新过期状态）
-2. 百分比折扣值必须为整数（1-100），固定金额折扣值必须 > 0
-3. 优惠券状态转换：AVAILABLE -> USED / EXPIRED，不允许回退
-
 ---
 
 ## 交接历史
+
+### 2026-04-14 — @qa 验收通过
+- 状态：approved
+- 说明：86 个测试用例全部通过，架构合规，代码风格良好。运行 `/qa-ship 006-coupon-service` 归档。
 
 ### 2026-04-14 — @dev -> @qa
 - 状态：pending-review
