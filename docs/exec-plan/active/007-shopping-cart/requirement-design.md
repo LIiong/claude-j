@@ -151,3 +151,69 @@ CREATE TABLE IF NOT EXISTS t_cart_item (
   - 新增 `com.claudej.adapter.cart.web.response.CartItemResponse`
 - **start**:
   - 修改 `schema.sql` — 新增 t_cart 和 t_cart_item 表 DDL
+
+## 架构评审
+
+**评审人**：@architect
+**日期**：2026-04-14
+**结论**：✅ 通过
+
+### 评审检查项
+
+**聚合设计**：
+- [x] 聚合根边界合理（遵循事务一致性原则，一个事务一个聚合）
+- [x] 聚合根封装所有业务不变量（非贫血模型）
+- [x] 状态变更仅通过聚合根方法（无公开 setter）
+
+**值对象识别**：
+- [x] 金额、标识符、状态等应为值对象
+- [x] 值对象不可变（final 字段、equals/hashCode）
+- [x] 约束条件在构造函数中校验
+
+**端口设计**：
+- [x] Repository 端口在 domain 层（接口）
+- [x] 方法粒度合适（不多不少）
+- [x] 返回 Domain 对象，不返回 DO
+
+**依赖方向**：
+- [x] adapter → application → domain ← infrastructure
+- [x] 与已有聚合无循环依赖
+- [x] 对象转换链正确（DO ↔ Domain ↔ DTO ↔ Request/Response）
+
+**DDL 设计**：
+- [x] 表名 `t_{entity}`，列名 snake_case
+- [x] 索引策略合理
+- [x] 与领域模型字段一致
+
+**API 设计**：
+- [x] RESTful 规范
+- [x] 路径命名一致（`/api/v1/{resource}`）
+- [x] 响应格式 `ApiResult<T>`
+
+**ADR 需求**：
+- [x] 无需要记录的重大架构决策（Money 值对象复用模式已在 order 聚合中确立）
+
+### 评审意见
+
+**设计亮点**：
+1. **聚合边界清晰**：Cart 作为聚合根，CartItem 作为聚合内实体，符合事务一致性原则
+2. **值对象设计合理**：Quantity 值对象封装数量约束（1~999），Money 值对象保证金额精度
+3. **存储策略正确**：采用 t_cart + t_cart_item 两张表，与 order 聚合保持一致的持久化模式
+4. **Money 值对象策略**：为避免跨聚合引用，选择聚合内独立 Money 值对象，与 order 的 Money 保持相同逻辑但物理隔离，符合 DDD 最佳实践
+5. **API 设计规范**：RESTful 路径设计合理，使用标准 HTTP 方法（POST/PUT/DELETE/GET）
+
+**建议事项**（非阻塞）：
+1. **清空购物车接口**：DELETE /api/v1/carts 使用 DELETE 方法符合 RESTful 规范，语义清晰
+2. **商品数量上限 999**：合理范围，可根据业务需求后续调整
+3. **索引优化**：uk_user_id 和 uk_cart_product 联合唯一索引设计合理
+
+**架构基线检查**：
+- 运行 `./scripts/entropy-check.sh` 通过（0 errors, 2 warnings）
+- 与已有 order 聚合代码模式一致
+- 符合六边形架构依赖方向
+
+### 需要新增的 ADR
+无。Money 值对象复用模式已在 order 聚合中确立，无需新增 ADR。
+
+---
+评审结论：**设计通过，可以进入 Build 阶段。**
