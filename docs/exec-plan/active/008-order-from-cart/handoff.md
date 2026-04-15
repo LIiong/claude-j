@@ -1,10 +1,10 @@
 ---
 task-id: "008-order-from-cart"
-from: dev
-to: architect
-status: pending-review
-timestamp: "2026-04-15T11:00:00"
-summary: "Spec 阶段完成：从购物车创建订单功能设计"
+from: architect
+to: dev
+status: approved
+timestamp: "2026-04-15T11:30:00"
+summary: "架构评审通过，可以进入 Build 阶段"
 ---
 
 # 交接文档
@@ -81,17 +81,24 @@ summary: "Spec 阶段完成：从购物车创建订单功能设计"
 ## 评审意见
 
 ### 评审结论
-- [ ] approved - 设计通过，可以进入 Build 阶段
+- [x] approved - 设计通过，可以进入 Build 阶段
 - [ ] changes-requested - 需要修改设计
 
 ### 具体意见
 
-<!-- 如有修改意见，请列出具体条目 -->
+详见 `requirement-design.md` 中「架构评审」章节。核心结论：
+
+1. **应用服务层依赖**：合理，应用服务职责就是编排多个聚合
+2. **事务边界**：单服务场景下 `@Transactional` 足够，无需分布式事务
+3. **用户状态验证**：设计已预留扩展点，M1 阶段可跳过
+4. **优惠券扩展点**：设计合理，couponId 作为可选字段传入
+5. **DDD 架构合规**：完全符合六边形架构约束
+6. **Java 8 规范**：合规
 
 ### 补充 ADR
 - [ ] 需要创建 ADR 记录重要决策
-- ADR 文件路径：（如适用）
+- 无需新增 ADR，本功能遵循已有架构决策
 
 ## 评审人
 - 评审者：@architect
-- 评审时间：
+- 评审时间：2026-04-15

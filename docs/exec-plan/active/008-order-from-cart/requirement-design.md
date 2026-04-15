@@ -196,6 +196,72 @@ CART_EMPTY("CART_EMPTY", "购物车为空，无法下单")
 | 7 | `claude-j-adapter/src/test/java/com/claudej/adapter/order/web/OrderControllerTest.java` | 添加 POST /from-cart API 测试 |
 | 8 | `claude-j-start/src/test/java/com/claudej/start/order/OrderFromCartIntegrationTest.java` | 添加集成测试 |
 
+## 架构评审
+
+**评审人**：@architect
+**日期**：2026-04-15
+**结论**：✅ 通过
+
+### 评审检查项
+
+- [x] 聚合根边界合理（遵循事务一致性原则）
+- [x] 值对象识别充分（金额、标识符等应为 VO）
+- [x] Repository 端口粒度合适（方法不多不少）
+- [x] 与已有聚合无循环依赖
+- [x] DDL 设计与领域模型一致（字段映射、索引合理）
+- [x] API 设计符合 RESTful 规范
+- [x] 对象转换链正确（DO ↔ Domain ↔ DTO ↔ Request/Response）
+
+### 评审意见
+
+#### 1. 应用服务层依赖 CartRepository 和 OrderRepository —— 合理 ✅
+
+- OrderApplicationService 是订单用例的编排中心，负责协调购物车与订单两个聚合
+- 这是应用服务的核心职责：编排多个聚合完成业务流程
+- 依赖方向正确：application → domain（CartRepository 和 OrderRepository 都是 domain 层定义的端口）
+
+#### 2. 事务边界 —— 当前设计在单服务场景下合理 ✅
+
+- `@Transactional` 保证购物车查询、订单创建、购物车清空的原子性
+- 两个聚合在同一事务中修改，在单体应用中是可接受的做法
+- 若未来拆分为微服务，需要引入 Saga 模式，但当前设计已预留扩展空间
+- 无需引入分布式事务（2PC/XA），增加复杂度
+
+#### 3. 用户状态验证 —— 建议作为可选项 ✅
+
+- 设计文档已提及"验证用户存在且状态正常（可选，预留扩展）"
+- 当前 M1 阶段可跳过用户验证，简化实现
+- 如需添加，建议通过 UserDomainService 或 UserRepository 查询验证
+
+#### 4. 优惠券预留扩展点 —— 设计合理 ✅
+
+- couponId 作为可选字段传入是合适的扩展点
+- 优惠券应用逻辑应放在 Order 聚合内（通过 `applyCoupon()` 方法）
+- 当前阶段仅预留字段，不实现具体逻辑，符合迭代开发原则
+
+#### 5. DDD 六边形架构合规性 —— 完全合规 ✅
+
+- 依赖方向：adapter → application → domain，符合架构约束
+- 无 domain 层 Spring/MyBatis-Plus import
+- Repository 是 domain 层定义的端口，infrastructure 层实现
+- 符合已有代码模式（参考 OrderApplicationService 现有实现）
+
+#### 6. Java 8 编码规范 —— 合规 ✅
+
+- 无 var、List.of()、Map.of() 使用
+- 使用构造器注入模式（符合现有代码风格）
+- 使用传统 setter 进行对象转换（符合现有代码模式）
+
+### 建议（非阻塞）
+
+1. **聚合操作顺序优化**：建议先验证用户状态（如果实现），再查询购物车，减少无效查询
+2. **幂等性考虑**：未来可考虑为 createOrderFromCart 添加幂等键，防止重复下单
+3. **事件发布**：清空购物车后，可考虑发布 CartClearedEvent（用于后续积分、推荐等场景）
+
+### 需要新增的 ADR
+
+无需新增 ADR。本功能遵循已有架构决策，属于在现有框架内的功能实现。
+
 ## 接口规范
 
 ### 请求参数
