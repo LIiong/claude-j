@@ -2,7 +2,7 @@
 task-id: "008-order-from-cart"
 from: dev
 to: qa
-status: pending-review
+status: approved
 timestamp: "2026-04-15T11:30:00"
 summary: "开发完成，三项预飞检查全部通过，等待 QA 验收"
 pre-flight:
@@ -121,14 +121,14 @@ pre-flight:
 
 ## 验收结论
 
-- [ ] approved - 验收通过
+- [x] approved - 验收通过
 - [ ] changes-requested - 需要修改
 
 ## 问题清单
 
-<!-- 如有问题请列出 -->
+无问题，所有检查项通过。
 
 ## 验收人
 
 - 验收者：@qa
-- 验收时间：
+- 验收时间：2026-04-15
