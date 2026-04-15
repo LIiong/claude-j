@@ -105,8 +105,7 @@ CREATE TABLE IF NOT EXISTS t_cart (
     create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     deleted INT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
-    UNIQUE KEY uk_user_id (user_id),
-    KEY idx_user_id (user_id)
+    UNIQUE KEY uk_user_id (user_id)
 );
 
 -- Cart item table

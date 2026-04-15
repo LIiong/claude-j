@@ -1,8 +1,7 @@
 package com.claudej.coupon;
 
-import com.claudej.adapter.coupon.web.request.CreateCouponRequest;
-import com.claudej.adapter.coupon.web.request.UseCouponRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -12,8 +11,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -35,22 +34,38 @@ class CouponIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    private String createCouponRequest(String name, String discountType, String discountValue,
+                                       String minOrderAmount, String userId, 
+                                       LocalDateTime validFrom, LocalDateTime validUntil) {
+        ObjectNode request = objectMapper.createObjectNode();
+        request.put("name", name);
+        request.put("discountType", discountType);
+        request.put("discountValue", discountValue);
+        request.put("minOrderAmount", minOrderAmount);
+        request.put("userId", userId);
+        request.put("validFrom", validFrom.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        request.put("validUntil", validUntil.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        return request.toString();
+    }
+
+    private String createUseCouponRequest(String orderId) {
+        ObjectNode request = objectMapper.createObjectNode();
+        request.put("orderId", orderId);
+        return request.toString();
+    }
+
     @Test
     void should_createAndQueryCoupon_when_fullFlow() throws Exception {
         // Given - 创建优惠券请求
-        CreateCouponRequest request = new CreateCouponRequest();
-        request.setName("满100减20");
-        request.setDiscountType("FIXED_AMOUNT");
-        request.setDiscountValue(new BigDecimal("20.00"));
-        request.setMinOrderAmount(new BigDecimal("100.00"));
-        request.setUserId("USER001");
-        request.setValidFrom(LocalDateTime.now().minusDays(1));
-        request.setValidUntil(LocalDateTime.now().plusDays(30));
+        String requestJson = createCouponRequest(
+            "满100减20", "FIXED_AMOUNT", "20.00", "100.00", "USER001",
+            LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(30)
+        );
 
         // When - 创建优惠券
         MvcResult createResult = mockMvc.perform(post("/api/v1/coupons")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(requestJson))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.data.name", is("满100减20")))
@@ -87,18 +102,14 @@ class CouponIntegrationTest {
     @Test
     void should_useCouponSuccessfully_when_validRequest() throws Exception {
         // Given - 创建优惠券
-        CreateCouponRequest request = new CreateCouponRequest();
-        request.setName("8折优惠券");
-        request.setDiscountType("PERCENTAGE");
-        request.setDiscountValue(new BigDecimal("20"));
-        request.setMinOrderAmount(new BigDecimal("100.00"));  // @Positive 要求 > 0
-        request.setUserId("USER002");
-        request.setValidFrom(LocalDateTime.now().minusDays(1));
-        request.setValidUntil(LocalDateTime.now().plusDays(30));
+        String requestJson = createCouponRequest(
+            "8折优惠券", "PERCENTAGE", "20", "100.00", "USER002",
+            LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(30)
+        );
 
         MvcResult createResult = mockMvc.perform(post("/api/v1/coupons")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(requestJson))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -106,12 +117,10 @@ class CouponIntegrationTest {
                 .path("data").path("couponId").asText();
 
         // When - 使用优惠券
-        UseCouponRequest useRequest = new UseCouponRequest();
-        useRequest.setOrderId("ORDER123");
-
+        String useRequest = createUseCouponRequest("ORDER123");
         mockMvc.perform(post("/api/v1/coupons/{couponId}/use", couponId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(useRequest)))
+                        .content(useRequest))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.data.status", is("USED")))
@@ -136,36 +145,32 @@ class CouponIntegrationTest {
     @Test
     void should_return400_when_createWithInvalidData() throws Exception {
         // Given - 无效请求（名称为空）
-        CreateCouponRequest request = new CreateCouponRequest();
-        request.setName("");  // 空名称
-        request.setDiscountType("FIXED_AMOUNT");
-        request.setDiscountValue(new BigDecimal("20.00"));
-        request.setMinOrderAmount(new BigDecimal("100.00"));
-        request.setUserId("USER003");
-        request.setValidFrom(LocalDateTime.now().minusDays(1));
-        request.setValidUntil(LocalDateTime.now().plusDays(30));
+        ObjectNode request = objectMapper.createObjectNode();
+        request.put("name", "");  // 空名称
+        request.put("discountType", "FIXED_AMOUNT");
+        request.put("discountValue", "20.00");
+        request.put("minOrderAmount", "100.00");
+        request.put("userId", "USER003");
+        request.put("validFrom", LocalDateTime.now().minusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        request.put("validUntil", LocalDateTime.now().plusDays(30).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
 
         mockMvc.perform(post("/api/v1/coupons")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(request.toString()))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void should_expireCoupon_when_pastValidUntil() throws Exception {
         // Given - 创建即将过期的优惠券（有效期截止到昨天）
-        CreateCouponRequest request = new CreateCouponRequest();
-        request.setName("过期优惠券");
-        request.setDiscountType("FIXED_AMOUNT");
-        request.setDiscountValue(new BigDecimal("20.00"));
-        request.setMinOrderAmount(new BigDecimal("100.00"));  // @Positive 要求 > 0
-        request.setUserId("USER004");
-        request.setValidFrom(LocalDateTime.now().minusDays(30));
-        request.setValidUntil(LocalDateTime.now().minusDays(1));  // 昨天过期
+        String requestJson = createCouponRequest(
+            "过期优惠券", "FIXED_AMOUNT", "20.00", "100.00", "USER004",
+            LocalDateTime.now().minusDays(30), LocalDateTime.now().minusDays(1)
+        );
 
         MvcResult createResult = mockMvc.perform(post("/api/v1/coupons")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(requestJson))
                 .andExpect(status().isOk())
                 .andReturn();
 
