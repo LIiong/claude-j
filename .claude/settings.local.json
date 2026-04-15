@@ -101,7 +101,17 @@
       "Bash(grep -n \"entropy.*12\\\\|12.*entropy\" /Users/macro.li/aiProject/claude-j/.claude/skills/*/SKILL.md /Users/macro.li/aiProject/claude-j/.claude/agents/*.md)",
       "Bash(xargs cat:*)",
       "Bash(mvn checkstyle:check -B -q)",
-      "Bash(xargs -I{} echo \"{} 个 Java 文件\")"
+      "Bash(xargs -I{} echo \"{} 个 Java 文件\")",
+      "Skill(gsd:progress)",
+      "Bash(curl -s http://localhost:8081/swagger-ui.html 2>/dev/null | head -20 || echo \"尝试 /swagger-ui/ ...\"\ncurl -s http://localhost:8081/swagger-ui/ 2>/dev/null | head -20 || echo \"尝试 /v3/api-docs ...\")",
+      "Bash(curl -s -X POST http://localhost:8081/api/v1/carts -H \"Content-Type: application/json\" -d '{\"customerId\": \"CUST001\"}')",
+      "Bash(curl -s http://localhost:8081/api/v1/carts/12345)",
+      "Bash(echo \"1. 添加商品到购物车:\"\ncurl -s -X POST \"http://localhost:8081/api/v1/carts/items\" \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"userId\":\"user001\",\"productId\":\"P001\",\"productName\":\"iPhone 15\",\"unitPrice\":5999.00,\"quantity\":1}'\n\necho -e \"\\\\n\\\\n2. 查询购物车:\"\ncurl -s \"http://localhost:8081/api/v1/carts?userId=user001\"\n\necho -e \"\\\\n\\\\n3. 添加第二个商品:\"\ncurl -s -X POST \"http://localhost:8081/api/v1/carts/items\" \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"userId\":\"user001\",\"productId\":\"P002\",\"productName\":\"AirPods Pro\",\"unitPrice\":1999.00,\"quantity\":2}'\n\necho -e \"\\\\n\\\\n4. 再次查询购物车:\"\ncurl -s \"http://localhost:8081/api/v1/carts?userId=user001\")",
+      "Bash(echo \"5. 更新商品数量:\"\ncurl -s -X PUT \"http://localhost:8081/api/v1/carts/items/quantity\" \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"userId\":\"user001\",\"productId\":\"P001\",\"quantity\":3}'\n\necho -e \"\\\\n\\\\n6. 删除商品:\"\ncurl -s -X DELETE \"http://localhost:8081/api/v1/carts/items/P002?userId=user001\"\n\necho -e \"\\\\n\\\\n7. 最终查询:\"\ncurl -s \"http://localhost:8081/api/v1/carts?userId=user001\"\n\necho -e \"\\\\n\\\\n8. 清空购物车:\"\ncurl -s -X DELETE \"http://localhost:8081/api/v1/carts?userId=user001\"\n\necho -e \"\\\\n\\\\n9. 清空后查询:\"\ncurl -s \"http://localhost:8081/api/v1/carts?userId=user001\")",
+      "Bash(echo \"=== 用户 API ===\"\ncurl -s -X POST \"http://localhost:8081/api/v1/users\" \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"username\":\"testuser\",\"email\":\"test@example.com\",\"phone\":\"13800138000\"}'\n\necho -e \"\\\\n\\\\n=== 优惠券 API ===\"\ncurl -s \"http://localhost:8081/api/v1/coupons\"\n\necho -e \"\\\\n\\\\n=== 订单 API ===\"\ncurl -s \"http://localhost:8081/api/v1/orders\")",
+      "Bash(mvn checkstyle:check 2>&1 | grep -A5 \"ERROR\")",
+      "Bash(./scripts/quick-check.sh 2>&1 | tail -20)",
+      "Skill(gsd:do)"
     ]
   }
 }

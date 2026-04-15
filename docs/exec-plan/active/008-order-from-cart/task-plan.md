@@ -6,15 +6,15 @@
 
 | # | 任务 | 负责人 | 状态 | 复杂度 | 备注 |
 |---|------|--------|------|--------|------|
-| 1 | ErrorCode: 添加 CART_EMPTY 错误码 | dev | 待办 | S | 仅添加枚举值 |
-| 2 | Application: CreateOrderFromCartCommand | dev | 待办 | S | 命令对象 |
-| 3 | Application: OrderApplicationService.createOrderFromCart | dev | 待办 | M | 核心逻辑，需注入 CartRepository |
-| 4 | Application: OrderApplicationService 单元测试 | dev | 待办 | M | 覆盖正常/异常场景 |
-| 5 | Adapter: CreateOrderFromCartRequest | dev | 待办 | S | 请求对象 + @Valid |
-| 6 | Adapter: OrderController.createOrderFromCart | dev | 待办 | S | 端点实现 |
-| 7 | Adapter: OrderController 单元测试 | dev | 待办 | M | MockMvc 测试 |
-| 8 | Start: OrderFromCartIntegrationTest | dev | 待办 | M | 全链路集成测试 |
-| 9 | 全量 mvn test | dev | 待办 | - | 含 ArchUnit 架构规则 |
+| 1 | ErrorCode: 添加 CART_EMPTY 错误码 | dev | 单测通过 | S | 仅添加枚举值 |
+| 2 | Application: CreateOrderFromCartCommand | dev | 单测通过 | S | 命令对象 |
+| 3 | Application: OrderApplicationService.createOrderFromCart | dev | 单测通过 | M | 核心逻辑，需注入 CartRepository |
+| 4 | Application: OrderApplicationService 单元测试 | dev | 单测通过 | M | 覆盖正常/异常场景 |
+| 5 | Adapter: CreateOrderFromCartRequest | dev | 单测通过 | S | 请求对象 + @Valid |
+| 6 | Adapter: OrderController.createOrderFromCart | dev | 单测通过 | S | 端点实现 |
+| 7 | Adapter: OrderController 单元测试 | dev | 单测通过 | M | MockMvc 测试 |
+| 8 | Start: OrderFromCartIntegrationTest | dev | 单测通过 | M | 全链路集成测试 |
+| 9 | 全量 mvn test | dev | 单测通过 | - | 含 ArchUnit 架构规则 |
 | 10 | QA: 测试用例设计 | qa | 待办 | - | |
 | 11 | QA: 验收测试 + 代码审查 | qa | 待办 | - | |
 | 12 | QA: 接口集成测试 | qa | 待办 | - | |
@@ -152,9 +152,10 @@ Task 9 (全量测试)
 
 ## 开发完成记录
 <!-- dev 完成后填写 -->
-- 全量 `mvn clean test`：x/x 用例通过
-- 架构合规检查：
-- 通知 @qa 时间：
+- 全量 `mvn clean test`：367/367 用例通过
+- 架构合规检查：全部通过（0 FAIL）
+- 代码风格检查：0 violations
+- 通知 @qa 时间：2026-04-15 11:30
 
 ## QA 验收记录
 <!-- qa 验收后填写 -->

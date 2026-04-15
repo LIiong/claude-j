@@ -2,7 +2,11 @@ package com.claudej.application.order.service;
 
 import com.claudej.application.order.assembler.OrderAssembler;
 import com.claudej.application.order.command.CreateOrderCommand;
+import com.claudej.application.order.command.CreateOrderFromCartCommand;
 import com.claudej.application.order.dto.OrderDTO;
+import com.claudej.domain.cart.model.aggregate.Cart;
+import com.claudej.domain.cart.model.entity.CartItem;
+import com.claudej.domain.cart.repository.CartRepository;
 import com.claudej.domain.common.exception.BusinessException;
 import com.claudej.domain.common.exception.ErrorCode;
 import com.claudej.domain.order.model.aggregate.Order;
@@ -23,10 +27,13 @@ import java.util.List;
 public class OrderApplicationService {
 
     private final OrderRepository orderRepository;
+    private final CartRepository cartRepository;
     private final OrderAssembler orderAssembler;
 
-    public OrderApplicationService(OrderRepository orderRepository, OrderAssembler orderAssembler) {
+    public OrderApplicationService(OrderRepository orderRepository, CartRepository cartRepository,
+                                   OrderAssembler orderAssembler) {
         this.orderRepository = orderRepository;
+        this.cartRepository = cartRepository;
         this.orderAssembler = orderAssembler;
     }
 
@@ -99,6 +106,51 @@ public class OrderApplicationService {
 
         order.cancel();
         order = orderRepository.save(order);
+        return orderAssembler.toDTO(order);
+    }
+
+    /**
+     * 从购物车创建订单
+     */
+    @Transactional
+    public OrderDTO createOrderFromCart(CreateOrderFromCartCommand command) {
+        if (command == null || command.getCustomerId() == null || command.getCustomerId().trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.ORDER_NOT_FOUND, "客户ID不能为空");
+        }
+
+        // 1. 查询购物车
+        Cart cart = cartRepository.findByUserId(command.getCustomerId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.CART_NOT_FOUND));
+
+        // 2. 验证购物车非空
+        if (cart.isEmpty()) {
+            throw new BusinessException(ErrorCode.CART_EMPTY);
+        }
+
+        // 3. 创建订单
+        CustomerId customerId = new CustomerId(command.getCustomerId());
+        Order order = Order.create(customerId);
+
+        // 4. 将购物车项转换为订单项
+        List<CartItem> cartItems = cart.getItems();
+        for (CartItem cartItem : cartItems) {
+            OrderItem orderItem = OrderItem.create(
+                    cartItem.getProductId(),
+                    cartItem.getProductName(),
+                    cartItem.getQuantity().getValue(),
+                    new Money(cartItem.getUnitPrice().getAmount(), cartItem.getUnitPrice().getCurrency())
+            );
+            order.addItem(orderItem);
+        }
+
+        // 5. 保存订单
+        order = orderRepository.save(order);
+
+        // 6. 清空购物车并保存
+        cart.clear();
+        cartRepository.save(cart);
+
+        // 7. 返回订单DTO
         return orderAssembler.toDTO(order);
     }
 }

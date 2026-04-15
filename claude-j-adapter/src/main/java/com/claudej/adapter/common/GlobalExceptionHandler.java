@@ -46,6 +46,7 @@ public class GlobalExceptionHandler {
             case ORDER_NOT_FOUND:
             case USER_NOT_FOUND:
             case COUPON_NOT_FOUND:
+            case CART_NOT_FOUND:
                 return HttpStatus.NOT_FOUND;
             case INVALID_SHORT_CODE:
             case INVALID_ORIGINAL_URL:
@@ -71,6 +72,7 @@ public class GlobalExceptionHandler {
             case COUPON_NOT_YET_VALID:
             case COUPON_ORDER_ID_EMPTY:
             case INVALID_COUPON_STATUS_TRANSITION:
+            case CART_EMPTY:
                 return HttpStatus.BAD_REQUEST;
             case ORDER_ALREADY_PAID:
             case ORDER_NOT_PAID:

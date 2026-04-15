@@ -1,6 +1,7 @@
 package com.claudej.adapter.order.web;
 
 import com.claudej.adapter.common.GlobalExceptionHandler;
+import com.claudej.adapter.order.web.request.CreateOrderFromCartRequest;
 import com.claudej.adapter.order.web.request.CreateOrderRequest;
 import com.claudej.application.order.dto.OrderDTO;
 import com.claudej.application.order.service.OrderApplicationService;
@@ -170,5 +171,75 @@ class OrderControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.errorCode", is("INVALID_ORDER_STATUS_TRANSITION")));
+    }
+
+    @Test
+    void should_return200_when_createOrderFromCart_success() throws Exception {
+        // Given
+        CreateOrderFromCartRequest request = new CreateOrderFromCartRequest();
+        request.setCustomerId("CUST001");
+
+        mockOrderDTO.setTotalAmount(new BigDecimal("11998.00"));
+
+        when(orderApplicationService.createOrderFromCart(any())).thenReturn(mockOrderDTO);
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/orders/from-cart")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.orderId", is("ORD123456")))
+                .andExpect(jsonPath("$.data.customerId", is("CUST001")))
+                .andExpect(jsonPath("$.data.status", is("CREATED")));
+    }
+
+    @Test
+    void should_return400_when_createOrderFromCart_withBlankCustomerId() throws Exception {
+        // Given
+        CreateOrderFromCartRequest request = new CreateOrderFromCartRequest();
+        request.setCustomerId("");  // Invalid: empty customerId
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/orders/from-cart")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void should_return404_when_createOrderFromCart_cartNotFound() throws Exception {
+        // Given
+        CreateOrderFromCartRequest request = new CreateOrderFromCartRequest();
+        request.setCustomerId("CUST001");
+
+        when(orderApplicationService.createOrderFromCart(any()))
+                .thenThrow(new BusinessException(ErrorCode.CART_NOT_FOUND));
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/orders/from-cart")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.errorCode", is("CART_NOT_FOUND")));
+    }
+
+    @Test
+    void should_return400_when_createOrderFromCart_cartIsEmpty() throws Exception {
+        // Given
+        CreateOrderFromCartRequest request = new CreateOrderFromCartRequest();
+        request.setCustomerId("CUST001");
+
+        when(orderApplicationService.createOrderFromCart(any()))
+                .thenThrow(new BusinessException(ErrorCode.CART_EMPTY));
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/orders/from-cart")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.errorCode", is("CART_EMPTY")));
     }
 }

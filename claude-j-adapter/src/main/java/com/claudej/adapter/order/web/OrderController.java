@@ -1,10 +1,12 @@
 package com.claudej.adapter.order.web;
 
 import com.claudej.adapter.common.ApiResult;
+import com.claudej.adapter.order.web.request.CreateOrderFromCartRequest;
 import com.claudej.adapter.order.web.request.CreateOrderRequest;
 import com.claudej.adapter.order.web.response.OrderItemResponse;
 import com.claudej.adapter.order.web.response.OrderResponse;
 import com.claudej.application.order.command.CreateOrderCommand;
+import com.claudej.application.order.command.CreateOrderFromCartCommand;
 import com.claudej.application.order.dto.OrderDTO;
 import com.claudej.application.order.service.OrderApplicationService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -97,6 +99,21 @@ public class OrderController {
     public ApiResult<OrderResponse> cancelOrder(@PathVariable String orderId) {
         OrderDTO dto = orderApplicationService.cancelOrder(orderId);
         OrderResponse response = convertToResponse(dto);
+        return ApiResult.ok(response);
+    }
+
+    /**
+     * 从购物车创建订单
+     */
+    @PostMapping("/from-cart")
+    public ApiResult<OrderResponse> createOrderFromCart(@Valid @RequestBody CreateOrderFromCartRequest request) {
+        CreateOrderFromCartCommand command = new CreateOrderFromCartCommand();
+        command.setCustomerId(request.getCustomerId());
+        command.setCouponId(request.getCouponId());
+
+        OrderDTO dto = orderApplicationService.createOrderFromCart(command);
+        OrderResponse response = convertToResponse(dto);
+
         return ApiResult.ok(response);
     }
 

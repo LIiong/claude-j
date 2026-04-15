@@ -2,8 +2,15 @@ package com.claudej.application.order.service;
 
 import com.claudej.application.order.assembler.OrderAssembler;
 import com.claudej.application.order.command.CreateOrderCommand;
+import com.claudej.application.order.command.CreateOrderFromCartCommand;
 import com.claudej.application.order.dto.OrderDTO;
+import com.claudej.domain.cart.model.aggregate.Cart;
+import com.claudej.domain.cart.model.entity.CartItem;
+import com.claudej.domain.cart.model.valobj.Money;
+import com.claudej.domain.cart.model.valobj.Quantity;
+import com.claudej.domain.cart.repository.CartRepository;
 import com.claudej.domain.common.exception.BusinessException;
+import com.claudej.domain.common.exception.ErrorCode;
 import com.claudej.domain.order.model.aggregate.Order;
 import com.claudej.domain.order.model.valobj.CustomerId;
 import com.claudej.domain.order.model.valobj.OrderId;
@@ -33,14 +40,19 @@ class OrderApplicationServiceTest {
     private OrderRepository orderRepository;
 
     @Mock
+    private CartRepository cartRepository;
+
+    @Mock
     private OrderAssembler orderAssembler;
 
     @InjectMocks
     private OrderApplicationService orderApplicationService;
 
     private CreateOrderCommand createCommand;
+    private CreateOrderFromCartCommand createFromCartCommand;
     private Order mockOrder;
     private OrderDTO mockOrderDTO;
+    private Cart mockCart;
 
     @BeforeEach
     void setUp() {
@@ -55,6 +67,9 @@ class OrderApplicationServiceTest {
 
         createCommand.setItems(Arrays.asList(item1));
 
+        createFromCartCommand = new CreateOrderFromCartCommand();
+        createFromCartCommand.setCustomerId("CUST001");
+
         mockOrder = Order.create(new CustomerId("CUST001"));
         mockOrder.addItem(com.claudej.domain.order.model.entity.OrderItem.create(
                 "PROD001", "iPhone", 2,
@@ -65,6 +80,10 @@ class OrderApplicationServiceTest {
         mockOrderDTO.setOrderId("ORD123456");
         mockOrderDTO.setCustomerId("CUST001");
         mockOrderDTO.setStatus("CREATED");
+
+        // 创建有商品的购物车
+        mockCart = Cart.create("CUST001");
+        mockCart.addItem("PROD001", "iPhone", Money.cny(5999), new Quantity(2));
     }
 
     @Test
@@ -154,5 +173,75 @@ class OrderApplicationServiceTest {
         // Then
         assertThat(result).isNotNull();
         verify(orderRepository).save(any(Order.class));
+    }
+
+    @Test
+    void should_createOrderFromCart_when_cartExistsWithItems() {
+        // Given
+        when(cartRepository.findByUserId("CUST001")).thenReturn(Optional.of(mockCart));
+        when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
+        when(cartRepository.save(any(Cart.class))).thenReturn(mockCart);
+        when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
+
+        // When
+        OrderDTO result = orderApplicationService.createOrderFromCart(createFromCartCommand);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getOrderId()).isEqualTo("ORD123456");
+        verify(cartRepository).findByUserId("CUST001");
+        verify(orderRepository).save(any(Order.class));
+        verify(cartRepository).save(any(Cart.class));
+    }
+
+    @Test
+    void should_throwBusinessException_when_cartNotFound() {
+        // Given
+        when(cartRepository.findByUserId("CUST001")).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> orderApplicationService.createOrderFromCart(createFromCartCommand))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("购物车不存在");
+    }
+
+    @Test
+    void should_throwBusinessException_when_cartIsEmpty() {
+        // Given
+        Cart emptyCart = Cart.create("CUST001");
+        when(cartRepository.findByUserId("CUST001")).thenReturn(Optional.of(emptyCart));
+
+        // When & Then
+        assertThatThrownBy(() -> orderApplicationService.createOrderFromCart(createFromCartCommand))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("购物车为空");
+    }
+
+    @Test
+    void should_throwBusinessException_when_customerIdIsBlank() {
+        // Given
+        CreateOrderFromCartCommand command = new CreateOrderFromCartCommand();
+        command.setCustomerId("");
+
+        // When & Then
+        assertThatThrownBy(() -> orderApplicationService.createOrderFromCart(command))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("客户ID不能为空");
+    }
+
+    @Test
+    void should_clearCartAfterOrderCreation() {
+        // Given
+        when(cartRepository.findByUserId("CUST001")).thenReturn(Optional.of(mockCart));
+        when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
+        when(cartRepository.save(any(Cart.class))).thenReturn(mockCart);
+        when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
+
+        // When
+        orderApplicationService.createOrderFromCart(createFromCartCommand);
+
+        // Then
+        assertThat(mockCart.isEmpty()).isTrue();
+        verify(cartRepository).save(mockCart);
     }
 }

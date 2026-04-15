@@ -1,104 +1,134 @@
 ---
 task-id: "008-order-from-cart"
-from: architect
-to: dev
-status: approved
+from: dev
+to: qa
+status: pending-review
 timestamp: "2026-04-15T11:30:00"
-summary: "架构评审通过，可以进入 Build 阶段"
+summary: "开发完成，三项预飞检查全部通过，等待 QA 验收"
+pre-flight:
+  mvn-test: pass
+  checkstyle: pass
+  entropy-check: pass
 ---
 
 # 交接文档
 
-## 任务概述
+## 开发完成情况
 
-实现从购物车创建订单的桥梁功能，连接购物车与订单模块。
+### 已实现功能
 
-## 设计要点
+- [x] 添加 CART_EMPTY 错误码
+- [x] 创建 CreateOrderFromCartCommand
+- [x] 实现 OrderApplicationService.createOrderFromCart 方法
+- [x] 编写 Application 层单元测试
+- [x] 创建 CreateOrderFromCartRequest
+- [x] 实现 OrderController.createOrderFromCart 端点
+- [x] 编写 Adapter 层单元测试
+- [x] 创建集成测试 OrderFromCartIntegrationTest
 
-### 业务需求
-- 支持用户从购物车直接创建订单
-- 下单成功后自动清空购物车
-- 事务保证数据一致性
+### 变更文件清单
 
-### 技术方案
-- **Domain 层**: 无变更，复用现有 Order、Cart 聚合
-- **Application 层**: 新增 `createOrderFromCart` 方法，编排 Cart + Order 两个聚合
-- **Adapter 层**: 新增 `POST /api/v1/orders/from-cart` 端点
+| # | 文件路径 | 变更类型 | 说明 |
+|---|---------|---------|------|
+| 1 | `claude-j-domain/.../common/exception/ErrorCode.java` | 修改 | 添加 CART_EMPTY 错误码 |
+| 2 | `claude-j-application/.../order/command/CreateOrderFromCartCommand.java` | 新增 | 从购物车创建订单命令 |
+| 3 | `claude-j-application/.../order/service/OrderApplicationService.java` | 修改 | 添加 createOrderFromCart 方法，注入 CartRepository |
+| 4 | `claude-j-adapter/.../order/web/request/CreateOrderFromCartRequest.java` | 新增 | 从购物车创建订单请求 |
+| 5 | `claude-j-adapter/.../order/web/OrderController.java` | 修改 | 添加 POST /from-cart 端点 |
+| 6 | `claude-j-adapter/.../common/GlobalExceptionHandler.java` | 修改 | 添加 CART 错误码 HTTP 状态码映射 |
 
-### 事务边界
-应用服务层使用 `@Transactional` 保证：
-1. 查询购物车
-2. 验证购物车非空
-3. 创建订单
-4. 保存订单
-5. 清空购物车
-6. 保存购物车（空状态）
+### 测试文件清单
 
-以上所有操作在同一个事务中完成。
+| # | 文件路径 | 说明 |
+|---|---------|------|
+| 1 | `claude-j-application/.../order/service/OrderApplicationServiceTest.java` | 新增 5 个测试方法 |
+| 2 | `claude-j-adapter/.../order/web/OrderControllerTest.java` | 新增 4 个测试方法 |
+| 3 | `claude-j-start/.../order/OrderFromCartIntegrationTest.java` | 新增集成测试类 |
 
-### 异常场景
-| 场景 | HTTP状态码 | 错误码 |
-|------|-----------|--------|
-| 购物车不存在 | 404 | CART_NOT_FOUND |
-| 购物车为空 | 400 | CART_EMPTY |
-| 客户ID为空 | 400 | PARAM_INVALID |
+## 预飞检查结果
 
-### 变更清单
+| 检查项 | 结果 | 说明 |
+|-------|------|------|
+| mvn test | **PASS** | 367 个测试全部通过 |
+| mvn checkstyle:check | **PASS** | 0 violations |
+| ./scripts/entropy-check.sh | **PASS** | 0 FAIL, 3 WARN（均为已有警告，非本任务引入）|
 
-#### 新增文件
-1. `CreateOrderFromCartRequest.java` - 请求对象
-2. `CreateOrderFromCartCommand.java` - 命令对象
+## API 端点
 
-#### 修改文件
-3. `ErrorCode.java` - 添加 CART_EMPTY 错误码
-4. `OrderApplicationService.java` - 添加 createOrderFromCart 方法
-5. `OrderController.java` - 添加 POST /from-cart 端点
+### POST /api/v1/orders/from-cart
 
-#### 测试文件
-6. `OrderApplicationServiceTest.java` - 应用服务单元测试（新增测试方法）
-7. `OrderControllerTest.java` - 控制器单元测试（新增测试方法）
-8. `OrderFromCartIntegrationTest.java` - 集成测试
+从购物车创建订单。
 
-## 待评审内容
+**请求体：**
+```json
+{
+    "customerId": "USER001",
+    "couponId": "COUPON001"  // 可选
+}
+```
 
-1. 应用服务层同时依赖 CartRepository 和 OrderRepository 是否合理？
-2. 事务边界是否合适？是否需要考虑分布式事务？
-3. 是否需要添加用户状态验证？
-4. 优惠券预留扩展点的设计是否合适？
+**响应：**
+```json
+{
+    "success": true,
+    "data": {
+        "orderId": "ORDER20250415001",
+        "customerId": "USER001",
+        "status": "CREATED",
+        "totalAmount": 299.99,
+        "currency": "CNY",
+        "items": [...],
+        "createTime": "2026-04-15T10:00:00"
+    }
+}
+```
 
-## 文档清单
+**HTTP 状态码：**
+- 200: 下单成功
+- 400: 购物车为空 / 客户ID为空
+- 404: 购物车不存在
+- 500: 服务器内部错误
 
-- [x] requirement-design.md - 需求设计（已存在）
-- [x] task-plan.md - 任务计划（已创建）
-- [x] dev-log.md - 开发日志（已创建，空文件）
+## 业务流程
+
+```
+1. 验证 customerId 非空
+2. 查询购物车
+3. 验证购物车非空
+4. 创建订单（将购物车项转为订单项）
+5. 保存订单
+6. 清空购物车
+7. 保存购物车（空状态）
+8. 返回订单信息
+```
+
+所有操作在同一事务中完成。
+
+## 待 QA 验证
+
+- [ ] 正常流程：从购物车创建订单成功
+- [ ] 异常场景：购物车不存在
+- [ ] 异常场景：购物车为空
+- [ ] 异常场景：客户ID为空
+- [ ] 数据一致性：订单创建后购物车被清空
+- [ ] 集成测试通过
 
 ---
 
-# 架构评审回复区
+# QA 验收回复区
 
-<!-- architect 评审后填写 -->
+<!-- qa 验收后填写 -->
 
-## 评审意见
+## 验收结论
 
-### 评审结论
-- [x] approved - 设计通过，可以进入 Build 阶段
-- [ ] changes-requested - 需要修改设计
+- [ ] approved - 验收通过
+- [ ] changes-requested - 需要修改
 
-### 具体意见
+## 问题清单
 
-详见 `requirement-design.md` 中「架构评审」章节。核心结论：
+<!-- 如有问题请列出 -->
 
-1. **应用服务层依赖**：合理，应用服务职责就是编排多个聚合
-2. **事务边界**：单服务场景下 `@Transactional` 足够，无需分布式事务
-3. **用户状态验证**：设计已预留扩展点，M1 阶段可跳过
-4. **优惠券扩展点**：设计合理，couponId 作为可选字段传入
-5. **DDD 架构合规**：完全符合六边形架构约束
-6. **Java 8 规范**：合规
+## 验收人
 
-### 补充 ADR
-- [ ] 需要创建 ADR 记录重要决策
-- 无需新增 ADR，本功能遵循已有架构决策
-
-## 评审人
-- 评审者：@architect
-- 评审时间：2026-04-15
+- 验收者：@qa
+- 验收时间：

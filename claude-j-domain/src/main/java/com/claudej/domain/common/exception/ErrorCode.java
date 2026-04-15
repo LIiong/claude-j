@@ -6,6 +6,7 @@ public enum ErrorCode {
 
     // Cart Management
     CART_NOT_FOUND("CART_NOT_FOUND", "购物车不存在"),
+    CART_EMPTY("CART_EMPTY", "购物车为空，无法下单"),
     CART_ITEM_NOT_FOUND("CART_ITEM_NOT_FOUND", "购物车商品不存在"),
     CART_ITEM_QUANTITY_INVALID("CART_ITEM_QUANTITY_INVALID", "商品数量必须在1-999之间"),
     CART_MONEY_AMOUNT_NULL("CART_MONEY_AMOUNT_NULL", "金额不能为空"),
