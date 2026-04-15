@@ -99,7 +99,9 @@
       "Bash(grep -n \"echo.*current-role\" /Users/macro.li/aiProject/claude-j/.claude/agents/*.md)",
       "Bash(grep -i \"guard-agent-scope\\\\|\\\\.claude-current-role\" /Users/macro.li/aiProject/claude-j/.claude/agents/*.md)",
       "Bash(grep -n \"entropy.*12\\\\|12.*entropy\" /Users/macro.li/aiProject/claude-j/.claude/skills/*/SKILL.md /Users/macro.li/aiProject/claude-j/.claude/agents/*.md)",
-      "Bash(xargs cat:*)"
+      "Bash(xargs cat:*)",
+      "Bash(mvn checkstyle:check -B -q)",
+      "Bash(xargs -I{} echo \"{} 个 Java 文件\")"
     ]
   }
 }
