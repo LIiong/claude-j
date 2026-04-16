@@ -47,6 +47,8 @@ public class GlobalExceptionHandler {
             case USER_NOT_FOUND:
             case COUPON_NOT_FOUND:
             case CART_NOT_FOUND:
+            case AUTH_USER_NOT_FOUND:
+            case SESSION_NOT_FOUND:
                 return HttpStatus.NOT_FOUND;
             case INVALID_SHORT_CODE:
             case INVALID_ORIGINAL_URL:
@@ -73,6 +75,14 @@ public class GlobalExceptionHandler {
             case COUPON_ORDER_ID_EMPTY:
             case INVALID_COUPON_STATUS_TRANSITION:
             case CART_EMPTY:
+            case INVALID_PASSWORD:
+            case INVALID_CREDENTIALS:
+            case INVALID_TOKEN:
+            case INVALID_VERIFICATION_CODE:
+            case VERIFICATION_CODE_TOO_FREQUENT:
+            case INVALID_USER_ID:
+            case INVALID_SESSION:
+            case PASSWORD_MISMATCH:
                 return HttpStatus.BAD_REQUEST;
             case ORDER_ALREADY_PAID:
             case ORDER_NOT_PAID:
@@ -80,7 +90,14 @@ public class GlobalExceptionHandler {
             case ORDER_ALREADY_DELIVERED:
             case ORDER_ALREADY_CANCELLED:
             case ORDER_CANNOT_CANCEL:
+            case AUTH_USER_ALREADY_EXISTS:
+            case EMAIL_ALREADY_VERIFIED:
+            case PHONE_ALREADY_VERIFIED:
                 return HttpStatus.CONFLICT;
+            case USER_LOCKED:
+            case USER_DISABLED:
+            case TOKEN_EXPIRED:
+                return HttpStatus.FORBIDDEN;
             default:
                 return HttpStatus.INTERNAL_SERVER_ERROR;
         }
