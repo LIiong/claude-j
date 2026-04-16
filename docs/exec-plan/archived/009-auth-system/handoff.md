@@ -1,8 +1,8 @@
 ---
 task-id: 009-auth-system
 from: qa
-to: dev
-status: accepted
+to: ship
+status: shipped
 ---
 
 ## 预飞检查结果

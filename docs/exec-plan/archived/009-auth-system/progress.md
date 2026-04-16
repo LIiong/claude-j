@@ -7,8 +7,8 @@ Build 完成，进入 QA 验收
 - [x] Spec 完成（requirement-design.md + task-plan.md）
 - [x] 架构评审通过
 - [x] Build 完成
-- [ ] QA 验收通过
-- [ ] 任务归档
+- [x] QA 验收通过
+- [x] 任务归档
 
 ## 变更记录
 | 时间 | 操作 | 提交 |
@@ -16,6 +16,8 @@ Build 完成，进入 QA 验收
 | 2026-04-16 | 创建任务目录 | - |
 | 2026-04-16 | 完成 Spec 阶段 | - |
 | 2026-04-16 | Build 完成 | Infrastructure + Adapter + Start 层实现 |
+| 2026-04-16 | QA 验收通过 | test-report.md |
+| 2026-04-16 | 任务归档 | 移至 archived/009-auth-system |
 
 ## Build 阶段完成详情
 
