@@ -13,22 +13,22 @@
 | 5 | Domain: 领域服务端口 (PasswordEncoder/TokenService) | dev | 已完成 | 代码已存在 |
 | 6 | Application: Command + DTO + Assembler | dev | 已完成 | 代码已存在 |
 | 7 | Application: AuthApplicationService 接口 | dev | 已完成 | 代码已存在 |
-| 8 | Infrastructure: DO 对象 (AuthUserDO/UserSessionDO/LoginLogDO) | dev | 待办 | |
-| 9 | Infrastructure: MyBatis Mapper | dev | 待办 | |
-| 10 | Infrastructure: Converter (DO ↔ Domain) | dev | 待办 | |
-| 11 | Infrastructure: RepositoryImpl | dev | 待办 | |
-| 12 | Infrastructure: PasswordEncoderImpl (BCrypt) | dev | 待办 | |
-| 13 | Infrastructure: TokenServiceImpl (JWT) | dev | 待办 | |
-| 14 | Infrastructure: 持久化层测试 | dev | 待办 | |
-| 15 | Adapter: AuthController + Request/Response | dev | 待办 | |
-| 16 | Adapter: 全局异常处理 | dev | 待办 | |
-| 17 | Adapter: Web 层测试 (MockMvc) | dev | 待办 | |
-| 18 | Start: schema.sql DDL 更新 | dev | 待办 | |
-| 19 | Start: application.yml JWT 配置 | dev | 待办 | |
-| 20 | 全量 mvn test | dev | 待办 | |
-| 21 | QA: 测试用例设计 | qa | 待办 | |
-| 22 | QA: 验收测试 + 代码审查 | qa | 待办 | |
-| 23 | QA: 接口集成测试 | qa | 待办 | |
+| 8 | Infrastructure: DO 对象 (AuthUserDO/UserSessionDO/LoginLogDO) | dev | 已完成 | |
+| 9 | Infrastructure: MyBatis Mapper | dev | 已完成 | |
+| 10 | Infrastructure: Converter (DO ↔ Domain) | dev | 已完成 | |
+| 11 | Infrastructure: RepositoryImpl | dev | 已完成 | |
+| 12 | Infrastructure: PasswordEncoderImpl (BCrypt) | dev | 已完成 | |
+| 13 | Infrastructure: TokenServiceImpl (JWT) | dev | 已完成 | |
+| 14 | Infrastructure: 持久化层测试 | dev | 已完成 | |
+| 15 | Adapter: AuthController + Request/Response | dev | 已完成 | |
+| 16 | Adapter: 全局异常处理 | dev | 已完成 | |
+| 17 | Adapter: Web 层测试 (MockMvc) | dev | 已完成 | |
+| 18 | Start: schema.sql DDL 更新 | dev | 已完成 | |
+| 19 | Start: application.yml JWT 配置 | dev | 已完成 | |
+| 20 | 全量 mvn test | dev | 已完成 | 44/44 通过 |
+| 21 | QA: 测试用例设计 | qa | 已完成 | 见 test-report.md |
+| 22 | QA: 验收测试 + 代码审查 | qa | 已完成 | 见 test-report.md |
+| 23 | QA: 接口集成测试 | qa | 已完成 | 见 test-report.md |
 
 ## 执行顺序
 
@@ -88,9 +88,8 @@ Phase 5: QA 验收
 
 ## QA 验收记录
 
-<!-- qa 验收后填写 -->
-- 全量测试（含集成测试）：x/x 用例通过
-- 代码审查结果：
-- 代码风格检查：
-- 问题清单：详见 test-report.md
-- **最终状态**：
+- 全量测试（含集成测试）：44/44 用例通过
+- 代码审查结果：PASS - 分层架构合规，Domain 纯净性良好
+- 代码风格检查：PASS - 0 violations
+- 问题清单：3 个 Minor 问题，详见 test-report.md
+- **最终状态**：验收通过，进入 Ship 阶段

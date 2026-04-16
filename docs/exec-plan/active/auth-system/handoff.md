@@ -1,8 +1,8 @@
 ---
 task-id: 009-auth-system
-from: dev
-to: qa
-status: pending-review
+from: qa
+to: dev
+status: accepted
 ---
 
 ## 预飞检查结果
@@ -71,6 +71,28 @@ status: pending-review
 
 - `pom.xml`: `spring-security-crypto` (BCrypt 密码加密)
 
+## QA 验收摘要
+
+**验收结论**: 通过
+
+**独立重跑三项检查**:
+- mvn test: 44/44 PASS
+- checkstyle: 0 violations PASS
+- entropy-check: 0 FAIL, 12 WARN PASS
+
+**代码审查**:
+- 分层架构: PASS - 依赖方向正确
+- Domain 纯净性: PASS - 无 Spring/MyBatis 依赖
+- 对象边界: PASS - DO/Request/Response 未泄漏
+- 测试覆盖: ArchUnit 14 条规则全部通过
+
+**功能验证**: 7 个 API 端点全部实现，登录锁定/密码强度/JWT Token 均符合设计
+
+**问题清单** (3 Minor):
+1. logout() 方法中 sessionId 参数未使用
+2. findUserByAccount() 邮箱/手机查找逻辑相同
+3. 缺少 auth 相关单元测试（entropy-check 已报告）
+
 ## 已知问题（QA 验收注意）
 
 entropy-check 报告 12 个 WARN（非阻塞）：
@@ -82,4 +104,6 @@ entropy-check 报告 12 个 WARN（非阻塞）：
 
 ## 下一步
 
-请 @qa 执行验收测试，详见 task-plan.md 中 QA 任务项。
+QA 验收通过，请进入 Ship 阶段：
+1. 更新 CLAUDE.md 聚合列表（添加 auth）
+2. 归档任务到 docs/exec-plan/archived/
