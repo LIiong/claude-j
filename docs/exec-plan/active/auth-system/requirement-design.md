@@ -346,3 +346,82 @@ CREATE TABLE IF NOT EXISTS t_login_log (
 **设计人**: @dev
 **设计时间**: 2026-04-16
 **状态**: pending-review
+
+---
+
+## 架构评审
+
+### 评审结论
+通过，建议 minor 优化
+
+### 评审检查项
+
+#### 1. 聚合边界与循环依赖
+- [x] **聚合根边界合理**：AuthUser 作为认证聚合根，职责清晰（管理凭证和状态）
+- [x] **与 user 聚合解耦**：通过 UserId 值对象弱关联，符合 DDD 最佳实践
+- [x] **无循环依赖**：auth 聚合仅依赖 user 聚合的 UserId VO，无反向依赖
+
+#### 2. 六边形架构合规
+- [x] **依赖方向正确**：adapter -> application -> domain <- infrastructure
+- [x] **domain 纯净性**：AuthUser、UserSession、LoginLog 及值对象均无 Spring/MyBatis 依赖
+- [x] **Repository 端口定义在 domain**：AuthUserRepository、UserSessionRepository、LoginLogRepository 均位于 domain.auth.repository
+- [x] **领域服务端口正确定义**：PasswordEncoder、TokenService 在 domain.auth.service 定义，由 infrastructure 实现
+
+#### 3. 对象边界
+- [x] **Request/Response 仅在 adapter**：设计文档中明确列在 adapter 层
+- [x] **DO 仅在 infrastructure**：设计文档中 DO 对象明确归属 infrastructure
+- [x] **Domain 对象不直接暴露**：TokenResponseDTO 用于 API 响应
+- [x] **DTO 转换链完整**：Request/Response <-> DTO <-> Domain <-> DO
+
+#### 4. 领域建模
+- [x] **聚合根封装不变量**：AuthUser 封装了登录锁定、密码修改、状态流转等所有业务规则
+- [x] **值对象不可变**：Password、JwtToken、SessionId 均为 final 字段，通过工厂方法创建
+- [x] **值对象相等语义**：均使用 @EqualsAndHashCode，符合要求
+- [x] **登录失败锁定在 domain 实现**：recordLoginFailure() 方法在聚合根内实现，正确
+
+#### 5. Repository 设计
+- [x] **方法粒度合适**：save/findByUserId/update/delete 覆盖基本 CRUD 需求
+- [ ] **建议**：AuthUserRepository.findByUserId 返回 Optional<AuthUser>，建议增加 findById(Long id) 用于内部关联查询
+
+#### 6. DDL 设计
+- [x] **表名规范**：t_auth_user、t_user_session、t_login_log 符合 t_{entity} 命名
+- [x] **列名规范**：snake_case 命名
+- [x] **索引合理**：idx_status、idx_user_id、idx_refresh_token、idx_create_time 覆盖查询场景
+- [x] **字段映射**：与 Domain 模型字段对应清晰
+
+#### 7. API 设计
+- [x] **RESTful 规范**：路径清晰，HTTP 方法使用 POST（操作型语义）
+- [x] **版本控制**：/api/v1 前缀
+- [ ] **建议**：短信登录路径 /api/v1/auth/login/sms 符合资源语义，但可考虑统一为 /api/v1/auth/login?type=sms
+
+#### 8. 安全性设计
+- [x] **密码加密**：BCrypt strength=10 符合业界标准（默认即 10）
+- [x] **JWT 配置**：HS256 算法，Access 1h / Refresh 7d 合理
+- [x] **Refresh Token 存储**：存储于数据库支持撤销和多设备管理，是可接受的方案
+- [x] **密码强度验证**：8-128位，大小写+数字+特殊字符，在 Password VO 中实现
+
+### 评审意见
+
+| 序号 | 问题 | 建议 | 严重程度 |
+|------|------|------|----------|
+| 1 | 暂无 UserSession 的更新方法 | UserSessionRepository 建议增加 update/deleteByRefreshToken 用于 Token 刷新场景 | minor |
+| 2 | AuthUser.verifyPassword 实现 | 当前比较明文哈希，实际应由 PasswordEncoder.matches 在 application 层完成比较，设计正确 | info |
+| 3 | JWT Token claims 设计 | 建议 access token claims 中包含 token 类型标识（typ: access）便于区分 | minor |
+
+### ADR 建议
+
+建议创建 ADR 记录以下架构决策：
+
+1. **ADR-003: Auth 聚合与 User 聚合分离策略**
+   - 决策：认证凭证与用户基本信息分属不同聚合
+   - 理由：职责分离、独立演进、避免事务跨聚合
+
+2. **ADR-004: Refresh Token 数据库存储方案**
+   - 决策：Refresh Token 存储于数据库而非纯内存/Redis
+   - 理由：支持 Token 撤销、多设备管理、审计追踪
+
+### 评审人
+architect
+
+### 评审时间
+2026-04-16
