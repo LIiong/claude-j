@@ -26,6 +26,8 @@ jobs:
 
       - name: Compile all modules
         run: mvn compile -q -B
+        env:
+          JWT_SECRET: test-jwt-secret-key-for-ci-at-least-32-bytes
 
   unit-tests:
     name: Unit Tests (Domain + Application)
@@ -43,6 +45,8 @@ jobs:
 
       - name: Run domain & application tests
         run: mvn test -pl claude-j-domain,claude-j-application -B
+        env:
+          JWT_SECRET: test-jwt-secret-key-for-ci-at-least-32-bytes
 
       - name: Upload test reports
         if: always()
@@ -69,6 +73,8 @@ jobs:
 
       - name: Run integration & ArchUnit tests
         run: mvn test -pl claude-j-infrastructure,claude-j-adapter,claude-j-start -B
+        env:
+          JWT_SECRET: test-jwt-secret-key-for-ci-at-least-32-bytes
 
       - name: Upload test reports
         if: always()
