@@ -1,0 +1,1 @@
+../.claude/skills/ralph/scripts/ralph-auto.sh

@@ -39,6 +39,7 @@ memory: project
 
 ### 1. 阅读设计文档
 - 读取 `{task-dir}/requirement-design.md`
+- 读取 `{task-dir}/task-plan.md`（新增：评审计划粒度与可执行性）
 - 读取 `{task-dir}/handoff.md` 确认状态为 `pending-review` 且 `to: architect`
 
 ### 2. 交叉验证
@@ -53,6 +54,8 @@ memory: project
 ```
 确认当前架构基线无违规。
 
+> **举证铁律**：本次必须真实运行，退出码写入评审章节。详见 `.claude/skills/verification-before-completion/SKILL.md`。
+
 ### 4. 编写评审意见
 在 `requirement-design.md` 末尾追加「架构评审」章节：
 
@@ -63,7 +66,9 @@ memory: project
 **日期**：{YYYY-MM-DD}
 **结论**：✅ 通过 / ❌ 待修改
 
-### 评审检查项
+### 评审检查项（12 维三类）
+
+**架构合规（7 项）**
 - [ ] 聚合根边界合理（遵循事务一致性原则）
 - [ ] 值对象识别充分（金额、标识符等应为 VO）
 - [ ] Repository 端口粒度合适（方法不多不少）
@@ -71,6 +76,22 @@ memory: project
 - [ ] DDL 设计与领域模型一致（字段映射、索引合理）
 - [ ] API 设计符合 RESTful 规范
 - [ ] 对象转换链正确（DO ↔ Domain ↔ DTO ↔ Request/Response）
+
+**需求质量（3 项 — 新增）**
+- [ ] 需求无歧义：核心名词、流程、异常分支均有明确定义
+- [ ] 验收条件可验证：每条 AC 可转化为 `should_xxx_when_yyy` 测试用例
+- [ ] 业务规则完备：状态机/不变量/边界值在需求中已列明
+
+**计划可执行性（2 项 — 新增）**
+- [ ] task-plan 粒度合格：按层任务已分解到原子级（10–15 分钟/步），每步含文件路径 + 验证命令 + 预期输出（详见 `docs/exec-plan/templates/task-plan.template.md` 原子任务章节）
+- [ ] 依赖顺序正确：domain → application → infrastructure → adapter → start 自下而上，层间依赖无倒置
+
+**心智原则（Karpathy — 动手前自检）**
+- [ ] **简洁性**：需求未要求的抽象/配置/工厂已移除；任何单一实现的 `XxxStrategy`/`XxxFactory` 需说明存在理由
+- [ ] **外科性**：设计仅改动任务直接相关的文件；若涉及跨聚合大改，在评审意见说明理由
+- [ ] **假设显性**：需求里含糊的字段/边界/异常，requirement-design 已在「假设与待确认」列出
+
+> 完整原则与反模式：`.claude/rules/karpathy-guidelines.md`
 
 ### 评审意见
 {具体意见、建议、问题}

@@ -55,6 +55,30 @@ adapter → application → domain ← infrastructure ← start(assembles all)
 - 表名 `t_{entity}`，列名 snake_case
 - 重要决策记录 ADR（`docs/architecture/decisions/`）
 
+## 三条心智铁律（Iron Laws）
+这三条约束跨越所有阶段与所有角色，优先级高于任何"效率/紧急"借口：
+
+```
+1. TDD          —  NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
+2. VERIFICATION —  NO COMPLETION CLAUMS WITHOUT FRESH VERIFICATION EVIDENCE
+3. DEBUG        —  NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
+```
+
+- TDD 细则 + 11 项反模式对照：`docs/standards/java-test.md`
+- 举证规则 + 禁用词汇：`.claude/skills/verification-before-completion/SKILL.md` + `.claude/rules/verification-gate.md`
+- 4 阶段调试铁轨：`.claude/skills/systematic-debugging/SKILL.md`
+
+## 四项心智原则（Karpathy Guidelines）
+
+铁律管"绝对红线"，原则管"选择时默认往哪偏"。所有任务都先往这四条上靠：
+
+1. **想清楚再写** — 显式声明假设，多解法全部列出，不懂就停。
+2. **简洁优先** — 最少代码解决问题，零投机，无需求外功能/抽象/配置。
+3. **外科式变更** — 只动该动的，匹配既有风格，不"顺手优化"相邻代码。
+4. **目标驱动执行** — 任务必须转成可验证目标（"写测试先红后绿"而非"工作正常"）。
+
+完整规则与本土化触发点：`.claude/rules/karpathy-guidelines.md`（alwaysApply，所有角色通用）。
+
 ## 自动化守护
 
 以下约束由 Hooks + 工具自动执行，**无需手动检查**：
@@ -84,6 +108,14 @@ adapter → application → domain ← infrastructure ← start(assembles all)
 | `/task-status [task-id]` | 查看任务状态一览（傻瓜式进度查询） |
 | `/full-check` | mvn test + checkstyle + entropy-check |
 
+### 自动触发 Skill（不可手动调用）
+这些 skill 由 agent 在满足条件时自动触发，无需用户调用：
+
+| Skill | 触发时机 | 作用 |
+|-------|---------|------|
+| `verification-before-completion` | 任何角色声称"通过/完成/修复"前 | 强制先跑命令、再附证据 |
+| `systematic-debugging` | @dev 收到 QA changes-requested 或遇测试失败 | 4 阶段根因调查铁轨 |
+
 ## Agent 团队
 
 采用**编排主 Agent + 子 Agent** 模式，杜绝上下文溢出：
@@ -103,8 +135,33 @@ Ralph（编排主 Agent — 只做决策和调度）
 
 协作流程、上下文隔离规则、返工限制见 `.claude/rules/agent-collaboration.md`
 
+## Skill 打包结构
+
+Skill 专属脚本随 skill 一起打包，整体移植：
+
+```
+.claude/skills/ralph/        ├── SKILL.md
+                             └── scripts/ (ralph-init.sh, ralph-loop.sh, ralph-auto.sh)
+.claude/skills/full-check/   ├── SKILL.md
+                             └── scripts/ (entropy-check.sh, quick-check.sh)
+scripts/                     ├── hooks/          (守护 Hook，独立)
+                             ├── githooks/      (Git Hook，独立)
+                             ├── setup.sh / claude-gate.sh / dev-gate.sh
+                             └── *.sh → 指向 .claude/skills/.../scripts/ 的符号链接
+```
+
+**为什么**：将脚本与 skill 打包可独立移植（复制整个 `.claude/skills/<skill>/` 即可），`scripts/` 下的符号链接保证 Hook、CI、已有调用方式零破坏性兼容。
+
 ## 参考文档
 - 架构详解：`docs/architecture/overview.md`
 - 开发规范：`docs/standards/java-dev.md`
 - 测试规范：`docs/standards/java-test.md`
 - 执行计划模板：`docs/exec-plan/templates/`
+- 工业级功能缺口路线图：`docs/roadmap/industry-gap-analysis.md`（半生产级升级待办清单 + Top 10 必做视图）
+
+## 移植到其他项目
+本项目同时是一个**方法论示范**。如需将工作流（Ralph 编排、Agent 协作、5 阶段交付、三层守护）移植到其他项目（Java/Kotlin/TypeScript/Python/Go 等）：
+
+- 📘 移植指南：[`PORTING.md`](./PORTING.md)
+- 🧩 通用模板：[`docs/templates/project/`](./docs/templates/project/)
+- 🛠 脚手架脚本：`./scripts/bootstrap-project.sh --help`

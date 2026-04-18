@@ -1,0 +1,1 @@
+../.claude/skills/full-check/scripts/entropy-check.sh

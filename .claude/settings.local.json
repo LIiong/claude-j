@@ -111,7 +111,8 @@
       "Bash(echo \"=== 用户 API ===\"\ncurl -s -X POST \"http://localhost:8081/api/v1/users\" \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"username\":\"testuser\",\"email\":\"test@example.com\",\"phone\":\"13800138000\"}'\n\necho -e \"\\\\n\\\\n=== 优惠券 API ===\"\ncurl -s \"http://localhost:8081/api/v1/coupons\"\n\necho -e \"\\\\n\\\\n=== 订单 API ===\"\ncurl -s \"http://localhost:8081/api/v1/orders\")",
       "Bash(mvn checkstyle:check 2>&1 | grep -A5 \"ERROR\")",
       "Bash(./scripts/quick-check.sh 2>&1 | tail -20)",
-      "Skill(gsd:do)"
+      "Skill(gsd:do)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

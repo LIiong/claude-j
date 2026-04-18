@@ -1,67 +1,91 @@
 ---
 name: qa-ship
-description: "@qa Ship 阶段：验收通过后归档任务目录，更新 CLAUDE.md 聚合列表，确认 ADR 完整。"
+description: "@qa Ship 阶段：验收通过后归档任务目录，更新 CLAUDE.md 聚合列表，确认 ADR 完整，提交归档 commit。"
 user-invocable: true
 disable-model-invocation: true
 argument-hint: "[task-id]-[task-name]"
-allowed-tools: "Read Edit Glob Grep Bash(mv *) Bash(ls *) Bash(git *) Bash(echo *)"
+allowed-tools: "Read Edit Glob Grep Bash(mv *) Bash(ls *) Bash(rm *) Bash(git *) Bash(echo *)"
 ---
 
-# @qa Ship 阶段 — 归档与文档更新
+# @qa Ship 阶段 — 归档与文档同步
 
-QA 验收通过后，归档任务并更新项目文档。
+QA 验收通过后，归档任务目录、同步项目级文档、清理运行时产物。
 
 ## 输入
-- 任务标识：`$ARGUMENTS`（如 `002-order-service`）
+- 任务标识：`$ARGUMENTS`（如 `007-shopping-cart`）
 
-## 执行前：注册角色标记（Hook 自动识别用）
+## 前置条件
+1. `handoff.md` 必须 `status: approved`
+2. `test-report.md` 末尾必须含「验收通过」
+3. 条件不满足 → **停止**，告知用户先运行 `/qa-verify $ARGUMENTS`
+
+## 执行步骤
+
+### 0. 注册角色标记
 ```bash
 echo "qa" > .claude-current-role
 ```
 
-## 前置条件
-1. 阅读 `docs/exec-plan/active/$ARGUMENTS/handoff.md` — 确认 status: approved
-2. 阅读 `docs/exec-plan/active/$ARGUMENTS/test-report.md` — 确认含"验收通过"
-3. 如果上述条件不满足，**停止执行**，告知用户需先运行 `/qa-verify $ARGUMENTS`
-
-## 执行步骤
-
-### 1. 归档任务目录
+### 1. 核验归档前置条件
 ```bash
+grep -E "^status:\s*approved" docs/exec-plan/active/$ARGUMENTS/handoff.md
+grep "验收通过" docs/exec-plan/active/$ARGUMENTS/test-report.md
+```
+任一失败 → 终止并报错。
+
+### 2. 归档任务目录
+```bash
+mkdir -p docs/exec-plan/archived/
 mv docs/exec-plan/active/$ARGUMENTS/ docs/exec-plan/archived/$ARGUMENTS/
 ```
 
-### 2. 更新 CLAUDE.md 聚合列表
-检查本次任务是否引入新聚合（检查 `claude-j-domain/src/main/java/com/claudej/domain/` 下的子目录）：
-- 对比 CLAUDE.md 中"当前聚合列表"表格与 domain 层实际目录
-- 若有新聚合，追加到表格中（包含：聚合名、包名、状态、说明）
+### 3. 同步 CLAUDE.md 聚合列表
+对比 `claude-j-domain/src/main/java/com/claudej/domain/` 下子目录与 CLAUDE.md「当前聚合」表格：
+- 若本任务引入新聚合，在表格追加一行（聚合名、包名、说明）
+- 若仅扩展已有聚合，无需改动
 
-### 3. 确认 ADR 完整
-检查 `docs/architecture/decisions/` 是否有本次任务新增的 ADR 文件：
-- 确认 ADR 文件含"状态"、"背景"、"决策"三节
-- 如缺失，告知用户补充
+### 4. 确认 ADR 完整
+```bash
+ls docs/architecture/decisions/ | grep -i "$ARGUMENTS" || echo "无新增 ADR"
+```
+若有新增 ADR，确认含「状态 / 背景 / 决策」三节。
 
-### 4. 验证归档结果
+### 5. 核验归档产物
 ```bash
 ls docs/exec-plan/archived/$ARGUMENTS/
 ```
-确认以下文件存在：
-- `requirement-design.md`
+必须包含：
+- `requirement-design.md`（含架构评审章节）
 - `task-plan.md`
 - `dev-log.md`
 - `test-case-design.md`
 - `test-report.md`
 - `handoff.md`
 
-### 5. 输出归档摘要
-汇总：
-- 归档路径
-- 新增聚合（若有）
-- 新增 ADR（若有）
-- 遗留问题（Minor 级别待修复项，从 test-report.md 提取）
+### 6. git 提交归档变更
+```bash
+git add docs/exec-plan/ CLAUDE.md
+# 若有新 ADR
+git add docs/architecture/decisions/
+git commit -m "docs(ship): 归档 $ARGUMENTS"
+```
 
-## 下一步
-归档完成后，告知用户：
-- 任务已归档到 `docs/exec-plan/archived/$ARGUMENTS/`
-- 可通过 `git commit` 提交归档变更
-- 如需开始新功能，运行 `/dev-spec [new-task-id]-[task-name]`
+### 7. 清理运行时产物
+```bash
+rm -f .claude-current-role
+```
+
+### 8. 输出归档摘要
+| 项 | 值 |
+|----|-----|
+| 归档路径 | `docs/exec-plan/archived/$ARGUMENTS/` |
+| 新增聚合 | {如有} |
+| 新增 ADR | {如有} |
+| 遗留 Minor 问题 | {从 test-report.md 提取} |
+| 总 commit 数 | {本任务相关 commit 总数} |
+
+## 完成后行为
+
+**独立使用模式**：告知用户任务已归档，可开启新任务（`/dev-spec [new-task-id]`）。
+
+**Ralph 编排模式**：输出归档摘要，Ralph 输出整体交付完成报告。

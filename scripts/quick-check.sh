@@ -1,0 +1,1 @@
+../.claude/skills/full-check/scripts/quick-check.sh

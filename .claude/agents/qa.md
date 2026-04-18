@@ -42,6 +42,8 @@ memory: project
 - `mvn checkstyle:check` — 代码风格检查通过
 - `./scripts/entropy-check.sh` — 熵检查通过
 
+> **举证铁律**：test-report.md 的每条结论必须附命令 + 关键输出片段（失败行号、测试数、退出码）。禁止照搬 @dev 的 pre-flight、禁止"看起来通过"类措辞。完整规则见 `.claude/skills/verification-before-completion/SKILL.md` 与 `.claude/rules/verification-gate.md`。
+
 ### 4. 执行测试用例
 - 按 test-case-design.md 中定义的用例执行验收测试
 - 编写集成测试（start 模块，全链路穿透 H2）
@@ -78,6 +80,7 @@ Checkstyle 已自动覆盖 Java 8 兼容、命名、import 规范，以下为需
 如存在 Critical 或 Major 问题：
 - 在 test-report.md 中标记为"待修复"
 - 通知 @dev 具体问题详情和建议修复方案
+- **多个失败疑似同根因时**：在问题清单中显式标注"疑似共同根因"，并在 handoff 里建议 @dev 先走 `.claude/skills/systematic-debugging/SKILL.md` 的 Phase 1，不要逐条盲修。
 
 ### 9. 回归验证
 Dev 修复问题后：

@@ -59,6 +59,16 @@ memory: project
 - 若 `status: approved` → 继续步骤 6
 
 ### 6. 编写单元测试（TDD）
+**铁律**：`NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST`。
+先写测试看到 Red，再写最小实现转 Green，再重构。违反即删重来。
+动手前对照 `docs/standards/java-test.md#tdd-反模式对照表` 自检 11 项借口。
+
+**四项心智原则**（`.claude/rules/karpathy-guidelines.md`）同步生效：
+- 需求里没说的字段/边界/异常路径——在 `requirement-design.md` 或 `dev-log.md`「待确认」段**显式声明假设**，别闷头猜。
+- 单一用处的代码不抽象（`XxxFactory`/`XxxBuilder` 只有一个实现 → 去掉）。
+- 编辑既有类时**只动与任务直接相关的行**，别顺手格式化、别重构没坏的。
+- 每步有可验证目标（命令 + 预期输出）。
+
 在编码之前先写测试，按以下顺序：
 - 领域层测试（JUnit 5 + AssertJ，禁止 Spring 上下文）
 - 应用层测试（Mockito mock 端口）
@@ -73,6 +83,8 @@ memory: project
 - `mvn test` — 所有测试通过（含 ArchUnit 架构守护）
 - `mvn checkstyle:check` — 代码风格检查通过
 - `./scripts/entropy-check.sh` — 熵检查通过（架构漂移检测）
+
+> **举证铁律**：三项命令必须在**本消息**中真实运行，将输出摘要（测试通过数/退出码/检查项数）原样写入 handoff.md 的 `summary`。禁止复用历史输出、禁止"应该能过/可能没问题"类措辞。完整规则见 `.claude/skills/verification-before-completion/SKILL.md` 与 `.claude/rules/verification-gate.md`。
 
 ### 9. 记录开发日志
 更新 `{task-id}-{task-name}/task-plan.md` 中的任务状态。
@@ -91,10 +103,17 @@ memory: project
 - 通知 @qa 开始验收测试
 
 ### 12. 处理 QA 反馈
-收到 QA 在 test-report.md 中报告的问题后：
-- 修复问题并重新运行单测
-- 在 dev-log.md 记录修复详情
-- 通知 @qa 重新验证
+收到 QA 在 test-report.md 中报告的问题后**强制先走系统化调试**：
+
+1. **Phase 1（根因）**：读 test-report.md 全部失败，读 stack trace，稳定复现，定位出问题的层（adapter/application/domain/infrastructure），数据流反向追踪到源头 — 不得在完成 Phase 1 前编辑 `src/main/java/`。
+2. **Phase 2（模式）**：对照已实现聚合（如 shortlink）找工作示例，列出差异。
+3. **Phase 3（假设）**：写下"我认为 X 是根因，因为 Y"，一次只动一个变量。
+4. **Phase 4（实施）**：**先写 Red 测试复现**，再改根因，全量 `mvn test` 验证无回归。
+
+- **同一 bug 修 3 次失败 → 停下质疑架构**（记录到 dev-log.md"架构质疑"章节，通过 handoff 升级人工）。
+- 在 dev-log.md 记录：复现命令 + 修复前失败输出 + 修复后通过输出（Red-Green 证据）。
+- 完整 4 阶段铁轨见 `.claude/skills/systematic-debugging/SKILL.md`。
+- 通知 @qa 重新验证。
 
 ---
 

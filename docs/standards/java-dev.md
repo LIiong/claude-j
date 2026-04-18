@@ -1,8 +1,17 @@
-# Java 开发规则（Claude Rules）
+---
+description: "Java 开发规则：DDD 战术模式、六边形架构、Java 8 语法、MyBatis-Plus 约束。编辑 Java、Mapper XML、SQL 时生效。"
+globs:
+  - "**/*.java"
+  - "**/mapper/*.xml"
+  - "**/schema.sql"
+alwaysApply: false
+---
+
+# Java 开发规则
 
 ## 适用范围
-- 适用于所有 `*.java`、`*.xml`（MyBatis Mapper）及相关 DDL 变更。
-- 目标：确保代码符合 DDD + 六边形架构、Java 8 约束和对象边界约束。
+- **生效时机**：编辑 `*.java`、MyBatis Mapper XML、DDL 脚本时自动注入。
+- **目标**：确保代码符合 DDD + 六边形架构、Java 8 约束和对象边界约束。
 
 ## MUST（强制）
 
