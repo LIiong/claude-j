@@ -180,6 +180,8 @@ if [[ "$(uname)" == "Darwin" ]]; then
     SED_INPLACE="sed -i ''"
 fi
 
+BUILD_TOOL_LC=$(echo "${BUILD_TOOL}" | tr '[:upper:]' '[:lower:]')
+
 substitute_vars() {
     local file="$1"
     if [[ "${DRY_RUN}" == "true" ]]; then
@@ -206,13 +208,13 @@ substitute_vars() {
                    -e "s|\${MODULE_ADAPTER}|${MODULE_ADAPTER}|g" \
                    -e "s|\${MODULE_START}|${MODULE_START}|g" \
                    -e "s|\${ARCHUNIT_RULE_COUNT}|14|g" \
-                   -e "s|\${ENTROPY_CHECK_COUNT}|12|g" \
+                   -e "s|\${ENTROPY_CHECK_COUNT}|13|g" \
                    -e "s|\${TABLE_PREFIX}|t_|g" \
                    -e "s|\${COLUMN_CASE}|snake_case|g" \
-                   -e "s|\${CMD_BUILD_ALL}|${BUILD_TOOL,,} clean install|g" \
-                   -e "s|\${CMD_RUN_TESTS}|${BUILD_TOOL,,} test|g" \
-                   -e "s|\${CMD_RUN_DEV}|${BUILD_TOOL,,} spring-boot:run -pl ${MODULE_START} -Dspring-boot.run.profiles=dev|g" \
-                   -e "s|\${CMD_STYLE_CHECK}|${BUILD_TOOL,,} checkstyle:check|g" \
+                   -e "s|\${CMD_BUILD_ALL}|${BUILD_TOOL_LC} clean install|g" \
+                   -e "s|\${CMD_RUN_TESTS}|${BUILD_TOOL_LC} test|g" \
+                   -e "s|\${CMD_RUN_DEV}|${BUILD_TOOL_LC} spring-boot:run -pl ${MODULE_START} -Dspring-boot.run.profiles=dev|g" \
+                   -e "s|\${CMD_STYLE_CHECK}|${BUILD_TOOL_LC} checkstyle:check|g" \
                    -e "s|\${CMD_QUICK_CHECK}|./scripts/quick-check.sh|g" \
                    -e "s|\${CMD_ENTROPY_CHECK}|./scripts/entropy-check.sh|g" \
                    "${file}"
