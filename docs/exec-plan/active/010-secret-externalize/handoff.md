@@ -1,45 +1,53 @@
 ---
 task-id: "010-secret-externalize"
-from: architect
-to: dev
-status: approved
-timestamp: "2026-04-17T14:10:00Z"
+from: dev
+to: qa
+status: pending-review
+timestamp: "2026-04-17T22:25:00-04:00"
 pre-flight:
-  mvn-test: pass       # Baseline: 142 tests run, 0 failures, 0 errors
-  checkstyle: pending  # To be verified in Build phase
-  entropy-check: pass  # 12/12 checks passed (Exit 0)
-artifacts:
-  - requirement-design.md (架构评审章节已追加)
-  - task-plan.md
-  - dev-log.md
-summary: "架构评审通过。JwtSecretValidator 置于 infrastructure 层 auth/config 包位置恰当，ApplicationRunner Fail-fast 机制合理，配置分层策略符合 Spring Boot 最佳实践。建议 CI 所有 job 均注入 JWT_SECRET，错误提示可补充当前长度信息。"
+  mvn-test: pass       # Tests: 44 run, 0 failures, 0 errors
+  checkstyle: pass     # Exit 0, 0 violations
+  entropy-check: pass  # 12/12 checks passed, 0 errors, 10 warnings (auth聚合遗留)
+summary: |
+  JWT Secret 外置化任务完成，共 7 个 commit：
+  - JwtSecretValidator 启动校验器（4 个测试）
+  - JwtTokenServiceImpl 移除 fallback
+  - infrastructure 测试配置添加 jwt.secret
+  - application.yml 外置化为 ${JWT_SECRET:}
+  - application-dev.yml 添加本地默认值
+  - CI 配置注入 JWT_SECRET 环境变量（3 个 jobs）
+  - 新增 docs/ops/secrets.md 运维文档
 ---
 
-## 评审结论
+## 变更清单
 
-### 状态: APPROVED
+### 新增文件
+- `claude-j-infrastructure/src/main/java/com/claudej/infrastructure/auth/config/JwtSecretValidator.java`
+- `claude-j-infrastructure/src/test/java/com/claudej/infrastructure/auth/config/JwtSecretValidatorTest.java`
+- `docs/ops/secrets.md`
 
-**评审人**: @architect
-**日期**: 2026-04-17
+### 修改文件
+- `claude-j-infrastructure/src/main/java/com/claudej/infrastructure/auth/token/JwtTokenServiceImpl.java` - 移除 fallback 默认值
+- `claude-j-infrastructure/src/test/resources/application.yml` - 添加测试用 jwt.secret
+- `claude-j-start/src/main/resources/application.yml` - secret 外置化为 ${JWT_SECRET:}
+- `claude-j-start/src/main/resources/application-dev.yml` - 添加本地开发默认值
+- `.github/workflows/ci.yml` - build/unit-tests/integration-tests jobs 注入 JWT_SECRET
 
-### 关键确认点
+## 关键设计点
 
-| 检查项 | 结论 | 说明 |
-|--------|------|------|
-| JwtSecretValidator 位置 | 通过 | infrastructure 层 auth/config 包，符合配置校验类归属 |
-| 启动校验机制 | 通过 | ApplicationRunner + IllegalStateException，Fail-fast 正确 |
-| 配置分层策略 | 通过 | application.yml 无默认值，application-dev.yml 有默认值 |
-| CI 环境变量 | 通过 | 设计已覆盖，需确保所有 job 注入 |
-| 架构基线 | 通过 | entropy-check.sh: 0 errors, 10 warnings |
+1. **JwtSecretValidator**: ApplicationRunner 实现，启动时校验 JWT_SECRET 非空且长度 >=32
+2. **配置分层**: application.yml 无默认值（强制依赖环境变量），application-dev.yml 提供本地默认值
+3. **CI 注入**: 三个 jobs（build, unit-tests, integration-tests）均已配置 JWT_SECRET 环境变量
 
-### 建议（非阻塞）
+## 测试覆盖
 
-1. CI 环境变量注入: 确保 build/unit-tests/integration-tests 三个 job 均注入 JWT_SECRET
-2. 错误提示: 可考虑在异常信息中补充当前长度（如 "current: 16"）
-3. 运维文档: secrets.md 可补充 Docker/K8s 环境变量注入示例
+- JwtSecretValidatorTest: 4 个测试（null, empty, <32, valid）
+- 全量测试: 44 个通过
 
-### 下一步
+## 验收要点
 
-- @dev 可进入 Build 阶段
-- 遵循 task-plan.md 原子任务分解执行
-- Build 完成后更新 handoff.md → @qa 验收
+1. 未设置 JWT_SECRET 时应用启动失败并提示明确错误
+2. 设置 JWT_SECRET（长度>=32）后应用正常启动
+3. JWT_SECRET 长度 <32 时应用启动失败
+4. 开发环境使用 application-dev.yml 可正常启动
+5. CI 测试通过（环境变量已注入）

@@ -6,14 +6,14 @@
 
 | # | 任务 | 负责人 | 状态 | 备注 |
 |---|------|--------|------|------|
-| 1 | Infrastructure: JwtSecretValidator 启动校验器 | dev | 待办 | |
-| 2 | Infrastructure: JwtTokenServiceImpl 移除 fallback | dev | 待办 | |
-| 3 | Infrastructure: 测试配置添加 jwt.secret | dev | 待办 | |
-| 4 | Start: application.yml 外置化配置 | dev | 待办 | |
-| 5 | Start: application-dev.yml 添加默认值 | dev | 待办 | |
-| 6 | CI: 注入 JWT_SECRET 环境变量 | dev | 待办 | |
-| 7 | Docs: 新增 secrets.md 运维文档 | dev | 待办 | |
-| 8 | 全量 mvn test | dev | 待办 | |
+| 1 | Infrastructure: JwtSecretValidator 启动校验器 | dev | 单测通过 | 4 个测试通过 |
+| 2 | Infrastructure: JwtTokenServiceImpl 移除 fallback | dev | 单测通过 | |
+| 3 | Infrastructure: 测试配置添加 jwt.secret | dev | 单测通过 | |
+| 4 | Start: application.yml 外置化配置 | dev | 单测通过 | |
+| 5 | Start: application-dev.yml 添加默认值 | dev | 单测通过 | |
+| 6 | CI: 注入 JWT_SECRET 环境变量 | dev | 单测通过 | 3 个 job 已注入 |
+| 7 | Docs: 新增 secrets.md 运维文档 | dev | 单测通过 | |
+| 8 | 全量 mvn test | dev | 单测通过 | 44 tests, 0 failures |
 | 9 | QA: 测试用例设计 | qa | 待办 | |
 | 10 | QA: 验收测试 + 代码审查 | qa | 待办 | |
 | 11 | QA: 启动场景验证 | qa | 待办 | |
@@ -93,10 +93,10 @@ infrastructure → start → ci → docs → 全量测试 → QA 验收
 - **commit**：`test: 全量验证通过`
 
 ## 开发完成记录
-<!-- dev 完成后填写 -->
-- 全量 `mvn clean test`：x/x 用例通过
-- 架构合规检查：
-- 通知 @qa 时间：
+
+- 全量 `mvn clean test`：44/44 用例通过
+- 架构合规检查：entropy-check 0 errors, 10 warnings
+- 通知 @qa 时间：2026-04-17
 
 ## QA 验收记录
 <!-- qa 验收后填写 -->
