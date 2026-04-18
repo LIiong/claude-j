@@ -22,7 +22,7 @@ echo "============================================"
 echo ""
 
 # ------ 1. Domain 层纯净性 ------
-echo "--- [1/12] Domain 层纯净性 ---"
+echo "--- [1/13] Domain 层纯净性 ---"
 
 SPRING_IN_DOMAIN=$(grep -r "import org.springframework" claude-j-domain/src/main/java/ 2>/dev/null | wc -l | tr -d ' ')
 if [ "$SPRING_IN_DOMAIN" -gt 0 ]; then
@@ -43,7 +43,7 @@ fi
 echo ""
 
 # ------ 2. 依赖方向 ------
-echo "--- [2/12] 依赖方向检查 ---"
+echo "--- [2/13] 依赖方向检查 ---"
 
 # adapter 不应 import infrastructure
 ADAPTER_INFRA=$(grep -r "import com.claudej.infrastructure" claude-j-adapter/src/main/java/ 2>/dev/null | wc -l | tr -d ' ')
@@ -74,7 +74,7 @@ fi
 echo ""
 
 # ------ 3. Java 8 兼容性 ------
-echo "--- [3/12] Java 8 兼容性 ---"
+echo "--- [3/13] Java 8 兼容性 ---"
 
 VAR_USAGE=$(grep -rn "^\s*var " claude-j-*/src/main/java/ 2>/dev/null | wc -l | tr -d ' ')
 if [ "$VAR_USAGE" -gt 0 ]; then
@@ -95,7 +95,7 @@ fi
 echo ""
 
 # ------ 4. DO 泄漏检查 ------
-echo "--- [4/12] DO 对象泄漏检查 ---"
+echo "--- [4/13] DO 对象泄漏检查 ---"
 
 DO_IN_APP=$(grep -rn "import com.claudej.infrastructure.*dataobject" claude-j-application/src/main/java/ 2>/dev/null | wc -l | tr -d ' ')
 DO_IN_ADAPTER=$(grep -rn "import com.claudej.infrastructure.*dataobject" claude-j-adapter/src/main/java/ 2>/dev/null | wc -l | tr -d ' ')
@@ -110,7 +110,7 @@ fi
 echo ""
 
 # ------ 5. 未使用 import ------
-echo "--- [5/12] 代码整洁度 ---"
+echo "--- [5/13] 代码整洁度 ---"
 
 STAR_IMPORTS=$(grep -rn "import .*\.\*;" claude-j-*/src/main/java/ 2>/dev/null | wc -l | tr -d ' ')
 if [ "$STAR_IMPORTS" -gt 0 ]; then
@@ -122,7 +122,7 @@ fi
 echo ""
 
 # ------ 6. 文档同步检查 ------
-echo "--- [6/12] 文档同步检查 ---"
+echo "--- [6/13] 文档同步检查 ---"
 
 # 检查 schema.sql 中的表是否在 CLAUDE.md 中有记录
 TABLES_IN_SQL=$(grep -c "CREATE TABLE" claude-j-start/src/main/resources/db/schema.sql 2>/dev/null || echo 0)
@@ -137,7 +137,7 @@ fi
 echo ""
 
 # ------ 7. 测试覆盖 ------
-echo "--- [7/12] 测试文件存在性 ---"
+echo "--- [7/13] 测试文件存在性 ---"
 
 # 检查每个 main 下的 Service/Repository 是否有对应测试
 MISSING_TESTS=0
@@ -155,7 +155,7 @@ fi
 echo ""
 
 # ------ 8. 死代码检测 ------
-echo "--- [8/12] 死代码检测 ---"
+echo "--- [8/13] 死代码检测 ---"
 
 DEAD_CLASSES=0
 for JAVA_FILE in $(find claude-j-*/src/main/java -name "*.java" 2>/dev/null); do
@@ -178,7 +178,7 @@ fi
 echo ""
 
 # ------ 9. ADR 一致性 ------
-echo "--- [9/12] ADR 一致性 ---"
+echo "--- [9/13] ADR 一致性 ---"
 
 ADR_DIR="docs/architecture/decisions"
 ADR_ISSUES=0
@@ -211,7 +211,7 @@ fi
 echo ""
 
 # ------ 10. 知识库一致性 ------
-echo "--- [10/12] 知识库一致性 ---"
+echo "--- [10/13] 知识库一致性 ---"
 
 KB_ISSUES=0
 # Scan file path references in key docs and verify they exist
@@ -244,7 +244,7 @@ fi
 echo ""
 
 # ------ 11. 过期活跃任务检测 ------
-echo "--- [11/12] 过期活跃任务检测 ---"
+echo "--- [11/13] 过期活跃任务检测 ---"
 
 STALE_TASKS=0
 for REPORT in docs/exec-plan/active/*/test-report.md; do
@@ -264,7 +264,7 @@ fi
 echo ""
 
 # ------ 12. 聚合列表同步检查 ------
-echo "--- [12/12] 聚合列表同步检查 ---"
+echo "--- [12/13] 聚合列表同步检查 ---"
 
 AGG_ISSUES=0
 if [ -d "claude-j-domain/src/main/java/com/claudej/domain" ]; then
@@ -287,6 +287,36 @@ if [ -d "claude-j-domain/src/main/java/com/claudej/domain" ]; then
 fi
 if [ "$AGG_ISSUES" -eq 0 ]; then
     echo -e "${GREEN}PASS${NC}: 聚合列表与代码同步"
+fi
+echo ""
+
+# ------ 13. 归档防篡改检测 ------
+echo "--- [13/13] 归档目录防篡改检测 ---"
+
+# 原则：任务归档后（commit 含 "archive"），目录应是只读快照。
+# 若此后仍有 commit 修改 docs/exec-plan/archived/**（忽略归档 commit 本身），
+# 通常表示 Ship 阶段 handoff 不完整（如 task-plan.md 同步漏做、CLAUDE.md 未一次改全）。
+# 这是工作流盲点的滞后指示器，输出 WARN 级，不阻断 CI。
+
+TAMPER_COUNT=0
+if [ -d "docs/exec-plan/archived" ]; then
+    # 过去 30 天内所有修改 archived/ 的 commit（短 hash + 首行 subject），
+    # 排除初始归档 commit（subject 匹配 "archive" 关键字）
+    # --diff-filter=M 仅保留"修改已存在文件"的 commit，排除初始 add（防止老的
+    # 归档创建 commit 刷屏）；--no-renames 防跨目录 rename 计入。
+    SUSPECT=$(git log --since="30.days" --no-renames --diff-filter=M \
+        --pretty=format:"%h %s" -- docs/exec-plan/archived/ 2>/dev/null \
+        | grep -iEv "archive" \
+        || true)
+    if [ -n "$SUSPECT" ]; then
+        TAMPER_COUNT=$(echo "$SUSPECT" | wc -l | tr -d ' ')
+        echo -e "${YELLOW}WARN${NC}: 归档目录被 $TAMPER_COUNT 个 post-archive commit 修改过（可能提示 Ship 阶段 handoff 不完整）"
+        echo "$SUSPECT" | sed 's/^/      /'
+        WARNINGS=$((WARNINGS + 1))
+    fi
+fi
+if [ "$TAMPER_COUNT" -eq 0 ]; then
+    echo -e "${GREEN}PASS${NC}: 归档目录无 post-archive 篡改"
 fi
 echo ""
 
