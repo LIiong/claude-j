@@ -12,3 +12,7 @@ spring:
     init:
       mode: always
       schema-locations: classpath:db/schema.sql
+
+jwt:
+  secret: dev-jwt-secret-key-at-least-32-bytes-for-local
+
