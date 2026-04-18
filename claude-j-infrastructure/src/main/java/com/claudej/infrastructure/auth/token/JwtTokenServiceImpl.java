@@ -29,13 +29,11 @@ public class JwtTokenServiceImpl implements TokenService {
     private final long refreshTokenExpirationDays;
 
     public JwtTokenServiceImpl(
-            @Value("${jwt.secret:claude-j-default-secret-key-for-jwt-signing-at-least-32-bytes}") String secret,
+            @Value("${jwt.secret}") String secret,
             @Value("${jwt.access-token-expiration:60}") long accessTokenExpirationMinutes,
             @Value("${jwt.refresh-token-expiration:7}") long refreshTokenExpirationDays) {
-        // 确保密钥至少32字节
-        String paddedSecret = String.format("%-32s", secret).substring(0, 32);
-        this.accessTokenKey = Keys.hmacShaKeyFor(paddedSecret.getBytes(StandardCharsets.UTF_8));
-        this.refreshTokenKey = Keys.hmacShaKeyFor((paddedSecret + "refresh").substring(0, 32).getBytes(StandardCharsets.UTF_8));
+        this.accessTokenKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.refreshTokenKey = Keys.hmacShaKeyFor((secret + "refresh").getBytes(StandardCharsets.UTF_8));
         this.accessTokenExpirationMinutes = accessTokenExpirationMinutes;
         this.refreshTokenExpirationDays = refreshTokenExpirationDays;
     }
