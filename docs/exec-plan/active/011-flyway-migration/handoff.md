@@ -4,13 +4,13 @@
 
 - **task-id**: 011-flyway-migration
 - **task-name**: 引入 Flyway 数据库迁移框架
-- **from**: dev
-- **to**: qa
-- **status**: pending-review
+- **from**: qa
+- **to**: ralph
+- **status**: approved
 
 ## 阶段说明
 
-Build 阶段（TDD 开发）完成，等待 QA 验收。
+QA 验收完成，准予 Ship。
 
 ## 交付物
 
@@ -59,9 +59,28 @@ Build 阶段（TDD 开发）完成，等待 QA 验收。
 2. 代码审查
 3. 功能验证：空库启动、migration 历史、validate 机制
 
+## QA 验收记录
+
+| 检查项 | 状态 | 输出摘要 |
+|--------|------|----------|
+| mvn test | **PASS** | Tests run: 52, Failures: 0, Errors: 0, Skipped: 0 |
+| mvn checkstyle:check | **PASS** | 0 Checkstyle violations |
+| ./scripts/entropy-check.sh | **PASS** | 0 FAIL, 11 WARN(既有), status: PASS |
+| Flyway 验证测试 | **PASS** | 2/2 通过，7 migrations validated |
+
+## 关键验证结果（QA 独立重跑）
+
+1. **空库启动**: 应用正常启动，Flyway 自动执行 7 个 migration
+2. **flyway_schema_history**: 7 条记录，version 1-7，success=1
+3. **表创建验证**: 所有 11 张表（t_user, t_order...t_login_log）成功创建
+4. **validate 机制**: validate-on-migrate: true 已启用
+5. **代码审查**: 无 Critical/Major 问题，1 个 Minor 建议（CI 插件配置）
+
 ## Summary
 
 **开发完成**: 2026-04-18
 **19 项原子任务**: 全部完成
 **三项预飞**: 全部通过
-**待**: QA 验收
+**QA 验收**: **通过**
+**问题清单**: 0 Critical, 0 Major, 1 Minor (CI 优化建议)
+**状态**: 准予 Ship
