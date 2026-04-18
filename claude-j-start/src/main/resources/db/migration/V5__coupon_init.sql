@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS t_coupon (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    coupon_id VARCHAR(32) NOT NULL COMMENT '优惠券唯一业务标识',
+    name VARCHAR(50) NOT NULL COMMENT '优惠券名称',
+    discount_type VARCHAR(20) NOT NULL COMMENT '折扣类型：FIXED_AMOUNT/PERCENTAGE',
+    discount_value DECIMAL(12,2) NOT NULL COMMENT '折扣值',
+    min_order_amount DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '最低订单金额门槛',
+    currency VARCHAR(8) NOT NULL DEFAULT 'CNY' COMMENT '币种',
+    status VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE' COMMENT '状态：AVAILABLE/USED/EXPIRED',
+    user_id VARCHAR(64) NOT NULL COMMENT '所属用户ID',
+    valid_from TIMESTAMP NOT NULL COMMENT '有效期开始',
+    valid_until TIMESTAMP NOT NULL COMMENT '有效期截止',
+    used_time TIMESTAMP NULL COMMENT '使用时间',
+    used_order_id VARCHAR(64) NULL COMMENT '关联订单号',
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted INT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
+    UNIQUE KEY uk_coupon_id (coupon_id),
+    KEY idx_user_id (user_id),
+    KEY idx_user_status (user_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='优惠券表';
