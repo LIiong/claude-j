@@ -157,6 +157,10 @@ find .claude docs scripts -type f \( -name "*.md" -o -name "*.sh" \) \
 
 ### Step 6 — 验证
 ```bash
+# 产物自检（必需文件 + 符号链接 + settings.json hook 路径三件套）
+./scripts/verify-portable.sh /path/to/new-project
+# 预期：所有项 ✅，退出码 0
+
 # 确认 hooks 加载
 ls .claude/settings.json
 
