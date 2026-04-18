@@ -287,3 +287,102 @@ CREATE TABLE IF NOT EXISTS t_login_log (
 2. flyway_schema_history 表可见 7 条成功记录
 3. 修改历史 migration 后 validate 失败：人为修改 V1 文件内容，启动时报错
 4. 三项预飞检查通过：mvn test / checkstyle / entropy-check
+
+## 架构评审
+
+**评审人**：@architect
+**日期**：2026-04-18
+**结论**：✅ 通过
+
+### 评审检查项（12 维三类）
+
+**架构合规（7 项）**
+- [x] 聚合根边界合理（遵循事务一致性原则）
+  - V1-V7 按聚合拆分清晰：user→order→shortlink→link→coupon→cart→auth
+  - 无跨聚合外键依赖，符合 DDD 聚合边界原则
+- [x] 值对象识别充分（金额、标识符等应为 VO）
+  - 本任务不涉及领域模型变更，DDL 仅做迁移
+- [x] Repository 端口粒度合适（方法不多不少）
+  - 本任务不涉及 Repository 变更
+- [x] 与已有聚合无循环依赖
+  - 聚合初始化顺序合理，无循环依赖风险
+- [x] DDL 设计与领域模型一致（字段映射、索引合理）
+  - V1-V7 DDL 与现有 schema.sql 完全一致
+  - 表名 t_{entity}、列名 snake_case 符合规范
+- [x] API 设计符合 RESTful 规范
+  - 本任务不涉及 API 变更
+- [x] 对象转换链正确（DO ↔ Domain ↔ DTO ↔ Request/Response）
+  - 本任务不涉及对象转换链变更
+
+**需求质量（3 项）**
+- [x] 需求无歧义：核心名词、流程、异常分支均有明确定义
+  - Flyway 版本、命名规范、baseline 策略均已明确
+- [x] 验收条件可验证：每条 AC 可转化为 `should_xxx_when_yyy` 测试用例
+  - 4 项验收条件均可自动化验证
+- [x] 业务规则完备：状态机/不变量/边界值在需求中已列明
+  - migration 校验机制、版本冲突处理已说明
+
+**计划可执行性（2 项）**
+- [x] task-plan 粒度合格：按层任务已分解到原子级（10–15 分钟/步），每步含文件路径 + 验证命令 + 预期输出
+  - 19 项原子任务，每项含文件路径、骨架/内容、验证命令、预期输出、commit 信息
+- [x] 依赖顺序正确：domain → application → infrastructure → adapter → start 自下而上，层间依赖无倒置
+  - 本任务为基础设施迁移，按 POM→Migration→Config→Docs→CI→Verify 顺序合理
+
+**心智原则（Karpathy — 动手前自检）**
+- [x] **简洁性**：需求未要求的抽象/配置/工厂已移除；任何单一实现的 `XxxStrategy`/`XxxFactory` 需说明存在理由
+  - 无过度抽象，直接使用 Flyway 标准配置
+- [x] **外科性**：设计仅改动任务直接相关的文件；若涉及跨聚合大改，在评审意见说明理由
+  - 影响范围清晰：pom.xml、application-dev.yml、schema.sql→migration/、新增 docs/ops/、CI workflow
+- [x] **假设显性**：需求里含糊的字段/边界/异常，requirement-design 已在「假设与待确认」列出
+  - task-plan.md 已列出 4 项假设和 3 项风险
+
+### 架构基线检查
+
+```bash
+./scripts/entropy-check.sh
+```
+
+**结果**：12/12 项通过，0 FAIL，11 WARN（与任务无关的已有警告）
+
+```
+{"issues": 0, "warnings": 11, "status": "PASS"}
+架构合规检查通过。
+```
+
+### 评审意见
+
+1. **版本号策略确认**：采用线性整数版本 V1-V7（非时间戳），符合 Flyway 社区最佳实践，与聚合初始化顺序一致，便于理解。
+
+2. **表结构完整性验证**：对比 schema.sql 与 V1-V7 设计：
+   - schema.sql 共 11 张表：t_user、t_order、t_order_item、t_short_link、t_link、t_coupon、t_cart、t_cart_item、t_auth_user、t_user_session、t_login_log
+   - V1-V7 完全覆盖，无遗漏，DDL 内容一致
+
+3. **Spring Boot 2.7 兼容性确认**：
+   - 选用 Flyway 8.5.13 与 Spring Boot 2.7.18 内置兼容
+   - 配置使用 `baseline-on-migrate: true` 适合新库场景
+
+4. **baseline 策略说明**：
+   - 新库：启用 `baseline-on-migrate: true`，首次启动自动基线化
+   - 老库（如有）：需手动执行 `flyway baseline` 或调整 baseline version
+   - 建议在 db-migrations.md 中补充老库迁移指引
+
+5. **CI 集成建议**：
+   - flyway:validate job 使用 `mvn flyway:validate -pl claude-j-start` 合理
+   - 需确保 CI 环境有 H2 或测试数据库支持
+
+6. **验证策略完整性**：
+   - 4 项验收标准均可自动化验证
+   - 建议第 3 项（validate 失败验证）在集成测试中覆盖
+
+### 新增 ADR 建议
+
+无需新增 ADR，本任务为工具迁移，不涉及架构决策变更。
+
+### 评审通过条件
+
+- [x] 架构合规检查通过
+- [x] 表结构完整性验证通过
+- [x] 计划粒度与可执行性合格
+- [x] 验收条件可验证
+
+**评审结论**：设计合规，计划可执行，准予进入 Build 阶段。

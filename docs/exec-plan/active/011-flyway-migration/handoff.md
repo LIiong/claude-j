@@ -4,9 +4,9 @@
 
 - **task-id**: 011-flyway-migration
 - **task-name**: 引入 Flyway 数据库迁移框架
-- **from**: dev
-- **to**: architect
-- **status**: pending-review
+- **from**: architect
+- **to**: dev
+- **status**: approved
 
 ## 阶段说明
 
@@ -45,4 +45,12 @@ Spec 阶段完成，等待架构评审。
 
 ## Summary
 
-Spec 阶段已完成，设计文档就绪，等待架构评审通过后进入 Build 阶段。
+**评审结论**: approved
+**关键发现**:
+- V1-V7 聚合划分合理，与 schema.sql 表结构完全对应
+- Flyway 8.5.13 与 Spring Boot 2.7 兼容
+- baseline 策略适用于新库场景
+- 19 项原子任务粒度合格，可执行性高
+
+**评审通过时间**: 2026-04-18
+**可进入阶段**: Build（开发实现）
