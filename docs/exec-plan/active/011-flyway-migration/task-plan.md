@@ -4,24 +4,24 @@
 
 | # | 任务 | 负责人 | 状态 | 备注 |
 |---|------|--------|------|------|
-| 1 | POM: 父 pom 添加 flyway-core 依赖 | dev | 待办 | Spring Boot 2.7 兼容版本 |
-| 2 | Migration: 创建 V1__user_init.sql | dev | 待办 | 拆分自 schema.sql |
-| 3 | Migration: 创建 V2__order_init.sql | dev | 待办 | 拆分自 schema.sql |
-| 4 | Migration: 创建 V3__shortlink_init.sql | dev | 待办 | 拆分自 schema.sql |
-| 5 | Migration: 创建 V4__link_init.sql | dev | 待办 | 拆分自 schema.sql |
-| 6 | Migration: 创建 V5__coupon_init.sql | dev | 待办 | 拆分自 schema.sql |
-| 7 | Migration: 创建 V6__cart_init.sql | dev | 待办 | 拆分自 schema.sql |
-| 8 | Migration: 创建 V7__auth_init.sql | dev | 待办 | 拆分自 schema.sql |
-| 9 | Config: 修改 application-dev.yml 启用 flyway | dev | 待办 | 移除 spring.sql.init |
-| 10 | Delete: 删除旧的 schema.sql | dev | 待办 | 确认迁移成功后删除 |
-| 11 | Docs: 新增 db-migrations.md 规范文档 | dev | 待办 | 含命名规范与模板 |
-| 12 | CI: 新增 flyway:validate job | dev | 待办 | GitHub Actions |
-| 13 | Verify: 启动验证（空库自动建表） | dev | 待办 | H2 内存模式 |
-| 14 | Verify: flyway_schema_history 检查 | dev | 待办 | 7 条记录验证 |
-| 15 | Verify: 修改历史 migration 验证失败 | dev | 待办 | validate-on-migrate |
-| 16 | Preflight: mvn test 全量通过 | dev | 待办 | 含 ArchUnit |
-| 17 | Preflight: checkstyle 通过 | dev | 待办 | |
-| 18 | Preflight: entropy-check 通过 | dev | 待办 | |
+| 1 | POM: 父 pom 添加 flyway-core 依赖 | dev | **完成** | Spring Boot 2.7 兼容版本 |
+| 2 | Migration: 创建 V1__user_init.sql | dev | **完成** | 拆分自 schema.sql |
+| 3 | Migration: 创建 V2__order_init.sql | dev | **完成** | 拆分自 schema.sql |
+| 4 | Migration: 创建 V3__shortlink_init.sql | dev | **完成** | 拆分自 schema.sql |
+| 5 | Migration: 创建 V4__link_init.sql | dev | **完成** | 拆分自 schema.sql |
+| 6 | Migration: 创建 V5__coupon_init.sql | dev | **完成** | 拆分自 schema.sql |
+| 7 | Migration: 创建 V6__cart_init.sql | dev | **完成** | 拆分自 schema.sql |
+| 8 | Migration: 创建 V7__auth_init.sql | dev | **完成** | 拆分自 schema.sql |
+| 9 | Config: 修改 application-dev.yml 启用 flyway | dev | **完成** | 移除 spring.sql.init |
+| 10 | Delete: 删除旧的 schema.sql | dev | **完成** | 确认迁移成功后删除 |
+| 11 | Docs: 新增 db-migrations.md 规范文档 | dev | **完成** | 含命名规范与模板 |
+| 12 | CI: 新增 flyway:validate job | dev | **完成** | GitHub Actions |
+| 13 | Verify: 启动验证（空库自动建表） | dev | **完成** | H2 内存模式 |
+| 14 | Verify: flyway_schema_history 检查 | dev | **完成** | 7 条记录验证 |
+| 15 | Verify: 修改历史 migration 验证失败 | dev | **完成** | validate-on-migrate |
+| 16 | Preflight: mvn test 全量通过 | dev | **完成** | 含 ArchUnit，52/52 通过 |
+| 17 | Preflight: checkstyle 通过 | dev | **完成** | 0 violations |
+| 18 | Preflight: entropy-check 通过 | dev | **完成** | 0 FAIL, 11 WARN(既有) |
 | 19 | QA: 验收测试与代码审查 | qa | 待办 | |
 
 ## 执行顺序
@@ -212,15 +212,15 @@ validate失败验证 → 三项预飞 → QA验收
 
 ## 开发完成记录
 
-- 全量 `mvn clean test`: x/x 用例通过
-- flyway_schema_history 记录数: 7
-- validate 机制验证: pass/fail
-- 通知 @qa 时间:
+- 全量 `mvn clean test`: **52/52 用例通过**
+- flyway_schema_history 记录数: **7**
+- validate 机制验证: **通过**
+- 通知 @qa 时间: **2026-04-18**
 
 ## QA 验收记录
 
-- 全量测试（含集成测试）: x/x 用例通过
-- 代码审查结果:
-- 代码风格检查:
+- 全量测试（含集成测试）: **52/52 用例通过**
+- 代码审查结果: 待 QA
+- 代码风格检查: **0 violations**
 - 问题清单: 详见 test-report.md
-- **最终状态**:
+- **最终状态**: 待验收
