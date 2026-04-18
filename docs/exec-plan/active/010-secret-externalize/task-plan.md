@@ -14,9 +14,9 @@
 | 6 | CI: 注入 JWT_SECRET 环境变量 | dev | 单测通过 | 3 个 job 已注入 |
 | 7 | Docs: 新增 secrets.md 运维文档 | dev | 单测通过 | |
 | 8 | 全量 mvn test | dev | 单测通过 | 44 tests, 0 failures |
-| 9 | QA: 测试用例设计 | qa | 待办 | |
-| 10 | QA: 验收测试 + 代码审查 | qa | 待办 | |
-| 11 | QA: 启动场景验证 | qa | 待办 | |
+| 9 | QA: 测试用例设计 | qa | 已完成 | test-case-design.md |
+| 10 | QA: 验收测试 + 代码审查 | qa | 已完成 | 50 tests, 0 failures |
+| 11 | QA: 启动场景验证 | qa | 已完成 | 6 个集成测试通过 |
 
 ## 执行顺序
 infrastructure → start → ci → docs → 全量测试 → QA 验收
@@ -99,9 +99,11 @@ infrastructure → start → ci → docs → 全量测试 → QA 验收
 - 通知 @qa 时间：2026-04-17
 
 ## QA 验收记录
-<!-- qa 验收后填写 -->
-- 全量测试（含集成测试）：x/x 用例通过
-- 代码审查结果：
-- 代码风格检查：
-- 问题清单：详见 test-report.md
-- **最终状态**：
+
+- 全量测试（含集成测试）：50/50 用例通过
+- 代码审查结果：✅ 通过，依赖方向正确，JwtSecretValidator 位置合理
+- 代码风格检查：✅ 通过，0 violations
+- 问题清单：详见 test-report.md（0 个阻塞性问题）
+- **最终状态**：✅ 验收通过
+- 验收时间：2026-04-18
+- 提交 commit：`58f05dd`
