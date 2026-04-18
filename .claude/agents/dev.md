@@ -97,6 +97,7 @@ memory: project
 
 ### 11. 通知 QA
 三项验证全部通过后：
+- **dev-log 四段自检**：逐条检查 `dev-log.md` 的「问题记录」，确认每条都含 `Issue / Root Cause / Fix / Verification` 四段。任一条目缺 `Verification` 行（只记了决策，没附命令 + 输出）→ 补齐后再提交 handoff（举证铁律）
 - 在 task-plan.md 中标记任务为"待验收"
 - 更新 `handoff.md`（from: dev, to: qa, status: pending-review）
 - 在 handoff.md 中记录三项预飞检查结果（mvn-test / checkstyle / entropy-check: pass）
