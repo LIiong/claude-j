@@ -106,6 +106,10 @@ cd ..
 
 > **打包说明**：`entropy-check.sh` / `quick-check.sh` 属于 `full-check` skill 的子能力；`ralph-*.sh` 属于 `ralph` skill。移植时只需整体复制 `.claude/skills/`，符号链接保证现有 Hook、CI、其他 skill 的旧调用方式继续工作。
 
+> **易被忽略的已随 `.claude/` 打包的脚本**（`cp -r .claude` 已自动包含，单独列出便于校验）：
+> - `.claude/skills/using-claude-j-workflow/scripts/session-start.sh` — SessionStart hook 目标脚本；`.claude/settings.json` 已指向该路径，**无需再从 `scripts/hooks/` 单独复制**。
+> - `.claude/skills/qa-ship/scripts/pre-archive-check.sh` — 归档前置闸；`.claude/agents/qa.md` 第 10 步 **机械依赖** 此脚本的 PASS 输出。
+
 ### Step 2 — 变量替换
 按"变量清单"做全局替换。推荐工具：
 ```bash
@@ -139,7 +143,7 @@ find .claude docs scripts -type f \( -name "*.md" -o -name "*.sh" \) \
 - 关键：保留"依赖方向"、"domain 纯净"、"测试命名"三条规则
 
 **L3（熵扫描）**：
-- `scripts/entropy-check.sh` 为 12 项 grep 规则
+- `scripts/entropy-check.sh` 为 13 项 grep 规则（第 13 项为"归档后篡改检测"，仅 WARN 级）
 - 按新栈重写 grep 模式（依据目标语言 import 语法）
 
 ### Step 5 — 运行脚手架（可选）
@@ -199,4 +203,5 @@ ls .claude/settings.json
 - `scripts/bootstrap-project.sh` — 自动化脚手架脚本
 - `.claude/skills/ralph/scripts/README.md` — Ralph skill 打包脚本说明
 - `.claude/skills/full-check/scripts/README.md` — 验证脚本打包说明
+- `.claude/skills/qa-ship/scripts/pre-archive-check.sh` — 归档前置闸脚本（qa.md 第 10 步机械调用）
 - `CLAUDE.md` — 当前项目（claude-j）的实际配置，可作为填写示例
