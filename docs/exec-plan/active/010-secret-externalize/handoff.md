@@ -1,34 +1,45 @@
 ---
 task-id: "010-secret-externalize"
-from: dev
-to: architect
-status: pending-review
-timestamp: "2025-04-17T13:58:00Z"
+from: architect
+to: dev
+status: approved
+timestamp: "2026-04-17T14:10:00Z"
 pre-flight:
-  mvn-test: pending
-  checkstyle: pending
-  entropy-check: pending
+  mvn-test: pass       # Baseline: 142 tests run, 0 failures, 0 errors
+  checkstyle: pending  # To be verified in Build phase
+  entropy-check: pass  # 12/12 checks passed (Exit 0)
 artifacts:
-  - requirement-design.md
+  - requirement-design.md (架构评审章节已追加)
   - task-plan.md
   - dev-log.md
-summary: "JWT secret 外置化：将 secret 从 application.yml 移入环境变量 JWT_SECRET，新增启动校验器确保非空且 >=32 字符，dev 环境保留默认值便于本地开发"
+summary: "架构评审通过。JwtSecretValidator 置于 infrastructure 层 auth/config 包位置恰当，ApplicationRunner Fail-fast 机制合理，配置分层策略符合 Spring Boot 最佳实践。建议 CI 所有 job 均注入 JWT_SECRET，错误提示可补充当前长度信息。"
 ---
 
-## 设计要点
+## 评审结论
 
-### 核心变更
-1. **application.yml**: `secret: ${JWT_SECRET:}` — 无默认值，强制依赖环境变量
-2. **application-dev.yml**: 添加默认 JWT secret，便于本地开发启动
-3. **JwtSecretValidator**: Spring Boot ApplicationRunner 实现，启动时校验 secret 非空且长度 >=32
-4. **JwtTokenServiceImpl**: 移除 fallback 默认值，完全依赖外部配置
-5. **CI**: 注入 JWT_SECRET 环境变量供测试使用
-6. **docs/ops/secrets.md**: 运维文档说明配置方式
+### 状态: APPROVED
 
-### 关键决策
-- Validator 放在 infrastructure 层 auth/config 包（基础设施配置管理）
-- 校验失败抛 IllegalStateException 阻止启动（fail-fast）
-- 开发环境保留默认值（application-dev.yml 自动加载）
+**评审人**: @architect
+**日期**: 2026-04-17
 
-### 无领域模型变更
-此任务为配置安全增强，不涉及聚合、实体、值对象或 Repository 端口。
+### 关键确认点
+
+| 检查项 | 结论 | 说明 |
+|--------|------|------|
+| JwtSecretValidator 位置 | 通过 | infrastructure 层 auth/config 包，符合配置校验类归属 |
+| 启动校验机制 | 通过 | ApplicationRunner + IllegalStateException，Fail-fast 正确 |
+| 配置分层策略 | 通过 | application.yml 无默认值，application-dev.yml 有默认值 |
+| CI 环境变量 | 通过 | 设计已覆盖，需确保所有 job 注入 |
+| 架构基线 | 通过 | entropy-check.sh: 0 errors, 10 warnings |
+
+### 建议（非阻塞）
+
+1. CI 环境变量注入: 确保 build/unit-tests/integration-tests 三个 job 均注入 JWT_SECRET
+2. 错误提示: 可考虑在异常信息中补充当前长度（如 "current: 16"）
+3. 运维文档: secrets.md 可补充 Docker/K8s 环境变量注入示例
+
+### 下一步
+
+- @dev 可进入 Build 阶段
+- 遵循 task-plan.md 原子任务分解执行
+- Build 完成后更新 handoff.md → @qa 验收

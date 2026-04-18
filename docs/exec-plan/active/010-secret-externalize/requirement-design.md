@@ -99,3 +99,61 @@ public class JwtSecretValidator implements ApplicationRunner {
 4. 开发环境使用 application-dev.yml 可正常启动（使用默认值）
 5. CI 测试通过（环境变量已注入）
 6. 三项预飞检查通过: mvn test / checkstyle / entropy-check
+
+## 架构评审
+
+**评审人**: @architect
+**日期**: 2026-04-17
+**结论**: 通过（附建议）
+
+### 评审检查项（9 维三类）
+
+**架构合规（5 项）**
+- [x] 组件位置合理: JwtSecretValidator 置于 infrastructure 层 auth/config 包，符合配置校验类归属（基础设施层负责技术适配与配置）
+- [x] 无循环依赖: 纯配置任务，不涉及聚合间关系
+- [x] 配置策略正确: application.yml 使用 `${JWT_SECRET:}` 无默认值，application-dev.yml 提供本地默认值，符合多环境配置规范
+- [x] Fail-fast 机制恰当: 使用 ApplicationRunner + IllegalStateException 在启动时校验，错误立即阻断
+- [x] 无对象转换链变更: 不涉及 DO/Domain/DTO 转换
+
+**需求质量（3 项）**
+- [x] 需求无歧义: 环境变量名、长度限制、校验逻辑均已明确
+- [x] 验收条件可验证: 所有 6 条 AC 均可转化为具体测试用例
+- [x] 业务规则完备: 非空校验、长度校验、异常提示均已列明
+
+**计划可执行性（1 项）**
+- [x] 任务粒度合格: 11 个任务分解合理，每个原子任务含文件路径+验证命令+预期输出
+
+**心智原则（Karpathy）**
+- [x] **简洁性**: 方案直截了当，无过度抽象
+- [x] **外科性**: 改动范围精确，仅涉配置相关文件
+- [x] **假设显性**: 需求明确，无隐含假设
+
+### 评审意见
+
+**总体评价**: 设计清晰、范围合理、方案可行。
+
+**关键设计点确认**:
+1. **JwtSecretValidator 位置**: infrastructure 层 auth/config 包是恰当选择 —— 此类配置校验器属于基础设施关注点，与 Repository/Service 实现同层符合惯例
+2. **启动校验时机**: ApplicationRunner 在所有 Bean 初始化后执行，早于应用接收请求，Fail-fast 正确
+3. **配置分层策略**:
+   - application.yml: 生产配置强制依赖环境变量（安全）
+   - application-dev.yml: 开发环境提供默认值（便利）
+   - 符合 Spring Boot 多环境配置最佳实践
+
+**建议（非阻塞）**:
+1. **CI 环境变量**: 建议 CI 中注入的测试密钥使用 `CI_JWT_SECRET` 或带 `test-` 前缀，明确区分生产/测试环境（已在设计中体现）
+2. **错误提示优化**: 可考虑在异常信息中补充当前长度信息，如 "JWT_SECRET must be at least 32 characters, current: 16"
+3. **文档完整性**: secrets.md 可考虑补充 Docker/Kubernetes 环境变量注入示例
+
+**风险**: 无重大风险。需确保 CI 各 job（build/unit-tests/integration-tests）均注入 JWT_SECRET。
+
+### 需要新增的 ADR
+
+本任务为配置安全增强，不涉及架构决策变更，无需新增 ADR。
+
+**基线检查**:
+```bash
+./scripts/entropy-check.sh
+# 退出码: 0
+# 状态: PASS (0 errors, 10 warnings)
+```
