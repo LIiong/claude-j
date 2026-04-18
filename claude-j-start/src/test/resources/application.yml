@@ -10,15 +10,6 @@ spring:
     baseline-on-migrate: true
     validate-on-migrate: true
 
-mybatis-plus:
-  configuration:
-    map-underscore-to-camel-case: true
-  global-config:
-    db-config:
-      logic-delete-field: deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
-
 jwt:
-  secret: test-jwt-secret-key-for-infrastructure-tests-32
+  secret: test-jwt-secret-key-for-start-tests-32-bytes-long
 
