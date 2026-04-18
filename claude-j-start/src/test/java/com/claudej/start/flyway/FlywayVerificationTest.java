@@ -19,37 +19,37 @@ public class FlywayVerificationTest {
     @Test
     void should_have_7_migrations_in_schema_history() {
         List<Map<String, Object>> results = jdbcTemplate.queryForList(
-            "SELECT version, description, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY version"
+            "SELECT \"version\", \"description\", \"success\" FROM \"flyway_schema_history\" WHERE \"version\" IS NOT NULL ORDER BY \"version\""
         );
-        
+
         assertThat(results).hasSize(7);
-        assertThat(results.get(0).get("VERSION")).isEqualTo("1");
-        assertThat(results.get(0).get("DESCRIPTION")).isEqualTo("user init");
-        assertThat(results.get(0).get("SUCCESS")).isEqualTo(1);
-        assertThat(results.get(6).get("VERSION")).isEqualTo("7");
-        assertThat(results.get(6).get("DESCRIPTION")).isEqualTo("auth init");
-        assertThat(results.get(6).get("SUCCESS")).isEqualTo(1);
+        assertThat(results.get(0).get("version")).isEqualTo("1");
+        assertThat(results.get(0).get("description")).isEqualTo("user init");
+        assertThat(results.get(0).get("success")).isEqualTo(true);
+        assertThat(results.get(6).get("version")).isEqualTo("7");
+        assertThat(results.get(6).get("description")).isEqualTo("auth init");
+        assertThat(results.get(6).get("success")).isEqualTo(true);
     }
 
     @Test
     void should_have_all_11_tables_created() {
         List<String> tables = jdbcTemplate.queryForList(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'PUBLIC' AND table_name LIKE 't_%'",
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'PUBLIC' AND table_name LIKE 'T_%'",
             String.class
         );
-        
+
         assertThat(tables).containsExactlyInAnyOrder(
-            "t_user",
-            "t_order",
-            "t_order_item",
-            "t_short_link",
-            "t_link",
-            "t_coupon",
-            "t_cart",
-            "t_cart_item",
-            "t_auth_user",
-            "t_user_session",
-            "t_login_log"
+            "T_USER",
+            "T_ORDER",
+            "T_ORDER_ITEM",
+            "T_SHORT_LINK",
+            "T_LINK",
+            "T_COUPON",
+            "T_CART",
+            "T_CART_ITEM",
+            "T_AUTH_USER",
+            "T_USER_SESSION",
+            "T_LOGIN_LOG"
         );
     }
 }
