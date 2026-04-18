@@ -17,3 +17,7 @@ mybatis-plus:
       logic-delete-field: deleted
       logic-delete-value: 1
       logic-not-delete-value: 0
+
+jwt:
+  secret: test-jwt-secret-key-for-infrastructure-tests-32
+
