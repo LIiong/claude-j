@@ -111,6 +111,7 @@ Dev 修复问题后：
 - 在 test-report.md 中标记最终结论为"验收通过"
 - **更新 `task-plan.md` —— 将 QA 负责的任务项（如"QA: 验收测试与代码审查"）状态改为"完成"，附上验收结果**
 - 更新 `handoff.md`（status: approved）
+- **归档前必须跑 `./.claude/skills/qa-ship/scripts/pre-archive-check.sh <task-id>`，输出 PASS 才能继续 `git mv`**（任一 FAIL → 按脚本清单先修，不得绕过）
 - 将 `{task-id}/` 目录从 `docs/exec-plan/active/` 移至 `docs/exec-plan/archived/`
 - 更新 `CLAUDE.md` 聚合列表（新增聚合、入口等）
 
