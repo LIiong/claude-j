@@ -109,6 +109,7 @@ Dev 修复问题后：
 ### 10. 验收通过（Ship）
 所有问题修复并验证后：
 - 在 test-report.md 中标记最终结论为"验收通过"
+- **更新 `task-plan.md` —— 将 QA 负责的任务项（如"QA: 验收测试与代码审查"）状态改为"完成"，附上验收结果**
 - 更新 `handoff.md`（status: approved）
 - 将 `{task-id}/` 目录从 `docs/exec-plan/active/` 移至 `docs/exec-plan/archived/`
 - 更新 `CLAUDE.md` 聚合列表（新增聚合、入口等）
