@@ -34,12 +34,31 @@ alwaysApply: false
 - Web 层必须断言响应结构与状态码（200/400/404/500 等）。
 - 集成测试必须断言 DO ↔ Domain 映射准确性。
 
+### 集成测试适量（防爆 start 模块）
+
+> **背景**：010-secret-externalize 的 `JwtSecretIntegrationTest` 写了 6 个 `@SpringBootTest` 全链路用例，其中 3 个实际在覆盖 009-auth-system 的 Auth 功能（重复覆盖），违反 Karpathy 原则②（简洁优先）。
+
+- 单任务新增的 `@SpringBootTest` 全链路测试 **≤ 3 个**，覆盖：
+  1. **Happy path**（核心成功流程）
+  2. **关键分支 1**（任务新增的关键异常/边界）
+  3. **关键分支 2**（可选）
+- 其余场景用更轻量的切片测试：
+  - `@WebMvcTest` + MockMvc（HTTP 契约）
+  - `@DataJpaTest` / `@MybatisPlusTest` + H2（持久化）
+  - 纯 JUnit + Mockito（Service 层）
+  - `ApplicationContextRunner`（配置绑定 / 启动失败）
+- **禁止**在新任务的集成测试里重复覆盖已有聚合的功能（例如 010 的集成测试不应包含"注册→登录→刷新"全流程验证——这是 009 的责任）。
+- **反模式**：用集成测试做"我顺手验证一下 Auth/Order/Cart 也没坏"。回归职责归 `mvn test` 全量与 ArchUnit，不归单个任务的集成测试。
+
 ## MUST NOT（禁止）
 - 禁止跨层测试依赖（例如 Domain 测试依赖 Infrastructure）。
 - 禁止在 Domain/Application 单测中使用 Spring 上下文。
 - 禁止在单测中连接真实数据库（除 Infrastructure 的 H2 场景）。
 - 禁止 `Thread.sleep()`、`@Order`、共享可变测试状态。
 - 禁止直接测试私有方法（通过公开行为验证）。
+- 禁止用反射访问被测类的 `private` 字段注入值（根因通常是生产代码用了字段注入 `@Value`，改为构造函数注入后测试无需反射，详见 `java-dev.md` 依赖注入规则）。
+- 禁止单任务新增超过 3 个 `@SpringBootTest` 全链路集成测试。
+- 禁止在新任务的集成测试中重复覆盖其他已完成聚合的功能。
 
 ## TDD 铁律
 

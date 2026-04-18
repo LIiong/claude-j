@@ -46,6 +46,28 @@ NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 - 在动手写代码前对照 `docs/standards/java-test.md#tdd-反模式对照表` 自检 11 项借口；任一命中即视为违规。
 - 详尽的 TDD 规则与反模式见 `docs/standards/java-test.md`（规则会在编辑 `src/test/java/` 时自动注入）。
 
+### 🔴 Red / Green commit 必须分离（强制）
+
+> **背景**：010-secret-externalize 发现生产类与测试类写入同一个 `feat` commit，无法从 git 历史证明 Red 真实出现过。从 011 起强制两段式提交。
+
+**模式**：
+```bash
+# 第 1 个 commit — Red（只含失败测试，跑 mvn test 必须红）
+git add src/test/java/.../XxxTest.java
+git commit -m "test(layer): add failing tests for Xxx (Red)"
+
+# 第 2 个 commit — Green（加生产代码让测试通过）
+git add src/main/java/.../Xxx.java
+git commit -m "feat(layer): implement Xxx to pass tests (Green)"
+
+# 必要时 — Refactor（不改行为，保持绿）
+git commit -m "refactor(layer): extract YyyHelper from Xxx (Refactor)"
+```
+
+**例外**：仅修复现有 bug（已有覆盖测试）、重命名、import 整理等无新增行为的改动，可合并为单 commit。
+
+**举证**：`handoff.md` 的 `pre-flight.tdd-evidence` 字段必须列出每个**新增**生产类的 `red-commit` + `green-commit` 两个 hash，@qa/@architect 可按 hash 独立回溯。
+
 ## 开发顺序（严格自下而上，每层一个 commit）
 
 ### 第 1 层：Domain（纯 Java，禁止 Spring/MyBatis）
@@ -153,9 +175,16 @@ to: qa
 status: pending-review
 timestamp: "{ISO-8601}"
 pre-flight:
-  mvn-test: pass
-  checkstyle: pass
-  entropy-check: pass
+  mvn-test: pass       # Tests run: X, Failures: 0, Errors: 0
+  checkstyle: pass     # Exit 0, 0 violations
+  entropy-check: pass  # 12/12 checks passed
+  tdd-evidence:        # 🔴 每个新增生产类列出红绿 commit
+    - class: "XxxAggregate"
+      red-commit: "abc1234"
+      green-commit: "def5678"
+    - class: "XxxRepositoryImpl"
+      red-commit: "ghi9abc"
+      green-commit: "jkl0def"
 summary: "{X 个聚合/端口实现完成，测试 Y 条全绿}"
 ---
 ```

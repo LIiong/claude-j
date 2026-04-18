@@ -9,6 +9,29 @@
 
 ---
 
+## 0. AC 自动化覆盖矩阵（强制，动笔前先填）
+
+> **背景**：010-secret-externalize 的 AC1「未设 JWT_SECRET 启动失败」被标为"手动验证"，关键安全保证失去回归保障。从 011 起每条 AC 必须在此表留下可回溯的自动化证据。
+>
+> **规则**：
+> 1. 列出 `requirement-design.md#验收标准` 的每一条 AC
+> 2. 每条必须映射到至少 1 个自动化测试（哪一层、哪个测试方法名）
+> 3. 若标「手动」，必须说明**为什么不能自动化** + **替代自动化测试**（即便是弱化版）
+> 4. @architect 评审时会校验本表是否填写完整，不全则 changes-requested
+
+| # | 验收条件（AC） | 自动化层 | 对应测试方法 | 手动备注（若有） |
+|---|---|---|---|---|
+| AC1 | {例：未设 JWT_SECRET 启动失败并提示错误} | Infrastructure | `JwtSecretValidatorTest.should_failStart_when_secretMissing`（用 `ApplicationContextRunner`） | - |
+| AC2 | {例：设置 JWT_SECRET 后登录正常} | Start（集成） | `AuthIntegrationTest.should_login_when_secretConfigured` | - |
+| AC3 | {...} | {Domain/Application/Infrastructure/Adapter/Start} | {should_xxx_when_yyy} | - |
+
+**反模式（禁止）**：
+- ❌ "启动失败无法自动化" → 错。用 `ApplicationContextRunner` / `@SpringBootTest(properties=...)` 均可模拟启动失败
+- ❌ "性能场景只能手测" → 错。用 JMH / `@Timeout` 可自动化门限
+- ❌ "CI 环境才触发" → 错。把 CI 的环境变量注入等价物放到 `@TestPropertySource` 即可
+
+---
+
 ## 一、Domain 层测试场景
 
 <!-- 纯单元测试，JUnit 5 + AssertJ，禁止 Spring 上下文 -->

@@ -66,7 +66,7 @@ memory: project
 **日期**：{YYYY-MM-DD}
 **结论**：✅ 通过 / ❌ 待修改
 
-### 评审检查项（12 维三类）
+### 评审检查项（15 维四类）
 
 **架构合规（7 项）**
 - [ ] 聚合根边界合理（遵循事务一致性原则）
@@ -77,14 +77,19 @@ memory: project
 - [ ] API 设计符合 RESTful 规范
 - [ ] 对象转换链正确（DO ↔ Domain ↔ DTO ↔ Request/Response）
 
-**需求质量（3 项 — 新增）**
+**需求质量（3 项）**
 - [ ] 需求无歧义：核心名词、流程、异常分支均有明确定义
 - [ ] 验收条件可验证：每条 AC 可转化为 `should_xxx_when_yyy` 测试用例
 - [ ] 业务规则完备：状态机/不变量/边界值在需求中已列明
 
-**计划可执行性（2 项 — 新增）**
+**计划可执行性（2 项）**
 - [ ] task-plan 粒度合格：按层任务已分解到原子级（10–15 分钟/步），每步含文件路径 + 验证命令 + 预期输出（详见 `docs/exec-plan/templates/task-plan.template.md` 原子任务章节）
 - [ ] 依赖顺序正确：domain → application → infrastructure → adapter → start 自下而上，层间依赖无倒置
+
+**可测性保障（3 项 — 010 复盘后新增）**
+- [ ] **AC 自动化全覆盖**：`test-case-design.md` 的「AC 自动化覆盖矩阵」每条 AC 都有对应自动化测试方法；任一标「手动」但无替代自动化测试 → **打回**
+- [ ] **可测的注入方式**：若引入新 Spring Bean，使用构造函数注入而非字段注入（避免测试反射）；详见 `java-dev.md` 依赖注入规则
+- [ ] **配置校验方式合规**：若涉及敏感/跨环境配置校验，使用 `@ConfigurationProperties + @Validated`，不得用 `ApplicationRunner`/`@PostConstruct`；详见 ADR-005
 
 **心智原则（Karpathy — 动手前自检）**
 - [ ] **简洁性**：需求未要求的抽象/配置/工厂已移除；任何单一实现的 `XxxStrategy`/`XxxFactory` 需说明存在理由

@@ -5,9 +5,13 @@ to: architect
 status: pending-review
 timestamp: "{YYYY-MM-DDTHH:MM:SS}"
 pre-flight:
-  mvn-test: pending
-  checkstyle: pending
-  entropy-check: pending
+  mvn-test: pending            # 填真实输出，如: pass # Tests run: 50, Failures: 0
+  checkstyle: pending           # 填真实输出，如: pass # Exit 0
+  entropy-check: pending        # 填真实输出，如: pass # 12/12 checks passed
+  tdd-evidence:                 # 🔴 强制：每个生产类都要有红绿两个 commit hash
+    - class: "{ClassName}"
+      red-commit: "{hash7}"     # test(xxx): add failing test (Red)
+      green-commit: "{hash7}"   # feat(xxx): implement to pass (Green)
 artifacts:
   - requirement-design.md
   - task-plan.md

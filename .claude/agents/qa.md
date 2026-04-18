@@ -42,6 +42,13 @@ memory: project
 - `mvn checkstyle:check` — 代码风格检查通过
 - `./scripts/entropy-check.sh` — 熵检查通过
 
+**TDD 红绿证据校验（010 复盘后新增）**：
+- 读取 `handoff.md` 的 `pre-flight.tdd-evidence` 字段
+- 对每个新增生产类：
+  - `git show {red-commit} --stat` 应只含 `src/test/java/` 文件 + 测试失败可复现
+  - `git show {green-commit}` 应含对应 `src/main/java/` 文件
+  - 若两个 commit 相同或 red-commit 里已含生产代码 → **判定为 Critical（TDD 铁律违规），打回 @dev 重做**
+
 > **举证铁律**：test-report.md 的每条结论必须附命令 + 关键输出片段（失败行号、测试数、退出码）。禁止照搬 @dev 的 pre-flight、禁止"看起来通过"类措辞。完整规则见 `.claude/skills/verification-before-completion/SKILL.md` 与 `.claude/rules/verification-gate.md`。
 
 ### 4. 执行测试用例
@@ -75,6 +82,17 @@ Checkstyle 已自动覆盖 Java 8 兼容、命名、import 规范，以下为需
 - 四：测试金字塔合规
 - 五：问题清单（严重度：高/中/低）
 - 六：验收结论
+
+**非业务任务的章节裁剪（010 复盘后新增）**：
+- 在报告开头声明「任务类型」：业务聚合 / 配置变更 / 基础设施 / 运维 / 文档
+- 若任务类型为后四类，允许**整节删除**不相关的章节（领域模型检查、对象转换链检查、Controller 检查），避免整表 "N/A" 噪音
+- 不可删除的章节：一（测试执行）、三（代码风格）、五（问题清单）、六（验收结论）
+- 删除章节处留一行：`> 本任务不涉及 {章节名}，已按模板说明省略`
+
+**AC 自动化覆盖校验（010 复盘后新增）**：
+- 交叉检查 `requirement-design.md#验收标准` 与 `test-case-design.md#AC 自动化覆盖矩阵`
+- 每条 AC 必须有对应的自动化测试方法；若标「手动验证」且无替代自动化测试 → **判定为 Critical，打回 @dev**
+- 验证手动替代是否已被尝试（例如"启动失败"应可用 `ApplicationContextRunner` 自动化）
 
 ### 8. 通知 Dev 修复（如有问题）
 如存在 Critical 或 Major 问题：

@@ -39,6 +39,14 @@ alwaysApply: false
 - DO 必须标注 `@TableName`，主键按规范使用 `@TableId`。
 - 复杂查询必须放在 `resources/mapper/` 的 XML 文件中。
 
+### 依赖注入与配置绑定
+- **可注入 Spring Bean 的依赖必须使用构造函数注入**（参数上打 `@Value` / `@Autowired` / 直接类型注入均可）。
+- 禁止对 Bean 的实例字段使用 `@Value` / `@Autowired` 做字段注入（单测被迫使用反射，违反"不测私有实现细节"）。
+- **敏感/跨环境配置校验一律使用 `@ConfigurationProperties + @Validated` + JSR-303 注解**（`@NotBlank`/`@Size`/`@Positive` 等）。
+- 禁止用 `ApplicationRunner` / `CommandLineRunner` 做配置校验（时机晚于消费方 Bean 初始化，可能被抢先挂掉）。
+- 禁止用 `@PostConstruct` 做跨字段/跨环境配置校验（仅允许做 Bean 内部不变量校验）。
+- 详见 `docs/architecture/decisions/005-config-validation-strategy.md`。
+
 ## MUST NOT（禁止）
 - 禁止在 `domain` 中出现 `org.springframework.*` 或 `com.baomidou.*` import。
 - 禁止使用 `var`、records、text blocks、switch 表达式、`List.of()`、`Map.of()`。
@@ -46,6 +54,8 @@ alwaysApply: false
 - 禁止 Request/Response 泄漏到 `adapter` 之下。
 - 禁止将 Domain 对象直接作为 REST 响应输出。
 - 禁止在聚合根/实体上使用 `@Setter` 或 `@Data`。
+- 禁止在 Spring Bean 字段上使用 `@Value` / `@Autowired`（用构造函数注入）。
+- 禁止用 `ApplicationRunner` / `CommandLineRunner` 做敏感配置校验（用 `@ConfigurationProperties + @Validated`）。
 
 ## 执行检查（每次改动后）
 1. 按顺序实现：Domain -> Application -> Infrastructure -> Adapter -> Start。
