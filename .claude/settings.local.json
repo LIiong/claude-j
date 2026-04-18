@@ -119,7 +119,23 @@
       "Bash(.claude/skills/using-git-worktrees/scripts/worktree.sh list:*)",
       "Bash(mkdir -p .claude/skills/using-claude-j-workflow/scripts)",
       "Bash(git mv:*)",
-      "Bash(bash .claude/skills/using-claude-j-workflow/scripts/session-start.sh)"
+      "Bash(bash .claude/skills/using-claude-j-workflow/scripts/session-start.sh)",
+      "Bash(chmod +x .claude/skills/qa-ship/scripts/pre-archive-check.sh)",
+      "Bash(./.claude/skills/qa-ship/scripts/pre-archive-check.sh 011-flyway-migration --archived --skip-reverify)",
+      "Bash(mkdir -p /tmp/bad-task-011)",
+      "Bash(cp docs/exec-plan/archived/011-flyway-migration/handoff.md /tmp/bad-task-011/)",
+      "Bash(cp docs/exec-plan/archived/011-flyway-migration/test-report.md /tmp/bad-task-011/)",
+      "Read(//tmp/**)",
+      "Read(//tmp/bad-task-011/**)",
+      "Bash(cp /tmp/bad-task-011/* docs/exec-plan/active/011-test-fixture-negative/)",
+      "Bash(./.claude/skills/qa-ship/scripts/pre-archive-check.sh 011-test-fixture-negative --skip-reverify)",
+      "Bash(git log *)",
+      "Bash(python3 -c 'import json,sys; s=json.load\\(sys.stdin\\); *)",
+      "Bash(chmod +x scripts/verify-portable.sh)",
+      "Bash(./scripts/verify-portable.sh /Users/macro.li/aiProject/claude-j)",
+      "Bash(rm -f /Users/macro.li/aiProject/claude-j-web/scripts/hooks/guard-java-layer.sh)",
+      "Bash(mv /Users/macro.li/aiProject/claude-j-web/.claude/rules/java-dev.md /Users/macro.li/aiProject/claude-j-web/.claude/rules/ts-dev.md.old)",
+      "Bash(mv /Users/macro.li/aiProject/claude-j-web/.claude/rules/java-test.md /Users/macro.li/aiProject/claude-j-web/.claude/rules/ts-test.md.old)"
     ]
   }
 }
