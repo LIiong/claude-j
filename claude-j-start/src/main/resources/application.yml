@@ -20,7 +20,7 @@ mybatis-plus:
       logic-not-delete-value: 0
 
 jwt:
-  secret: claude-j-secret-key-at-least-32-bytes-for-hs256-algorithm
+  secret: ${JWT_SECRET:}
   access-token-expiration: 60  # Access Token 有效期（分钟）
   refresh-token-expiration: 7  # Refresh Token 有效期（天）
 
