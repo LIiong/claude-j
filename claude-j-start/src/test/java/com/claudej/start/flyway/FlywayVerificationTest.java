@@ -17,7 +17,7 @@ public class FlywayVerificationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void should_have_7_migrations_in_schema_history() {
+    void should_record_7_migrations_when_flyway_migrates() {
         List<Map<String, Object>> results = jdbcTemplate.queryForList(
             "SELECT \"version\", \"description\", \"success\" FROM \"flyway_schema_history\" WHERE \"version\" IS NOT NULL ORDER BY \"version\""
         );
@@ -32,7 +32,7 @@ public class FlywayVerificationTest {
     }
 
     @Test
-    void should_have_all_11_tables_created() {
+    void should_create_11_tables_when_migrations_complete() {
         List<String> tables = jdbcTemplate.queryForList(
             "SELECT table_name FROM information_schema.tables WHERE table_schema = 'PUBLIC' AND table_name LIKE 'T_%'",
             String.class
