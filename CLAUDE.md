@@ -92,6 +92,7 @@ adapter → application → domain ← infrastructure ← start(assembles all)
 | 架构规则（14 条，含测试命名规范） | ArchUnit | mvn test |
 | 代码风格 | Checkstyle | mvn checkstyle:check |
 | Pre-commit / Pre-push | Git Hooks | git commit/push |
+| 会话启动上下文注入（active task / 角色 / 未提交改动） | `session-start.sh` Hook | 新会话开始 |
 
 ## Skill 命令
 
@@ -107,14 +108,18 @@ adapter → application → domain ← infrastructure ← start(assembles all)
 | `/qa-ship [task-id]` | 归档已验收任务 |
 | `/task-status [task-id]` | 查看任务状态一览（傻瓜式进度查询） |
 | `/full-check` | mvn test + checkstyle + entropy-check |
+| `/receiving-code-review <task-id>` | QA 打回后结构化修复：按严重度拆单元，每单元 Red-Green-Commit |
+| `/using-git-worktrees new\|list\|remove` | 多任务并行隔离（worktree 级，不是单任务内部并行） |
 
 ### 自动触发 Skill（不可手动调用）
 这些 skill 由 agent 在满足条件时自动触发，无需用户调用：
 
 | Skill | 触发时机 | 作用 |
 |-------|---------|------|
+| `using-claude-j-workflow` | 会话开始（session-start hook 注入） | 工作流入口地图，告诉 agent 先读哪、先做什么 |
 | `verification-before-completion` | 任何角色声称"通过/完成/修复"前 | 强制先跑命令、再附证据 |
 | `systematic-debugging` | @dev 收到 QA changes-requested 或遇测试失败 | 4 阶段根因调查铁轨 |
+| `dispatching-parallel-agents` | Ralph 准备派发多个子 agent / 工具调用前 | 判定何时可并行（只读研究）何时必须串行（TDD/handoff） |
 
 ## Agent 团队
 
