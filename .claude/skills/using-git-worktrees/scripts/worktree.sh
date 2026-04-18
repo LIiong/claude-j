@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# worktree.sh — claude-j 多任务并行 worktree 管理
+# worktree.sh — 多任务并行 worktree 管理
 # 用法：
 #   worktree.sh new <task-id> [base-branch]   # 默认 base = main
 #   worktree.sh list
@@ -18,7 +18,7 @@ WT_PARENT="$(dirname "$PROJECT_DIR")/${PROJECT_NAME}-wt"
 
 usage() {
   cat <<EOF
-worktree.sh — claude-j 多任务并行管理
+worktree.sh — 多任务并行管理
 
 用法：
   $0 new <task-id> [base-branch]   创建 worktree（分支 task/<task-id>）
@@ -75,8 +75,7 @@ action_new() {
   echo ""
   echo "下一步："
   echo "   cd $wt_dir"
-  echo "   claude"
-  echo "   # 在 claude 里：/ralph $TASK_ID \"<需求描述>\""
+  echo "   # 在该 worktree 启动 shell / IDE / claude 会话开展任务"
 }
 
 action_list() {
@@ -85,7 +84,7 @@ action_list() {
   echo ""
 
   if [ -d "$WT_PARENT" ]; then
-    echo "📁 claude-j 副 worktree 父目录：$WT_PARENT"
+    echo "📁 副 worktree 父目录：$WT_PARENT"
     local count
     count=$(find "$WT_PARENT" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
     echo "   含 $count 个副 worktree"

@@ -1,6 +1,6 @@
 ---
 name: using-git-worktrees
-description: "多任务并行时用 git worktree 做隔离。适用于同时推进 2+ 个独立 task（例如 011-flyway 与 012-multi-profile），避免分支频繁切换和工作区脏污干扰。"
+description: "多任务并行时用 git worktree 做物理隔离。适用于同时推进 2+ 个独立 feature/bug 分支，避免在一个工作区里频繁 checkout、工作区脏污互相干扰。附带 worktree.sh 管理脚本（new/list/remove）。"
 user-invocable: true
 disable-model-invocation: true
 argument-hint: "<action: new|list|remove> [task-id] [base-branch]"
@@ -13,19 +13,20 @@ allowed-tools: "Bash(git worktree *) Bash(git branch *) Bash(git status *) Bash(
 
 | 场景 | 用 worktree？ |
 |------|--------------|
-| 单任务顺序走 5 阶段（Spec→...→Ship） | ❌ 不需要 |
-| 同时推进 2 个独立任务（如 011 和 012） | ✅ 推荐 |
-| 对已归档任务做 hotfix 的同时主干在开发 | ✅ 推荐 |
+| 单任务顺序完成 | ❌ 不需要 |
+| 同时推进 2+ 个独立任务 / 分支 | ✅ 推荐 |
+| 对已发布版本做 hotfix 的同时主干仍在开发 | ✅ 推荐 |
 | 长时间 code review 期间继续写新代码 | ✅ 推荐 |
-| 仅仅想分支切换 | ❌ 用 `git switch` 即可 |
+| 仅想切换分支查看 | ❌ `git switch` 即可 |
+| 同一任务内多角色协作（dev / reviewer / QA） | ❌ 子 agent / 独立上下文已够，worktree 反而增加复杂度 |
 
-## 核心约束
+## 核心约束（必读）
 
-Ralph 流水线依赖**文件系统状态**（`.claude-current-role`、`docs/exec-plan/active/`、`handoff.md`）。这些在每个 worktree **独立存在**，所以：
+每个 worktree 限定**一个任务**。理由：
 
-- 每个 worktree 只处理 **一个 task**
-- 不同 worktree 的 Claude 会话**不共享** `.claude-current-role`，角色标记不会互相干扰
-- `docs/exec-plan/active/{task-id}/` 在各自 worktree 独立，最终合并到 main 时按任务归档
+- 工作流状态通常存在文件系统（进度文件、角色标记、任务目录）。多任务共用 worktree → 状态互相覆盖。
+- 分支与工作目录 1:1 绑定。两个任务混放同一 worktree 等于退化为无 worktree。
+- 跨 worktree 的共享资源（maven/node_modules 缓存、CI 数据库）如有并发写冲突，串行执行即可，不要强并行。
 
 ## 命令入口
 
@@ -40,89 +41,94 @@ Ralph 流水线依赖**文件系统状态**（`.claude-current-role`、`docs/exe
 ## 目录约定
 
 ```
-~/aiProject/
-  claude-j/                    # 主 worktree（main 分支）
-  claude-j-wt/                 # 副 worktree 父目录（由脚本创建）
-    011-flyway-migration/      # 分支 task/011-flyway-migration
-    012-multi-profile/         # 分支 task/012-multi-profile
+~/projects/
+  <repo>/                    # 主 worktree（主分支）
+  <repo>-wt/                 # 副 worktree 父目录（脚本自动创建于主仓库同级）
+    011-feature-a/           # 分支 task/011-feature-a
+    012-bugfix-b/            # 分支 task/012-bugfix-b
 ```
 
-- 副 worktree 放在**主目录之外**（`../claude-j-wt/`）避免 IDE 扫描重复代码
-- 分支名自动为 `task/{task-id}`
-- 每个 worktree 内可独立启动 `claude` CLI
+- 副 worktree 放在**主仓库同级**（不是内部），避免 IDE / 构建工具扫描重复代码
+- 分支名默认 `task/<task-id>`（脚本会检查冲突）
+- 每个 worktree 可独立启动 shell / IDE / claude 会话
 
 ## 典型工作流
 
-### 场景：同时推进 011 和 012
+### 场景：同时推进 2 个任务
 
 ```bash
-# 1. 主 worktree（claude-j/）仍在 main，用来做 review / 查资料
-cd ~/aiProject/claude-j
+# 1. 主 worktree 仍在主分支，用于 review / 查资料
+cd ~/projects/myrepo
 
-# 2. 为 011 开 worktree
-/using-git-worktrees new 011-flyway-migration
-# → 创建 ~/aiProject/claude-j-wt/011-flyway-migration/ 分支 task/011-flyway-migration
-# → 输出：cd ~/aiProject/claude-j-wt/011-flyway-migration && claude
+# 2. 为任务 A 开 worktree
+/using-git-worktrees new 011-feature-a
+# → 创建 ~/projects/myrepo-wt/011-feature-a/ 分支 task/011-feature-a
 
-# 3. 新终端进入 worktree 跑 Ralph
-cd ~/aiProject/claude-j-wt/011-flyway-migration
-claude
-# 在 claude 里：/ralph 011-flyway-migration "Flyway 数据库迁移..."
+# 3. 新终端进入 worktree 开工
+cd ~/projects/myrepo-wt/011-feature-a
+# 这里跑任务 A 的全部流程（编码、测试、提交、push）
 
-# 4. 回主 worktree 开 012（或开第二个副 worktree）
-cd ~/aiProject/claude-j
-/using-git-worktrees new 012-multi-profile
+# 4. 回主仓库开任务 B
+cd ~/projects/myrepo
+/using-git-worktrees new 012-bugfix-b
 
-# 5. 011 完成合并后清理
-/using-git-worktrees remove 011-flyway-migration
+# 5. A 合并后清理
+/using-git-worktrees remove 011-feature-a
 ```
 
-### 场景：code review 期间写新代码
+### 场景：Review 与开发并行
 
 ```bash
-# PR 审阅用主 worktree（切到 PR 分支查看）
-cd ~/aiProject/claude-j
+# PR 审阅在主 worktree（切到 PR 分支查看）
+cd ~/projects/myrepo
 git fetch origin pull/123/head:pr-123
 git switch pr-123
 
-# 同时在副 worktree 继续写主干任务
-cd ~/aiProject/claude-j-wt/013-xxx
-# 不会被 pr-123 的代码干扰
+# 同时在副 worktree 继续主干任务，互不干扰
+cd ~/projects/myrepo-wt/013-xxx
 ```
 
 ## 冲突风险与规避
 
 | 风险 | 规避 |
 |------|------|
-| 两个 worktree 修改同一文件 | 每个 worktree 限定一个 task 的 docs/exec-plan/active 子目录；代码改动按聚合隔离（011 动 infra，012 动 start config —— 冲突面小） |
-| 共享 `.claude-current-role` 冲突 | worktree 各有独立 `.claude-current-role` 文件（gitignored） |
-| maven 本地仓库并发 | `~/.m2/repository` 是共享的；并发 `mvn install` 罕见冲突，出现则串行跑 |
-| Hook 路径混乱 | Hook 用 `$CLAUDE_PROJECT_DIR`，每个 worktree 独立 resolve，不会串台 |
-| IDE 索引重复 | 副 worktree 放主目录外；必要时在 IDE 排除 `claude-j-wt/` |
+| 两个 worktree 改同一文件 | 任务边界按模块/目录划分，冲突面最小化；最终靠 PR 合并时 rebase 解决 |
+| 共享的工具运行时状态（例如单例后台进程、端口占用） | 明确哪个 worktree 是"当前活动"，其他不启动相同端口服务 |
+| 包管理缓存并发写（maven/npm/pip） | 绝大多数缓存实现是幂等的；如遇冲突，串行执行安装命令 |
+| IDE 索引重复 | 副 worktree 放主仓库外；必要时在 IDE 排除 `*-wt/` |
+| Git Hook 路径混乱 | Hook 脚本用工作目录相对路径或 `git rev-parse --show-toplevel` 解析，避免硬编码 |
 
 ## 合并回主干
 
-每个 task 在其 worktree 内走完 Ralph 5 阶段（包括 Ship 归档到 `docs/exec-plan/archived/`），然后：
+每个 task 在其 worktree 内完成所有步骤后：
 
 ```bash
 # 在 worktree 内
-git push origin task/011-flyway-migration
-# GitHub 开 PR，合并到 main
+git push origin task/011-feature-a
+# 开 PR，合并到主干
 
-# 合并后清理
-cd ~/aiProject/claude-j
+# 合并后回主仓库清理
+cd ~/projects/myrepo
 git pull
-/using-git-worktrees remove 011-flyway-migration
+/using-git-worktrees remove 011-feature-a
+# （可选）删除本地已合并分支
+git branch -d task/011-feature-a
 ```
 
 ## 不要做
 
-- ❌ 不要在同一 worktree 内同时跑多个 task（Ralph 状态会打架）
-- ❌ 不要用 worktree 做 hot-swap 角色（@dev/@qa 通过子 agent 隔离，不需要 worktree）
-- ❌ 不要 `git worktree add` 到 `claude-j/` 子目录（会被 maven/IDE 当作内部模块）
-- ❌ 不要忘记 `remove`（长期遗留的 worktree 会让 `.git/worktrees/` 膨胀）
+- ❌ 同一 worktree 并发处理多个任务（文件状态会互相覆盖）
+- ❌ worktree 放在主仓库子目录（构建工具会把它当内部模块）
+- ❌ 跨 worktree 共享未提交改动（stash 不跨 worktree；走 commit + cherry-pick）
+- ❌ 忘记 `remove`（`.git/worktrees/` 元数据膨胀；脚本会在移除时清理空父目录）
+- ❌ 对同一分支在多个 worktree 中 checkout（git 本身会拒绝，但别绕过）
+
+## 与其他 skill 的关系
+
+- `dispatching-parallel-agents` — 单任务内"能不能并行子 agent"的决策；本 skill 是**任务间**的物理隔离，不冲突，两者互补。
+- 单任务内多角色（编码 + 评审 + 测试）通过子 agent 独立上下文即可，不需要 worktree。
 
 ## 参考
 
-- Git 官方文档：`man git-worktree`
-- `dispatching-parallel-agents` skill — 单任务内的子 agent 并行（更细粒度）
+- `man git-worktree`
+- Git 官方文档：https://git-scm.com/docs/git-worktree

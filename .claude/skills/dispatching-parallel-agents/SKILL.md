@@ -1,6 +1,6 @@
 ---
 name: dispatching-parallel-agents
-description: "Ralph 与编排 agent 决定何时可以并行派发子 agent 的判定手册。显式列出 claude-j 流水线中的依赖边界：哪些能并行（只读研究、多文件 grep）、哪些禁止并行（TDD Red-Green、聚合间状态修改、QA 验收）。"
+description: "编排 agent 决定何时可以并行派发子 agent / 工具调用的判定手册。显式列出安全并行区（只读研究、独立检查）与禁止并行区（TDD Red-Green、状态机更新、依赖产物的阶段）。防止因盲目并行破坏因果证据或交接状态。"
 user-invocable: false
 disable-model-invocation: true
 allowed-tools: "Read Grep Glob"
@@ -10,161 +10,155 @@ allowed-tools: "Read Grep Glob"
 
 ## 核心结论（先给答案）
 
-> **Ralph 5 阶段本身不能并行**（Spec→Review→Build→Verify→Ship 有刚性因果依赖）。
+> **多阶段流水线本身通常不能并行** —— 阶段之间有刚性因果依赖（产物 → 评审/消费）。
 >
-> **但阶段"内部"的只读/无状态步骤可以并行**：研究、多聚合 grep、跨文件检查。这是并行的唯一合法区。
+> **阶段"内部"的只读 / 无共享状态 / 彼此独立的步骤可以并行**：研究、多文件检索、独立的质量检查命令。
+>
+> **并行的唯一合法区 = 读操作 + 彼此没有顺序依赖的写/副作用**。
 
-盲目并行化 Ralph = 破坏 TDD 因果 + 破坏 handoff 状态机 + 破坏上下文隔离承诺。
+盲目并行化带来的不是性能收益，而是：丢失因果证据（TDD Red-Green 混乱）、破坏状态机（多 agent 同时改同一交接文件）、上下文假设不成立（A 还没写完 B 就开始读）。
 
 ## 可 / 不可并行：一张判定表
 
 ### ✅ 可以并行（独立、只读、无共享状态）
 
-| 场景 | 举例 | 工具 |
-|------|------|------|
-| **Spec 前置研究** | 同时读 `docs/architecture/overview.md` + `docs/standards/java-dev.md` + 已有聚合代码 | 多个 Read 工具并行 |
-| **@architect 交叉验证** | 同时 grep 多个 ADR + 查 CLAUDE.md 聚合表 + 跑 entropy-check | 多个 Grep / Bash 并行 |
-| **多文件同质检查** | 跨 7 个聚合检查某反模式（字段注入、`List.of`）| Grep 模式 + multiple Bash |
-| **Build 前置阅读** | @dev 开始编码前并行读 requirement-design + java-dev.md + 示例聚合 | Read 并行 |
-| **@qa 独立 re-run** | 同时跑 mvn test / checkstyle / entropy-check（互不依赖） | 3 个 Bash 并行 |
-| **多任务全无交集的研究子 agent** | 对 2 个完全独立的 task 各派一个 research-only agent | Agent 工具并行 |
+| 场景 | 举例 |
+|------|------|
+| **阅读多份参考文档** | 同时读 架构文档 + 规范 + 参考实现 |
+| **跨文件搜索同一模式** | 多个 `grep` 查多个目录 |
+| **独立的质量门命令** | `lint` + `type-check` + `unit-test` 三条无依赖的命令同时跑 |
+| **多方向只读调研子 agent** | 2 个 research-only agent 分别研究方案 A / 方案 B，最后主 agent 汇总决策 |
+| **跨 task 的物理隔离** | 不同 task 各自 worktree / 各自会话（见 using-git-worktrees） |
 
-### ❌ 禁止并行（有状态、有序、有产物依赖）
+### ❌ 禁止并行（有状态 / 有序 / 有产物依赖）
 
 | 场景 | 为什么禁止 |
 |------|------|
-| **TDD Red → Green** | 必须先看到 RED（铁律①），再 Green；并行执行会导致"绿了就通过"的假阳性 |
-| **同聚合内 Domain → Application → Infra → Adapter** | 依赖方向严格：后层依赖前层的编译产物 |
-| **Spec 和 Review 并行** | Review 必须读 Spec 产物（requirement-design.md）|
-| **Build 和 Verify 并行** | QA 必须读 Build 提交的代码和 pre-flight 证据 |
-| **同一 task 内多个修复单元并行** | 见 receiving-code-review：单问题闭环，并行会丢失因果证据 |
-| **多个 agent 同时改同一聚合** | 写冲突 + `guard-agent-scope.sh` 会拦 |
-| **`@dev` 编码 + `@qa` 写测试用例设计** | QA 必须基于 Build 产物写 test-case-design，时机错位 |
-| **Ralph 返工循环并行** | 第 N 轮 dev 修复必须等第 N 轮 qa 验收结束 |
+| **TDD：写失败测试 → 看到 RED → 写实现 → 看到 GREEN** | 必须先看到 RED（否则无法证明测试有效）；并行会导致"绿了就通过"的假阳性 |
+| **分层实现的后层依赖前层的编译 / 类型产物** | 后层依赖前层的 API 形状 |
+| **设计评审 vs 设计编写** | 评审必须读到稳定版本，并行会评审到半成品 |
+| **实现 vs 验收测试** | 验收要读实现后的代码与行为 |
+| **同一 review 反馈内的多个修复单元** | 单问题闭环（见 receiving-code-review）；并行会丢失"哪个 commit 修了哪条"的因果 |
+| **多个 agent 同时改同一目标文件 / 状态机文件** | 写冲突；状态机更新必须可线性追溯 |
+| **返工循环的第 N 轮 fix 与 第 N 轮 verify** | verify 必须基于 fix 的完整产物 |
+| **生成 commit 前的 test 运行** | commit 结果依赖 test 结果 |
 
-### 🤔 灰区：看情况
+### 🤔 灰区：看条件
 
-| 场景 | 条件 |
-|------|------|
-| **跨聚合独立扩展**（如"order 加支付" + "coupon 加过期清理"） | 各自在**独立 worktree** 里用 Ralph 各走一遍（用 `using-git-worktrees`） |
-| **Spec 阶段多方案调研** | 可以让 2 个只读子 agent 研究不同方向，最后主 agent 做决策；但不要并行让它们各写一份 requirement-design |
+| 场景 | 放行条件 |
+|------|---------|
+| **多个独立 task 各自推进** | 用 **worktree 物理隔离**（见 using-git-worktrees），不要在同一上下文里并行 orchestrate |
+| **多方案探索（research 阶段）** | 只读并行 OK；如果任何一方需要落地到文档/代码 → 改串行 |
+| **大批量同质改动（机械式 rename / 批量格式化）** | 并行修改允许，但必须确认改动彼此无依赖且无共享状态（通常用单个脚本工具而不是多 agent 更稳） |
 
-## Ralph 主 agent 的并行决策流程
+## 主 agent 的并行决策流程
 
-每次准备调度子 agent 前问 4 个问题：
+每次准备派发多个子 agent / 并发工具调用前，问 4 个问题：
 
 ```
-Q1: 两个任务是否共享写入目标（同文件 / 同 handoff.md / 同 .claude-current-role）？
+Q1: 两个任务是否共享写入目标（同文件 / 同状态机 / 同产物）？
     → 是 → 必须串行
-Q2: 后任务是否依赖前任务的产出物（commit / 文档 / 测试输出）？
+Q2: 后任务是否依赖前任务的产出物（文件 / 编译产物 / 测试结果 / commit）？
     → 是 → 必须串行
-Q3: 两个任务是否都只 Read / Grep / Bash（read-only 命令）？
+Q3: 两个任务是否都只读（Read / Grep / 只读 Bash 命令）？
     → 是 → 可以并行 ✅
-Q4: 两个任务是否改动同一模块的源码？
+Q4: 两个任务是否改动同一模块 / 同一上下文（共享内存状态、共享数据库）？
     → 是 → 必须串行
 ```
 
-**通过 Q1+Q2+Q4 的否决 + Q3 的肯定**，才算真正可并行。
+**通过 Q1+Q2+Q4 的否决 + Q3 的肯定**，才算真正可并行。有一个答不清，默认串行。
 
 ## 并行派发的具体做法
 
-### 方式 A：同一消息内多个工具调用（最常用）
+### 方式 A：同一消息内多个工具调用（最常用，零风险）
 
-Ralph 主 agent 在**一条消息**里发多个独立工具调用：
+主 agent 在**一条消息**里发多个独立工具调用：
 
 ```
-- Read(docs/architecture/overview.md)
-- Read(docs/standards/java-dev.md)
-- Grep("@Value", path="claude-j-*/src/main/java")
-- Bash("./scripts/entropy-check.sh")
+- Read(path/to/spec.md)
+- Read(path/to/conventions.md)
+- Grep("TODO", path="src/")
+- Bash("lint .")
 ```
 
-执行框架并行发起，回包后主 agent 汇总。这是**零风险并行**。
+运行时框架并行发起，回包后主 agent 汇总。**这是最安全的并行形式**，无状态共享风险。
 
 ### 方式 B：多个只读子 Agent 并行
 
 用 Agent 工具同时派发 2+ 个 **research-only** 子 agent：
 
-```python
-# 仅用于调研 / 多方向探索，每个 agent 都不得写源码
-Agent(subagent_type="Explore", prompt="调研 A 方向...")
-Agent(subagent_type="Explore", prompt="调研 B 方向...")
+```
+Agent(subagent_type="explore", prompt="调研方向 A，只读、不写文件")
+Agent(subagent_type="explore", prompt="调研方向 B，只读、不写文件")
 ```
 
 约束：
-- 每个 prompt 明确"只读、不得修改文件"
-- 返回 < 500 字总结，主 agent 整合
-- **不允许并行派 @dev 子 agent**（@dev 会写文件，违反并行前提）
+- 每个 prompt 明确"只读、不得修改文件 / 不得 commit"
+- 返回控制字数，主 agent 整合
+- **不允许并行派写类子 agent**（写文件 → 违反并行前提）
 
-### 方式 C：跨 worktree 多任务并行
+### 方式 C：跨 task 多会话（worktree）
 
-不同 task 放到**不同 worktree**（见 `using-git-worktrees`），用户在各自 worktree 启动独立 claude 会话。这是**进程级隔离**，Ralph 各跑各的，互不干扰。
+不同 task 放到不同 worktree（见 `using-git-worktrees`），用户在各自 worktree 启动独立上下文。**这是进程级隔离**，各跑各的，互不干扰。
 
-这不是 Ralph 内部并行，是**用户级并行**。
+## 常见流水线的并行机会
 
-## Ralph 现有流程的并行化点（具体建议）
+对多数"设计 → 评审 → 实现 → 验证 → 发布"类流水线：
 
-对照当前 `.claude/skills/ralph/SKILL.md`，合法并行机会：
+### 设计阶段内
+- 前置阅读（规范 / 架构 / 相似模块）→ 并行 Read
+- 相似实现检索 → 并行 Grep
 
-### Spec 阶段内
-- @dev 前置阅读（overview.md / java-dev.md / 已有聚合）→ 同一消息多 Read 并行
-- 同时 Grep 参考聚合的 Repository 端口 / Converter 模式
+### 评审阶段内
+- 交叉验证多份决策记录 / 规范 → 并行 Read / Grep
+- 基线健康检查（若有架构/规范扫描器） → 与文档检索并行
 
-### Review 阶段内
-- @architect 交叉验证：同一消息内并行
-  - `Grep("ADR", path="docs/architecture/decisions")`
-  - `Read(docs/architecture/overview.md)`
-  - `Bash("./scripts/entropy-check.sh")`
+### 实现阶段内
+- **前置阅读**可并行（规则 + 设计 + 参考实现）
+- **编码阶段严格串行**（按分层 / 按依赖拓扑）
+- 编码完成后**运行测试可并行**（不同模块的独立测试套件）
 
-### Build 阶段内（有限）
-- 只在**前置阅读**阶段可并行（读规则 + 读设计 + 读参考聚合）
-- **编码阶段严格串行**：Domain → Application → Infra → Adapter，每层一个 commit
-- 每层内部的测试可以写完一批后**并行运行**（`mvn -T 2C test`），但不要并行编辑代码
-
-### Verify 阶段内
-- 独立重跑三项检查 → 并行发三个 Bash
-  - `mvn clean test`
-  - `mvn checkstyle:check -B`
-  - `./scripts/entropy-check.sh`
-- 三者无依赖，耗时并行节省 30-50%
+### 验证阶段内
+- 独立的质量门命令（lint / type-check / unit-test / arch-check）互不依赖 → 并行
+- 节省时间通常显著（三条 1 分钟的命令并行约 1 分钟，串行 3 分钟）
 
 ### 跨 task
-- 用 `using-git-worktrees` 做物理隔离
-- **不要**在同一 Ralph 会话里并行调度 2 个 task 的 @dev 子 agent（handoff 状态会打架）
+- 用 worktree 物理隔离 + 独立会话
+- 不要在同一会话内并行 orchestrate 两个 task 的实现（状态机必会打架）
 
 ## 反模式（立即停）
 
 | 反模式 | 为什么不行 |
 |-------|-----------|
-| "同时派 @dev 写 Domain 和 @qa 写测试用例设计" | QA 要读 Build 产物，时机错位 |
+| "同时派一个写实现 + 一个写测试文档" | 测试文档要读实现，时机错位 |
 | "并行修复 Critical #1 + Critical #2（不同根因）" | Red-Green 因果被破坏，两次 Green 共用一次 commit → 丢证据 |
-| "用 2 个 subagent 并行读 + 写 requirement-design 再合并" | 写合并冲突，违反「一个 task 一个 spec」 |
-| "并行跑 mvn test + git commit" | commit 依赖 test 结果 |
-| "Review 和 Spec 同时跑，让 Review agent 边读边写评审" | 评审前提是 Spec 已稳定；并行会评审到半成品 |
+| "用 2 个 agent 并行读 + 各写一版设计稿再合并" | 合并冲突，违反"一个任务一份设计" |
+| "并行跑测试 + 提交 commit" | commit 依赖测试结果 |
+| "评审 agent 和设计 agent 同时跑，让 reviewer 边读边评" | 评审前提是设计稳定；并行等于评审半成品 |
+| "并行修改同一配置文件的两个 section" | YAML/JSON 合并冲突；哪怕看起来独立 |
 
-## 性能与正确性的权衡
+## 性能 vs 正确性的权衡
 
-并行的**真实收益**来自：
-- 多个 Read / Grep 的 IO 等待可同时进行（每个约 100-500ms）
-- `mvn test` + `checkstyle` + `entropy-check` 并行（约省 10-30s）
+并行的**真实收益**主要来自：
+- 多个 Read/Grep 的 IO 等待可同时进行（每个 100-500ms 量级）
+- 多个独立质量门命令并发（省 N-1 倍单命令耗时）
 
-对比**风险**：
-- 破坏 handoff 状态机 → QA 验收失败 → 返工一轮（数小时）
-- 丢失 TDD 证据 → QA 打回要求重做 → 返工一轮
+对比**并行失败的代价**：
+- 破坏状态机 / 因果 → 返工一轮（数小时）
+- 丢失 TDD 证据 → review 打回要求重做
 
-**因此默认态度：** 保守并行，只在 4 问全部通过时才并行。
+**默认态度：保守并行。只在 4 问全部通过时才并行。** 不确定 → 串行。
 
-## 当需要更高并行度时：换 worktree
+## 当需要更高并行度时：换物理隔离
 
-单 Ralph 会话内再怎么并行也有上限（handoff 状态机限制）。真需要并行 2+ task？
+单会话 / 单上下文内再怎么并行都有上限（状态机约束）。真需要并行 2+ task？
 
-→ **开 worktree**（`using-git-worktrees new`）→ 每个 task 独立 claude 会话独立 Ralph
+→ **开 worktree**（见 `using-git-worktrees`）→ 每个 task 独立会话独立流程
 
-这比在单会话里塞并行安全得多。
+这比在单会话里塞并行安全得多。物理隔离 > 逻辑并行。
 
-## 引用
+## 与其他实践的关系
 
-- `agent-collaboration.md`：handoff 状态机、返工轮次上限
-- `using-git-worktrees`：跨 task 物理隔离
-- `receiving-code-review`：单问题闭环，禁止并行修复
-- `verification-before-completion`：并行跑验证命令的合法场景
+- `using-git-worktrees` — task 级物理隔离；本 skill 是单 task / 单上下文内的并行决策，两者互补
+- `receiving-code-review` — 明确"禁止并行修复单元"，本 skill 支撑该约束
+- TDD / 完成前举证 — 并行执行 Green 测试前必须已经看到对应 Red；不得省略
