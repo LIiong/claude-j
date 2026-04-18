@@ -112,7 +112,14 @@
       "Bash(mvn checkstyle:check 2>&1 | grep -A5 \"ERROR\")",
       "Bash(./scripts/quick-check.sh 2>&1 | tail -20)",
       "Skill(gsd:do)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(chmod +x scripts/hooks/session-start.sh)",
+      "Bash(bash scripts/hooks/session-start.sh)",
+      "Bash(chmod +x .claude/skills/using-git-worktrees/scripts/worktree.sh)",
+      "Bash(.claude/skills/using-git-worktrees/scripts/worktree.sh list:*)",
+      "Bash(mkdir -p .claude/skills/using-claude-j-workflow/scripts)",
+      "Bash(git mv:*)",
+      "Bash(bash .claude/skills/using-claude-j-workflow/scripts/session-start.sh)"
     ]
   }
 }
