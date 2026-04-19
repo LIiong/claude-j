@@ -37,6 +37,7 @@
         <jacoco.version>0.8.11</jacoco.version>
         <jjwt.version>0.12.3</jjwt.version>
         <flyway.version>8.5.13</flyway.version>
+        <springdoc.version>1.7.0</springdoc.version>
     </properties>
 
     <dependencyManagement>
@@ -130,6 +131,13 @@
                 <groupId>mysql</groupId>
                 <artifactId>mysql-connector-java</artifactId>
                 <version>8.0.33</version>
+            </dependency>
+
+            <!-- SpringDoc OpenAPI -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-ui</artifactId>
+                <version>${springdoc.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

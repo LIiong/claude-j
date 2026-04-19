@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import javax.validation.Valid;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 /**
  * 购物车 Controller
  */
+@Tag(name = "购物车服务", description = "购物车商品添加、更新、删除、查询")
 @RestController
 @RequestMapping("/api/v1/carts")
 public class CartController {

@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import javax.validation.Valid;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 /**
  * 用户 Controller
  */
+@Tag(name = "用户服务", description = "用户注册、查询、管理")
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {

@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import javax.validation.Valid;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 /**
  * 优惠券 Controller
  */
+@Tag(name = "优惠券服务", description = "优惠券创建、领取、使用、查询")
 @RestController
 @RequestMapping("/api/v1/coupons")
 public class CouponController {

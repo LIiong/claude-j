@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import javax.validation.Valid;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 /**
  * 订单 Controller
  */
+@Tag(name = "订单服务", description = "订单创建、查询、支付、取消")
 @RestController
 @RequestMapping("/api/v1/orders")
 public class OrderController {

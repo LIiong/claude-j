@@ -27,12 +27,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
 /**
  * 认证 Controller
  */
+@Tag(name = "认证服务", description = "用户注册、登录、Token 刷新等认证相关接口")
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
@@ -46,6 +50,7 @@ public class AuthController {
     /**
      * 用户注册
      */
+    @Operation(summary = "用户注册", description = "新用户注册账号")
     @PostMapping("/register")
     public ApiResult<TokenResponse> register(@Valid @RequestBody RegisterRequest request,
                                               HttpServletRequest httpRequest) {

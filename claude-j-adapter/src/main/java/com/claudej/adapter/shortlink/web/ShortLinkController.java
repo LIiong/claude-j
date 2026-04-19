@@ -11,9 +11,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
+@Tag(name = "短链服务", description = "短链接创建与跳转")
 @RestController
 @RequestMapping("/api/v1/short-links")
 public class ShortLinkController {
@@ -24,6 +28,7 @@ public class ShortLinkController {
         this.shortLinkApplicationService = shortLinkApplicationService;
     }
 
+    @Operation(summary = "创建短链接", description = "将长链接转换为短链接")
     @PostMapping
     public ApiResult<ShortLinkResponse> createShortLink(
             @Valid @RequestBody CreateShortLinkRequest request,
