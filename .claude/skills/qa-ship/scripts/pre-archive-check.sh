@@ -3,8 +3,8 @@
 # pre-archive-check.sh — QA Ship 阶段归档前置闸
 #
 # 用法：
-#   ./pre-archive-check.sh <task-id>                 # 4 项必查 + 重跑三项 pre-flight
-#   ./pre-archive-check.sh <task-id> --skip-reverify # 仅 4 项必查（用于快速预演）
+#   ./pre-archive-check.sh <task-id>                 # 5 项必查 + 重跑三项 pre-flight
+#   ./pre-archive-check.sh <task-id> --skip-reverify # 仅 5 项必查（用于快速预演）
 #   ./pre-archive-check.sh <task-id> --archived      # 从 archived/ 读（回归审计用）
 #
 # 退出码：
@@ -66,7 +66,7 @@ fi
 
 # ------ 1. handoff.md: status:approved 且 to in {qa, ralph} ------
 echo ""
-echo "--- [1/4] handoff.md 状态 ---"
+echo "--- [1/5] handoff.md 状态 ---"
 HANDOFF="$TASK_DIR/handoff.md"
 if [ ! -f "$HANDOFF" ]; then
   fail "handoff.md 不存在"
@@ -90,7 +90,7 @@ fi
 
 # ------ 2. test-report.md: 含「验收通过」 ------
 echo ""
-echo "--- [2/4] test-report.md 验收结论 ---"
+echo "--- [2/5] test-report.md 验收结论 ---"
 REPORT="$TASK_DIR/test-report.md"
 if [ ! -f "$REPORT" ]; then
   fail "test-report.md 不存在"
@@ -102,7 +102,7 @@ fi
 
 # ------ 3. task-plan.md: QA 行已完成 ------
 echo ""
-echo "--- [3/4] task-plan.md QA 行状态 ---"
+echo "--- [3/5] task-plan.md QA 行状态 ---"
 PLAN="$TASK_DIR/task-plan.md"
 if [ ! -f "$PLAN" ]; then
   fail "task-plan.md 不存在"
@@ -128,9 +128,29 @@ else
   fi
 fi
 
-# ------ 4. 三项 pre-flight 重跑 ------
+# ------ 4. test-case-design.md 存在且非空（@qa 实际介入的铁证） ------
+# 背景：012-multi-profile 因主 agent 绕过 @qa 子 agent 直接完成，
+# 该文件缺失是"@qa 没真正跑过"的最硬信号。
 echo ""
-echo "--- [4/4] 三项 pre-flight 重跑 ---"
+echo "--- [4/5] test-case-design.md 存在 ---"
+TCD="$TASK_DIR/test-case-design.md"
+if [ ! -f "$TCD" ]; then
+  fail "test-case-design.md 不存在（@qa 子 agent 的独占产出物）"
+  echo "      → 该文件缺失通常意味着 @qa 未被真正调度。"
+  echo "      → 若任务确无可测代码，仍需由 @qa 创建此文件并写明 'N/A: 纯配置/文档任务' + 理由。"
+else
+  # 文件存在但内容过短也视为失败（防止写一行"略"糊弄）
+  SIZE=$(wc -c < "$TCD" | tr -d ' ')
+  if [ "$SIZE" -lt 100 ]; then
+    fail "test-case-design.md 过短（${SIZE} 字节 < 100）"
+  else
+    pass "test-case-design.md 存在（${SIZE} 字节）"
+  fi
+fi
+
+# ------ 5. 三项 pre-flight 重跑 ------
+echo ""
+echo "--- [5/5] 三项 pre-flight 重跑 ---"
 if [ "$SKIP_REVERIFY" -eq 1 ]; then
   warn "已 --skip-reverify，跳过（请确保已另行验证）"
 else
