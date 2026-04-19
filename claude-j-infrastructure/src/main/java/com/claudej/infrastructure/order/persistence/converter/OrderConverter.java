@@ -1,5 +1,6 @@
 package com.claudej.infrastructure.order.persistence.converter;
 
+import com.claudej.domain.coupon.model.valobj.CouponId;
 import com.claudej.domain.order.model.aggregate.Order;
 import com.claudej.domain.order.model.entity.OrderItem;
 import com.claudej.domain.order.model.valobj.CustomerId;
@@ -34,6 +35,13 @@ public class OrderConverter {
                         .collect(Collectors.toList());
 
         Money totalAmount = new Money(orderDO.getTotalAmount(), orderDO.getCurrency());
+        Money discountAmount = orderDO.getDiscountAmount() != null
+                ? new Money(orderDO.getDiscountAmount(), orderDO.getCurrency())
+                : Money.cny(0);
+        Money finalAmount = orderDO.getFinalAmount() != null
+                ? new Money(orderDO.getFinalAmount(), orderDO.getCurrency())
+                : totalAmount;
+        CouponId couponId = orderDO.getCouponId() != null ? new CouponId(orderDO.getCouponId()) : null;
 
         return Order.reconstruct(
                 orderDO.getId(),
@@ -42,6 +50,9 @@ public class OrderConverter {
                 OrderStatus.valueOf(orderDO.getStatus()),
                 items,
                 totalAmount,
+                discountAmount,
+                finalAmount,
+                couponId,
                 orderDO.getCreateTime(),
                 orderDO.getUpdateTime()
         );
@@ -60,6 +71,15 @@ public class OrderConverter {
         orderDO.setCustomerId(order.getCustomerIdValue());
         orderDO.setStatus(order.getStatus().name());
         orderDO.setTotalAmount(order.getTotalAmount().getAmount());
+        if (order.getDiscountAmount() != null) {
+            orderDO.setDiscountAmount(order.getDiscountAmount().getAmount());
+        }
+        if (order.getFinalAmount() != null) {
+            orderDO.setFinalAmount(order.getFinalAmount().getAmount());
+        }
+        if (order.getCouponId() != null) {
+            orderDO.setCouponId(order.getCouponIdValue());
+        }
         orderDO.setCurrency(order.getTotalAmount().getCurrency());
         orderDO.setCreateTime(order.getCreateTime());
         orderDO.setUpdateTime(order.getUpdateTime());

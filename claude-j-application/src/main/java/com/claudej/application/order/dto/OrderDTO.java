@@ -16,6 +16,9 @@ public class OrderDTO {
     private String customerId;
     private String status;
     private BigDecimal totalAmount;
+    private BigDecimal discountAmount;
+    private BigDecimal finalAmount;
+    private String couponId;
     private String currency;
     private List<OrderItemDTO> items;
     private LocalDateTime createTime;

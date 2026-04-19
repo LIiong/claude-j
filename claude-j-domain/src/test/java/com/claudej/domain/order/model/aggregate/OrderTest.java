@@ -1,6 +1,7 @@
 package com.claudej.domain.order.model.aggregate;
 
 import com.claudej.domain.common.exception.BusinessException;
+import com.claudej.domain.coupon.model.valobj.CouponId;
 import com.claudej.domain.order.model.entity.OrderItem;
 import com.claudej.domain.order.model.valobj.CustomerId;
 import com.claudej.domain.order.model.valobj.Money;
@@ -284,5 +285,141 @@ class OrderTest {
 
         // Then
         assertThat(order.getId()).isEqualTo(123L);
+    }
+
+    // --- Coupon related tests ---
+
+    @Test
+    void should_applyCouponAndCalculateFinalAmount_when_validCoupon() {
+        // Given
+        Order order = Order.create(new CustomerId("CUST001"));
+        order.addItem(OrderItem.create("PROD001", "iPhone", 1, Money.cny(100)));
+
+        // When
+        order.applyCoupon(new CouponId("COUPON001"), Money.cny(20));
+
+        // Then
+        assertThat(order.getCouponId()).isNotNull();
+        assertThat(order.getCouponIdValue()).isEqualTo("COUPON001");
+        assertThat(order.getDiscountAmount()).isEqualTo(Money.cny(20));
+        assertThat(order.getFinalAmount()).isEqualTo(Money.cny(80));
+    }
+
+    @Test
+    void should_calculateFinalAmount_when_noCoupon() {
+        // Given
+        Order order = Order.create(new CustomerId("CUST001"));
+        order.addItem(OrderItem.create("PROD001", "iPhone", 1, Money.cny(100)));
+
+        // Then
+        assertThat(order.getCouponId()).isNull();
+        assertThat(order.getDiscountAmount()).isEqualTo(Money.cny(0));
+        assertThat(order.getFinalAmount()).isEqualTo(Money.cny(100));
+    }
+
+    @Test
+    void should_throwException_when_applyCouponWithNullId() {
+        // Given
+        Order order = Order.create(new CustomerId("CUST001"));
+        order.addItem(OrderItem.create("PROD001", "iPhone", 1, Money.cny(100)));
+
+        // When & Then
+        assertThatThrownBy(() -> order.applyCoupon(null, Money.cny(20)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("优惠券ID不能为空");
+    }
+
+    @Test
+    void should_throwException_when_applyCouponWithNullDiscount() {
+        // Given
+        Order order = Order.create(new CustomerId("CUST001"));
+        order.addItem(OrderItem.create("PROD001", "iPhone", 1, Money.cny(100)));
+
+        // When & Then
+        assertThatThrownBy(() -> order.applyCoupon(new CouponId("COUPON001"), null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("折扣金额不能为空");
+    }
+
+    @Test
+    void should_throwException_when_applyCouponWithZeroDiscount() {
+        // Given
+        Order order = Order.create(new CustomerId("CUST001"));
+        order.addItem(OrderItem.create("PROD001", "iPhone", 1, Money.cny(100)));
+
+        // When & Then
+        assertThatThrownBy(() -> order.applyCoupon(new CouponId("COUPON001"), Money.cny(0)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("折扣金额必须大于0");
+    }
+
+    @Test
+    void should_throwException_when_discountExceedsTotal() {
+        // Given
+        Order order = Order.create(new CustomerId("CUST001"));
+        order.addItem(OrderItem.create("PROD001", "iPhone", 1, Money.cny(50)));
+
+        // When & Then
+        assertThatThrownBy(() -> order.applyCoupon(new CouponId("COUPON001"), Money.cny(60)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("折扣金额不能大于订单金额");
+    }
+
+    @Test
+    void should_removeCouponAndResetAmounts_when_couponApplied() {
+        // Given
+        Order order = Order.create(new CustomerId("CUST001"));
+        order.addItem(OrderItem.create("PROD001", "iPhone", 1, Money.cny(100)));
+        order.applyCoupon(new CouponId("COUPON001"), Money.cny(20));
+
+        // When
+        order.removeCoupon();
+
+        // Then
+        assertThat(order.getCouponId()).isNull();
+        assertThat(order.getDiscountAmount()).isEqualTo(Money.cny(0));
+        assertThat(order.getFinalAmount()).isEqualTo(Money.cny(100));
+    }
+
+    @Test
+    void should_doNothing_when_removeCouponButNoCouponApplied() {
+        // Given
+        Order order = Order.create(new CustomerId("CUST001"));
+        order.addItem(OrderItem.create("PROD001", "iPhone", 1, Money.cny(100)));
+
+        // When
+        order.removeCoupon();
+
+        // Then
+        assertThat(order.getCouponId()).isNull();
+        assertThat(order.getDiscountAmount()).isEqualTo(Money.cny(0));
+        assertThat(order.getFinalAmount()).isEqualTo(Money.cny(100));
+    }
+
+    @Test
+    void should_reconstructOrder_withCouponFields() {
+        // Given
+        OrderId orderId = new OrderId("ORD123456");
+        CustomerId customerId = new CustomerId("CUST001");
+        OrderItem item = OrderItem.create("PROD001", "iPhone", 1, Money.cny(100));
+        CouponId couponId = new CouponId("COUPON001");
+        Money discountAmount = Money.cny(20);
+        Money finalAmount = Money.cny(80);
+
+        // When
+        Order order = Order.reconstruct(
+                1L, orderId, customerId, OrderStatus.CREATED,
+                Arrays.asList(item), Money.cny(100), discountAmount, finalAmount,
+                couponId,
+                java.time.LocalDateTime.now(), java.time.LocalDateTime.now()
+        );
+
+        // Then
+        assertThat(order.getId()).isEqualTo(1L);
+        assertThat(order.getOrderIdValue()).isEqualTo("ORD123456");
+        assertThat(order.getCouponId()).isEqualTo(couponId);
+        assertThat(order.getCouponIdValue()).isEqualTo("COUPON001");
+        assertThat(order.getDiscountAmount()).isEqualTo(discountAmount);
+        assertThat(order.getFinalAmount()).isEqualTo(finalAmount);
     }
 }

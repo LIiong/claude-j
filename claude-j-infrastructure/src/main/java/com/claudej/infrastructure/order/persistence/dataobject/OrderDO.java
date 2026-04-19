@@ -27,6 +27,12 @@ public class OrderDO {
 
     private BigDecimal totalAmount;
 
+    private BigDecimal discountAmount;
+
+    private BigDecimal finalAmount;
+
+    private String couponId;
+
     private String currency;
 
     private LocalDateTime createTime;

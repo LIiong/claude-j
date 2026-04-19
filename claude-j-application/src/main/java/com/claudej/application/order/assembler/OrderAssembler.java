@@ -24,6 +24,10 @@ public interface OrderAssembler {
     @Mapping(target = "customerId", expression = "java(order.getCustomerIdValue())")
     @Mapping(target = "status", expression = "java(order.getStatus().name())")
     @Mapping(target = "currency", expression = "java(order.getTotalAmount().getCurrency())")
+    @Mapping(target = "totalAmount", expression = "java(extractAmount(order.getTotalAmount()))")
+    @Mapping(target = "discountAmount", expression = "java(extractAmount(order.getDiscountAmount()))")
+    @Mapping(target = "finalAmount", expression = "java(extractAmount(order.getFinalAmount()))")
+    @Mapping(target = "couponId", expression = "java(order.getCouponIdValue())")
     OrderDTO toDTO(Order order);
 
     /**

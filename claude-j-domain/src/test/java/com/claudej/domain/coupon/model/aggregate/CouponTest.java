@@ -298,4 +298,50 @@ class CouponTest {
 
         assertThat(coupon.calculateDiscount(BigDecimal.ZERO)).isEqualByComparingTo(BigDecimal.ZERO);
     }
+
+    // --- unuse() tests ---
+
+    @Test
+    void should_unuseCoupon_when_used() {
+        // Given
+        Coupon coupon = Coupon.create("满100减20", DiscountType.FIXED_AMOUNT,
+                new BigDecimal("20"), new BigDecimal("100"), "user123",
+                VALID_FROM, VALID_UNTIL);
+        coupon.use("order456", NOW);
+
+        // When
+        coupon.unuse();
+
+        // Then
+        assertThat(coupon.getStatus()).isEqualTo(CouponStatus.AVAILABLE);
+        assertThat(coupon.getUsedOrderId()).isNull();
+        assertThat(coupon.getUsedTime()).isNull();
+    }
+
+    @Test
+    void should_throwException_when_unuseAvailableCoupon() {
+        // Given
+        Coupon coupon = Coupon.create("优惠券", DiscountType.FIXED_AMOUNT,
+                new BigDecimal("20"), BigDecimal.ZERO, "user123",
+                VALID_FROM, VALID_UNTIL);
+
+        // When & Then
+        assertThatThrownBy(() -> coupon.unuse())
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不允许回滚");
+    }
+
+    @Test
+    void should_throwException_when_unuseExpiredCoupon() {
+        // Given
+        Coupon coupon = Coupon.create("优惠券", DiscountType.FIXED_AMOUNT,
+                new BigDecimal("20"), BigDecimal.ZERO, "user123",
+                VALID_FROM, VALID_UNTIL);
+        coupon.checkAndExpire(VALID_UNTIL.plusDays(1));
+
+        // When & Then
+        assertThatThrownBy(() -> coupon.unuse())
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不允许回滚");
+    }
 }

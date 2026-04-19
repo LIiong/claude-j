@@ -2,6 +2,7 @@ package com.claudej.domain.order.model.aggregate;
 
 import com.claudej.domain.common.exception.BusinessException;
 import com.claudej.domain.common.exception.ErrorCode;
+import com.claudej.domain.coupon.model.valobj.CouponId;
 import com.claudej.domain.order.model.entity.OrderItem;
 import com.claudej.domain.order.model.valobj.CustomerId;
 import com.claudej.domain.order.model.valobj.Money;
@@ -27,6 +28,9 @@ public class Order {
     private OrderStatus status;
     private final List<OrderItem> items;
     private Money totalAmount;
+    private Money discountAmount;
+    private Money finalAmount;
+    private CouponId couponId;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
@@ -35,6 +39,8 @@ public class Order {
         this.status = OrderStatus.CREATED;
         this.items = new ArrayList<>();
         this.totalAmount = Money.cny(0);
+        this.discountAmount = Money.cny(0);
+        this.finalAmount = Money.cny(0);
         this.createTime = createTime;
         this.updateTime = createTime;
     }
@@ -66,6 +72,30 @@ public class Order {
         }
         order.totalAmount = totalAmount;
         order.updateTime = updateTime;
+        order.finalAmount = totalAmount;
+        return order;
+    }
+
+    /**
+     * 从持久化层重建聚合根（带优惠券信息）
+     */
+    public static Order reconstruct(Long id, OrderId orderId, CustomerId customerId,
+                                     OrderStatus status, List<OrderItem> items,
+                                     Money totalAmount, Money discountAmount, Money finalAmount,
+                                     CouponId couponId,
+                                     LocalDateTime createTime, LocalDateTime updateTime) {
+        Order order = new Order(customerId, createTime);
+        order.id = id;
+        order.orderId = orderId;
+        order.status = status;
+        if (items != null) {
+            order.items.addAll(items);
+        }
+        order.totalAmount = totalAmount;
+        order.discountAmount = discountAmount;
+        order.finalAmount = finalAmount;
+        order.couponId = couponId;
+        order.updateTime = updateTime;
         return order;
     }
 
@@ -79,6 +109,42 @@ public class Order {
         items.add(item);
         recalculateTotal();
         updateTime = LocalDateTime.now();
+    }
+
+    /**
+     * 应用优惠券
+     * 不变量：finalAmount = totalAmount - discountAmount
+     */
+    public void applyCoupon(CouponId couponId, Money discountAmount) {
+        if (couponId == null) {
+            throw new BusinessException(ErrorCode.COUPON_ID_EMPTY, "优惠券ID不能为空");
+        }
+        if (discountAmount == null) {
+            throw new BusinessException(ErrorCode.COUPON_DISCOUNT_VALUE_INVALID, "折扣金额不能为空");
+        }
+        if (discountAmount.isZero()) {
+            throw new BusinessException(ErrorCode.COUPON_DISCOUNT_VALUE_INVALID, "折扣金额必须大于0");
+        }
+        if (discountAmount.isGreaterThan(this.totalAmount)) {
+            throw new BusinessException(ErrorCode.COUPON_DISCOUNT_VALUE_INVALID, "折扣金额不能大于订单金额");
+        }
+
+        this.couponId = couponId;
+        this.discountAmount = discountAmount;
+        this.finalAmount = this.totalAmount.subtract(discountAmount);
+        this.updateTime = LocalDateTime.now();
+    }
+
+    /**
+     * 移除优惠券（订单取消时使用）
+     */
+    public void removeCoupon() {
+        if (this.couponId != null) {
+            this.couponId = null;
+            this.discountAmount = Money.cny(0);
+            this.finalAmount = this.totalAmount;
+            this.updateTime = LocalDateTime.now();
+        }
     }
 
     /**
@@ -125,6 +191,12 @@ public class Order {
             total = total.add(item.getSubtotal());
         }
         this.totalAmount = total;
+        // 如果有优惠券，重新计算finalAmount；否则finalAmount等于totalAmount
+        if (this.couponId != null && this.discountAmount != null) {
+            this.finalAmount = this.totalAmount.subtract(this.discountAmount);
+        } else {
+            this.finalAmount = this.totalAmount;
+        }
     }
 
     /**
@@ -156,6 +228,13 @@ public class Order {
     }
 
     /**
+     * 便捷获取优惠券ID字符串值
+     */
+    public String getCouponIdValue() {
+        return couponId != null ? couponId.getValue() : null;
+    }
+
+    /**
      * 是否已支付
      */
     public boolean isPaid() {
@@ -174,5 +253,12 @@ public class Order {
      */
     public boolean isDelivered() {
         return status == OrderStatus.DELIVERED;
+    }
+
+    /**
+     * 是否使用了优惠券
+     */
+    public boolean hasCoupon() {
+        return couponId != null;
     }
 }

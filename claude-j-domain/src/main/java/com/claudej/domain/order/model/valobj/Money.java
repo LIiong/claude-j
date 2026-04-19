@@ -59,6 +59,16 @@ public final class Money {
     }
 
     /**
+     * 金额相减（确保结果不为负）n     */
+    public Money subtract(Money other) {
+        if (!this.currency.equals(other.currency)) {
+            throw new BusinessException(ErrorCode.CART_CURRENCY_MISMATCH, "币种不一致，无法相减");
+        }
+        BigDecimal result = this.amount.subtract(other.amount);
+        return new Money(result, this.currency);
+    }
+
+    /**
      * 金额相乘
      */
     public Money multiply(int multiplier) {

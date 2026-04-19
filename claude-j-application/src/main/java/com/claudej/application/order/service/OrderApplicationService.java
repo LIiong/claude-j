@@ -9,6 +9,9 @@ import com.claudej.domain.cart.model.entity.CartItem;
 import com.claudej.domain.cart.repository.CartRepository;
 import com.claudej.domain.common.exception.BusinessException;
 import com.claudej.domain.common.exception.ErrorCode;
+import com.claudej.domain.coupon.model.aggregate.Coupon;
+import com.claudej.domain.coupon.model.valobj.CouponId;
+import com.claudej.domain.coupon.repository.CouponRepository;
 import com.claudej.domain.order.model.aggregate.Order;
 import com.claudej.domain.order.model.entity.OrderItem;
 import com.claudej.domain.order.model.valobj.CustomerId;
@@ -18,6 +21,8 @@ import com.claudej.domain.order.repository.OrderRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -28,12 +33,14 @@ public class OrderApplicationService {
 
     private final OrderRepository orderRepository;
     private final CartRepository cartRepository;
+    private final CouponRepository couponRepository;
     private final OrderAssembler orderAssembler;
 
     public OrderApplicationService(OrderRepository orderRepository, CartRepository cartRepository,
-                                   OrderAssembler orderAssembler) {
+                                   CouponRepository couponRepository, OrderAssembler orderAssembler) {
         this.orderRepository = orderRepository;
         this.cartRepository = cartRepository;
+        this.couponRepository = couponRepository;
         this.orderAssembler = orderAssembler;
     }
 
@@ -52,6 +59,7 @@ public class OrderApplicationService {
         CustomerId customerId = new CustomerId(command.getCustomerId());
         Order order = Order.create(customerId);
 
+        // 添加订单项
         for (CreateOrderCommand.OrderItemCommand itemCmd : command.getItems()) {
             OrderItem item = OrderItem.create(
                     itemCmd.getProductId(),
@@ -60,6 +68,11 @@ public class OrderApplicationService {
                     new Money(itemCmd.getUnitPrice(), "CNY")
             );
             order.addItem(item);
+        }
+
+        // 处理优惠券
+        if (command.getCouponId() != null && !command.getCouponId().trim().isEmpty()) {
+            applyCouponToOrder(order, command.getCouponId(), command.getCustomerId());
         }
 
         order = orderRepository.save(order);
@@ -91,6 +104,14 @@ public class OrderApplicationService {
         Order order = orderRepository.findByOrderId(new OrderId(orderId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
 
+        // 如果有优惠券，核销优惠券
+        if (order.hasCoupon()) {
+            Coupon coupon = couponRepository.findByCouponId(order.getCouponId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.COUPON_NOT_FOUND));
+            coupon.use(order.getOrderIdValue(), LocalDateTime.now());
+            couponRepository.save(coupon);
+        }
+
         order.pay();
         order = orderRepository.save(order);
         return orderAssembler.toDTO(order);
@@ -103,6 +124,19 @@ public class OrderApplicationService {
     public OrderDTO cancelOrder(String orderId) {
         Order order = orderRepository.findByOrderId(new OrderId(orderId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        // 如果订单已支付且有优惠券，回滚优惠券
+        if (order.isPaid() && order.hasCoupon()) {
+            Coupon coupon = couponRepository.findByCouponId(order.getCouponId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.COUPON_NOT_FOUND));
+            coupon.unuse();
+            couponRepository.save(coupon);
+        }
+
+        // 如果订单未支付但有优惠券，移除优惠券关联
+        if (order.hasCoupon()) {
+            order.removeCoupon();
+        }
 
         order.cancel();
         order = orderRepository.save(order);
@@ -143,14 +177,50 @@ public class OrderApplicationService {
             order.addItem(orderItem);
         }
 
-        // 5. 保存订单
+        // 5. 处理优惠券
+        if (command.getCouponId() != null && !command.getCouponId().trim().isEmpty()) {
+            applyCouponToOrder(order, command.getCouponId(), command.getCustomerId());
+        }
+
+        // 6. 保存订单
         order = orderRepository.save(order);
 
-        // 6. 清空购物车并保存
+        // 7. 清空购物车并保存
         cart.clear();
         cartRepository.save(cart);
 
-        // 7. 返回订单DTO
+        // 8. 返回订单DTO
         return orderAssembler.toDTO(order);
+    }
+
+    /**
+     * 应用优惠券到订单
+     */
+    private void applyCouponToOrder(Order order, String couponIdStr, String customerId) {
+        CouponId couponId = new CouponId(couponIdStr);
+        Coupon coupon = couponRepository.findByCouponId(couponId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COUPON_NOT_FOUND));
+
+        // 验证优惠券归属
+        if (!coupon.getUserId().equals(customerId)) {
+            throw new BusinessException(ErrorCode.COUPON_NOT_BELONG_TO_USER);
+        }
+
+        // 检查有效期（懒过期策略）
+        LocalDateTime now = LocalDateTime.now();
+        coupon.checkAndExpire(now);
+        if (coupon.getStatus() != com.claudej.domain.coupon.model.valobj.CouponStatus.AVAILABLE) {
+            throw new BusinessException(ErrorCode.COUPON_NOT_AVAILABLE);
+        }
+
+        // 验证最低消费
+        BigDecimal totalAmount = order.getTotalAmount().getAmount();
+        if (totalAmount.compareTo(coupon.getMinOrderAmount()) < 0) {
+            throw new BusinessException(ErrorCode.COUPON_MIN_ORDER_AMOUNT_NOT_MET);
+        }
+
+        // 计算折扣金额
+        BigDecimal discountAmount = coupon.calculateDiscount(totalAmount);
+        order.applyCoupon(couponId, new Money(discountAmount, order.getTotalAmount().getCurrency()));
     }
 }

@@ -136,6 +136,17 @@ public class Coupon {
     }
 
     /**
+     * 回滚优惠券状态（订单取消时使用）
+     * 从 USED 状态回滚到 AVAILABLE
+     */
+    public void unuse() {
+        this.status = this.status.toAvailable();
+        this.usedTime = null;
+        this.usedOrderId = null;
+        this.updateTime = LocalDateTime.now();
+    }
+
+    /**
      * 检查并标记过期（懒过期策略）
      * 注意：这是查询路径上的副作用，查询时如果过期会自动转换状态并需持久化
      */

@@ -146,4 +146,55 @@ class MoneyTest {
         // Then
         assertThat(money1).isNotEqualTo(money2);
     }
+
+    @Test
+    void should_subtractMoney_when_sameCurrency() {
+        // Given
+        Money money1 = Money.cny(100);
+        Money money2 = Money.cny(30);
+
+        // When
+        Money result = money1.subtract(money2);
+
+        // Then
+        assertThat(result.getAmount()).isEqualByComparingTo(new BigDecimal("70"));
+        assertThat(result.getCurrency()).isEqualTo("CNY");
+    }
+
+    @Test
+    void should_returnZero_when_subtractEqualAmount() {
+        // Given
+        Money money1 = Money.cny(100);
+        Money money2 = Money.cny(100);
+
+        // When
+        Money result = money1.subtract(money2);
+
+        // Then
+        assertThat(result.isZero()).isTrue();
+    }
+
+    @Test
+    void should_throwException_when_subtractDifferentCurrency() {
+        // Given
+        Money money1 = new Money(new BigDecimal("100"), "CNY");
+        Money money2 = new Money(new BigDecimal("30"), "USD");
+
+        // When & Then
+        assertThatThrownBy(() -> money1.subtract(money2))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("币种不一致");
+    }
+
+    @Test
+    void should_throwException_when_subtractLargerAmount() {
+        // Given
+        Money money1 = Money.cny(50);
+        Money money2 = Money.cny(100);
+
+        // When & Then
+        assertThatThrownBy(() -> money1.subtract(money2))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("金额不能为负数");
+    }
 }

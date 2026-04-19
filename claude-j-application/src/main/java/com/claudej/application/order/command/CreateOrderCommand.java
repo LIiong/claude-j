@@ -11,6 +11,7 @@ import java.util.List;
 public class CreateOrderCommand {
 
     private String customerId;
+    private String couponId;
     private List<OrderItemCommand> items;
 
     /**

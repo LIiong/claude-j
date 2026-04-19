@@ -38,6 +38,13 @@ public enum CouponStatus {
     }
 
     /**
+     * 是否可以回滚到可用状态（用于订单取消）
+     */
+    public boolean canUnuse() {
+        return this == USED;
+    }
+
+    /**
      * 转换到已使用状态
      */
     public CouponStatus toUsed() {
@@ -57,5 +64,16 @@ public enum CouponStatus {
                     "优惠券状态 " + this + " 不允许过期");
         }
         return EXPIRED;
+    }
+
+    /**
+     * 回滚到可用状态（订单取消时使用）
+     */
+    public CouponStatus toAvailable() {
+        if (!canUnuse()) {
+            throw new BusinessException(ErrorCode.INVALID_COUPON_STATUS_TRANSITION,
+                    "优惠券状态 " + this + " 不允许回滚");
+        }
+        return AVAILABLE;
     }
 }

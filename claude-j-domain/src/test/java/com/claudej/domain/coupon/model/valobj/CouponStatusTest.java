@@ -61,4 +61,31 @@ class CouponStatusTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("不允许过期");
     }
+
+    @Test
+    void should_allowUnuse_when_used() {
+        assertThat(CouponStatus.USED.canUnuse()).isTrue();
+        assertThat(CouponStatus.AVAILABLE.canUnuse()).isFalse();
+        assertThat(CouponStatus.EXPIRED.canUnuse()).isFalse();
+    }
+
+    @Test
+    void should_transitionToAvailable_when_used() {
+        CouponStatus newStatus = CouponStatus.USED.toAvailable();
+        assertThat(newStatus).isEqualTo(CouponStatus.AVAILABLE);
+    }
+
+    @Test
+    void should_throwException_when_unuseFromAvailable() {
+        assertThatThrownBy(() -> CouponStatus.AVAILABLE.toAvailable())
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不允许回滚");
+    }
+
+    @Test
+    void should_throwException_when_unuseFromExpired() {
+        assertThatThrownBy(() -> CouponStatus.EXPIRED.toAvailable())
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不允许回滚");
+    }
 }
