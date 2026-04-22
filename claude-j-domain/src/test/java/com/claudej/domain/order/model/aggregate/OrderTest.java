@@ -396,6 +396,81 @@ class OrderTest {
         assertThat(order.getFinalAmount()).isEqualTo(Money.cny(100));
     }
 
+    // --- Refund related tests ---
+
+    @Test
+    void should_refundOrder_when_paid() {
+        // Given
+        Order order = Order.create(new CustomerId("CUST001"));
+        order.addItem(OrderItem.create("PROD001", "iPhone", 1, Money.cny(5999)));
+        order.pay();
+
+        // When
+        order.refund();
+
+        // Then
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.REFUNDED);
+        assertThat(order.isRefunded()).isTrue();
+    }
+
+    @Test
+    void should_refundOrder_when_shipped() {
+        // Given
+        Order order = Order.create(new CustomerId("CUST001"));
+        order.addItem(OrderItem.create("PROD001", "iPhone", 1, Money.cny(5999)));
+        order.pay();
+        order.ship();
+
+        // When
+        order.refund();
+
+        // Then
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.REFUNDED);
+        assertThat(order.isRefunded()).isTrue();
+    }
+
+    @Test
+    void should_refundOrder_when_delivered() {
+        // Given
+        Order order = Order.create(new CustomerId("CUST001"));
+        order.addItem(OrderItem.create("PROD001", "iPhone", 1, Money.cny(5999)));
+        order.pay();
+        order.ship();
+        order.deliver();
+
+        // When
+        order.refund();
+
+        // Then
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.REFUNDED);
+        assertThat(order.isRefunded()).isTrue();
+    }
+
+    @Test
+    void should_throwException_when_refundCreatedOrder() {
+        // Given
+        Order order = Order.create(new CustomerId("CUST001"));
+        order.addItem(OrderItem.create("PROD001", "iPhone", 1, Money.cny(5999)));
+
+        // When & Then
+        assertThatThrownBy(() -> order.refund())
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不允许退款");
+    }
+
+    @Test
+    void should_throwException_when_refundCancelledOrder() {
+        // Given
+        Order order = Order.create(new CustomerId("CUST001"));
+        order.addItem(OrderItem.create("PROD001", "iPhone", 1, Money.cny(5999)));
+        order.cancel();
+
+        // When & Then
+        assertThatThrownBy(() -> order.refund())
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不允许退款");
+    }
+
     @Test
     void should_reconstructOrder_withCouponFields() {
         // Given

@@ -120,6 +120,36 @@ public class OrderController {
         return ApiResult.ok(response);
     }
 
+    /**
+     * 发货
+     */
+    @PostMapping("/{orderId}/ship")
+    public ApiResult<OrderResponse> shipOrder(@PathVariable String orderId) {
+        OrderDTO dto = orderApplicationService.shipOrder(orderId);
+        OrderResponse response = convertToResponse(dto);
+        return ApiResult.ok(response);
+    }
+
+    /**
+     * 确认送达
+     */
+    @PostMapping("/{orderId}/deliver")
+    public ApiResult<OrderResponse> deliverOrder(@PathVariable String orderId) {
+        OrderDTO dto = orderApplicationService.deliverOrder(orderId);
+        OrderResponse response = convertToResponse(dto);
+        return ApiResult.ok(response);
+    }
+
+    /**
+     * 退款
+     */
+    @PostMapping("/{orderId}/refund")
+    public ApiResult<OrderResponse> refundOrder(@PathVariable String orderId) {
+        OrderDTO dto = orderApplicationService.refundOrder(orderId);
+        OrderResponse response = convertToResponse(dto);
+        return ApiResult.ok(response);
+    }
+
     private OrderResponse convertToResponse(OrderDTO dto) {
         OrderResponse response = new OrderResponse();
         response.setOrderId(dto.getOrderId());

@@ -242,4 +242,123 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.errorCode", is("CART_EMPTY")));
     }
+
+    // --- Ship/Deliver/Refund endpoint tests ---
+
+    @Test
+    void should_return200_when_shipOrderSuccess() throws Exception {
+        // Given
+        mockOrderDTO.setStatus("SHIPPED");
+        when(orderApplicationService.shipOrder("ORD123456")).thenReturn(mockOrderDTO);
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/orders/ORD123456/ship"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.status", is("SHIPPED")));
+    }
+
+    @Test
+    void should_return400_when_shipInvalidStatusOrder() throws Exception {
+        // Given
+        when(orderApplicationService.shipOrder("ORD123456"))
+                .thenThrow(new BusinessException(ErrorCode.INVALID_ORDER_STATUS_TRANSITION));
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/orders/ORD123456/ship"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.errorCode", is("INVALID_ORDER_STATUS_TRANSITION")));
+    }
+
+    @Test
+    void should_return404_when_shipNonExistentOrder() throws Exception {
+        // Given
+        when(orderApplicationService.shipOrder("NONEXISTENT"))
+                .thenThrow(new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/orders/NONEXISTENT/ship"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.errorCode", is("ORDER_NOT_FOUND")));
+    }
+
+    @Test
+    void should_return200_when_deliverOrderSuccess() throws Exception {
+        // Given
+        mockOrderDTO.setStatus("DELIVERED");
+        when(orderApplicationService.deliverOrder("ORD123456")).thenReturn(mockOrderDTO);
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/orders/ORD123456/deliver"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.status", is("DELIVERED")));
+    }
+
+    @Test
+    void should_return400_when_deliverInvalidStatusOrder() throws Exception {
+        // Given
+        when(orderApplicationService.deliverOrder("ORD123456"))
+                .thenThrow(new BusinessException(ErrorCode.INVALID_ORDER_STATUS_TRANSITION));
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/orders/ORD123456/deliver"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.errorCode", is("INVALID_ORDER_STATUS_TRANSITION")));
+    }
+
+    @Test
+    void should_return200_when_refundOrderSuccess() throws Exception {
+        // Given
+        mockOrderDTO.setStatus("REFUNDED");
+        when(orderApplicationService.refundOrder("ORD123456")).thenReturn(mockOrderDTO);
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/orders/ORD123456/refund"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.status", is("REFUNDED")));
+    }
+
+    @Test
+    void should_return400_when_refundInvalidStatusOrder() throws Exception {
+        // Given
+        when(orderApplicationService.refundOrder("ORD123456"))
+                .thenThrow(new BusinessException(ErrorCode.INVALID_ORDER_STATUS_TRANSITION));
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/orders/ORD123456/refund"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.errorCode", is("INVALID_ORDER_STATUS_TRANSITION")));
+    }
+
+    @Test
+    void should_return404_when_refundNonExistentOrder() throws Exception {
+        // Given
+        when(orderApplicationService.refundOrder("NONEXISTENT"))
+                .thenThrow(new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/orders/NONEXISTENT/refund"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.errorCode", is("ORDER_NOT_FOUND")));
+    }
+
+    @Test
+    void should_return404_when_refundOrderCouponNotFound() throws Exception {
+        // Given
+        when(orderApplicationService.refundOrder("ORD123456"))
+                .thenThrow(new BusinessException(ErrorCode.COUPON_NOT_FOUND));
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/orders/ORD123456/refund"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.errorCode", is("COUPON_NOT_FOUND")));
+    }
 }

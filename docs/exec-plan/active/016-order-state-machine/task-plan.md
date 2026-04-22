@@ -4,11 +4,11 @@
 
 | # | 任务 | 负责人 | 状态 | 备注 |
 |---|------|--------|------|------|
-| 1 | Domain: OrderStatus 新增 REFUNDED + canRefund/toRefunded + 测试 | dev | 待办 | |
-| 2 | Domain: Order 新增 refund()/isRefunded() + 测试 | dev | 待办 | |
-| 3 | Application: OrderApplicationService 新增 shipOrder/deliverOrder/refundOrder + 测试 | dev | 待办 | |
-| 4 | Adapter: OrderController 新增 ship/deliver/refund 端点 + 测试 | dev | 待办 | |
-| 5 | 全量 mvn test + checkstyle + entropy-check | dev | 待办 | |
+| 1 | Domain: OrderStatus 新增 REFUNDED + canRefund/toRefunded + 测试 | dev | 验收通过 | commit: 520b73f |
+| 2 | Domain: Order 新增 refund()/isRefunded() + 测试 | dev | 验收通过 | commit: 520b73f |
+| 3 | Application: OrderApplicationService 新增 shipOrder/deliverOrder/refundOrder + 测试 | dev | 验收通过 | TDD Red-Green 完成 |
+| 4 | Adapter: OrderController 新增 ship/deliver/refund 端点 + 测试 | dev | 验收通过 | TDD Red-Green 完成 |
+| 5 | 全量 mvn test + checkstyle + entropy-check | dev | 验收通过 | 549 tests, 0 checkstyle, entropy PASS |
 | 6 | QA: 测试用例设计 | qa | 待办 | |
 | 7 | QA: 验收测试 + 代码审查 | qa | 待办 | |
 
@@ -212,7 +212,18 @@ domain -> application -> adapter -> 全量测试 -> QA 验收
 - **commit**：`feat(adapter): order 新增 ship/deliver/refund REST 端点`
 
 ## 开发完成记录
-<!-- dev 完成后填写 -->
+- **日期**: 2026-04-22
+- **开发者**: @dev
+- **测试数量**: 549 tests run, 0 failures, 0 errors
+- **新增测试**:
+  - OrderStatusTest: 新增 8 个退款相关测试（canRefund/toRefunded 正向 + 逆向）
+  - OrderTest: 新增 5 个退款相关测试（refund 正向 + 逆向）
+  - OrderApplicationServiceTest: 新增 12 个 ship/deliver/refund 测试
+  - OrderControllerTest: 新增 9 个 ship/deliver/refund 端点测试
+- **三项验证**:
+  - mvn test: BUILD SUCCESS (549 tests, 0 failures)
+  - mvn checkstyle:check: 0 Checkstyle violations
+  - ./scripts/entropy-check.sh: 0 FAIL, 12 WARN (PASS)
 
 ## QA 验收记录
 <!-- qa 验收后填写 -->

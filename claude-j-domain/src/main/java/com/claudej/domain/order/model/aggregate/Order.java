@@ -183,6 +183,14 @@ public class Order {
     }
 
     /**
+     * 退款
+     */
+    public void refund() {
+        this.status = this.status.toRefunded();
+        this.updateTime = LocalDateTime.now();
+    }
+
+    /**
      * 重新计算订单总金额
      */
     private void recalculateTotal() {
@@ -246,6 +254,13 @@ public class Order {
      */
     public boolean isCancelled() {
         return status == OrderStatus.CANCELLED;
+    }
+
+    /**
+     * 是否已退款
+     */
+    public boolean isRefunded() {
+        return status == OrderStatus.REFUNDED;
     }
 
     /**

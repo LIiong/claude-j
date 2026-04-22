@@ -379,4 +379,204 @@ class OrderApplicationServiceTest {
         verify(couponRepository).findByCouponId(any(CouponId.class));
         verify(orderRepository).save(any(Order.class));
     }
+
+    // --- Ship/Deliver/Refund tests ---
+
+    @Test
+    void should_shipOrder_when_orderPaid() {
+        // Given - paid order
+        mockOrder.pay();
+        when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
+        when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
+        mockOrderDTO.setStatus("SHIPPED");
+        when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
+
+        // When
+        OrderDTO result = orderApplicationService.shipOrder("ORD123456");
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getStatus()).isEqualTo("SHIPPED");
+        verify(orderRepository).save(any(Order.class));
+    }
+
+    @Test
+    void should_throwException_when_shipOrderNotPaid() {
+        // Given - CREATED status order
+        when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
+
+        // When & Then
+        assertThatThrownBy(() -> orderApplicationService.shipOrder("ORD123456"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不允许发货");
+    }
+
+    @Test
+    void should_deliverOrder_when_orderShipped() {
+        // Given - shipped order
+        mockOrder.pay();
+        mockOrder.ship();
+        when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
+        when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
+        mockOrderDTO.setStatus("DELIVERED");
+        when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
+
+        // When
+        OrderDTO result = orderApplicationService.deliverOrder("ORD123456");
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getStatus()).isEqualTo("DELIVERED");
+        verify(orderRepository).save(any(Order.class));
+    }
+
+    @Test
+    void should_throwException_when_deliverOrderNotShipped() {
+        // Given - PAID status order
+        mockOrder.pay();
+        when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
+
+        // When & Then
+        assertThatThrownBy(() -> orderApplicationService.deliverOrder("ORD123456"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不允许确认送达");
+    }
+
+    @Test
+    void should_refundOrder_when_orderPaidWithoutCoupon() {
+        // Given - paid order without coupon
+        mockOrder.pay();
+        when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
+        when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
+        mockOrderDTO.setStatus("REFUNDED");
+        when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
+
+        // When
+        OrderDTO result = orderApplicationService.refundOrder("ORD123456");
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getStatus()).isEqualTo("REFUNDED");
+        verify(orderRepository).save(any(Order.class));
+        verify(couponRepository, never()).findByCouponId(any(CouponId.class));
+    }
+
+    @Test
+    void should_refundOrderAndUnuseCoupon_when_orderPaidWithCoupon() {
+        // Given - paid order with coupon
+        Order orderWithCoupon = Order.create(new CustomerId("CUST001"));
+        orderWithCoupon.addItem(com.claudej.domain.order.model.entity.OrderItem.create(
+                "PROD001", "iPhone", 2,
+                com.claudej.domain.order.model.valobj.Money.cny(5999)
+        ));
+        orderWithCoupon.applyCoupon(new CouponId("COUPON001"), com.claudej.domain.order.model.valobj.Money.cny(20));
+        orderWithCoupon.pay();
+
+        // Create USED coupon mock
+        Coupon usedCoupon = Coupon.create("满100减20", DiscountType.FIXED_AMOUNT,
+                new BigDecimal("20"), new BigDecimal("100"), "CUST001",
+                VALID_FROM, VALID_UNTIL);
+        usedCoupon.use("ORD123456", NOW);
+
+        when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(orderWithCoupon));
+        when(couponRepository.findByCouponId(any(CouponId.class))).thenReturn(Optional.of(usedCoupon));
+        when(couponRepository.save(any(Coupon.class))).thenReturn(usedCoupon);
+        when(orderRepository.save(any(Order.class))).thenReturn(orderWithCoupon);
+        mockOrderDTO.setStatus("REFUNDED");
+        when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
+
+        // When
+        OrderDTO result = orderApplicationService.refundOrder("ORD123456");
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getStatus()).isEqualTo("REFUNDED");
+        verify(couponRepository).findByCouponId(any(CouponId.class));
+        verify(couponRepository).save(any(Coupon.class));
+        verify(orderRepository).save(any(Order.class));
+    }
+
+    @Test
+    void should_refundOrder_when_orderShippedWithoutCoupon() {
+        // Given - shipped order without coupon
+        mockOrder.pay();
+        mockOrder.ship();
+        when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
+        when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
+        mockOrderDTO.setStatus("REFUNDED");
+        when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
+
+        // When
+        OrderDTO result = orderApplicationService.refundOrder("ORD123456");
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getStatus()).isEqualTo("REFUNDED");
+        verify(orderRepository).save(any(Order.class));
+        verify(couponRepository, never()).findByCouponId(any(CouponId.class));
+    }
+
+    @Test
+    void should_refundOrder_when_orderDeliveredWithoutCoupon() {
+        // Given - delivered order without coupon
+        mockOrder.pay();
+        mockOrder.ship();
+        mockOrder.deliver();
+        when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
+        when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
+        mockOrderDTO.setStatus("REFUNDED");
+        when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
+
+        // When
+        OrderDTO result = orderApplicationService.refundOrder("ORD123456");
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getStatus()).isEqualTo("REFUNDED");
+        verify(orderRepository).save(any(Order.class));
+        verify(couponRepository, never()).findByCouponId(any(CouponId.class));
+    }
+
+    @Test
+    void should_throwException_when_refundCreatedOrder() {
+        // Given - CREATED status order
+        when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
+
+        // When & Then
+        assertThatThrownBy(() -> orderApplicationService.refundOrder("ORD123456"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不允许退款");
+    }
+
+    @Test
+    void should_throwException_when_refundCancelledOrder() {
+        // Given - cancelled order
+        mockOrder.cancel();
+        when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
+
+        // When & Then
+        assertThatThrownBy(() -> orderApplicationService.refundOrder("ORD123456"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不允许退款");
+    }
+
+    @Test
+    void should_throwException_when_refundOrderAndCouponNotFound() {
+        // Given - paid order with coupon but coupon not found
+        Order orderWithCoupon = Order.create(new CustomerId("CUST001"));
+        orderWithCoupon.addItem(com.claudej.domain.order.model.entity.OrderItem.create(
+                "PROD001", "iPhone", 2,
+                com.claudej.domain.order.model.valobj.Money.cny(5999)
+        ));
+        orderWithCoupon.applyCoupon(new CouponId("COUPON001"), com.claudej.domain.order.model.valobj.Money.cny(20));
+        orderWithCoupon.pay();
+
+        when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(orderWithCoupon));
+        when(couponRepository.findByCouponId(any(CouponId.class))).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> orderApplicationService.refundOrder("ORD123456"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("优惠券不存在");
+    }
 }

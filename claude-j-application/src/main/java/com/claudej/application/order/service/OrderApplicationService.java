@@ -223,4 +223,50 @@ public class OrderApplicationService {
         BigDecimal discountAmount = coupon.calculateDiscount(totalAmount);
         order.applyCoupon(couponId, new Money(discountAmount, order.getTotalAmount().getCurrency()));
     }
+
+    /**
+     * 发货
+     */
+    @Transactional
+    public OrderDTO shipOrder(String orderId) {
+        Order order = orderRepository.findByOrderId(new OrderId(orderId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+        order.ship();
+        order = orderRepository.save(order);
+        return orderAssembler.toDTO(order);
+    }
+
+    /**
+     * 确认送达
+     */
+    @Transactional
+    public OrderDTO deliverOrder(String orderId) {
+        Order order = orderRepository.findByOrderId(new OrderId(orderId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+        order.deliver();
+        order = orderRepository.save(order);
+        return orderAssembler.toDTO(order);
+    }
+
+    /**
+     * 退款
+     */
+    @Transactional
+    public OrderDTO refundOrder(String orderId) {
+        Order order = orderRepository.findByOrderId(new OrderId(orderId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        // 如果有优惠券，回滚优惠券
+        if (order.hasCoupon()) {
+            Coupon coupon = couponRepository.findByCouponId(order.getCouponId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.COUPON_NOT_FOUND));
+            coupon.unuse();
+            couponRepository.save(coupon);
+            order.removeCoupon();
+        }
+
+        order.refund();
+        order = orderRepository.save(order);
+        return orderAssembler.toDTO(order);
+    }
 }

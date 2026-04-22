@@ -14,7 +14,8 @@ public enum OrderStatus {
     PAID("已支付"),
     SHIPPED("已发货"),
     DELIVERED("已送达"),
-    CANCELLED("已取消");
+    CANCELLED("已取消"),
+    REFUNDED("已退款");
 
     private final String description;
 
@@ -92,5 +93,23 @@ public enum OrderStatus {
                     "订单状态 " + this + " 不允许取消");
         }
         return CANCELLED;
+    }
+
+    /**
+     * 是否可以退款
+     */
+    public boolean canRefund() {
+        return this == PAID || this == SHIPPED || this == DELIVERED;
+    }
+
+    /**
+     * 转换到已退款状态
+     */
+    public OrderStatus toRefunded() {
+        if (!canRefund()) {
+            throw new BusinessException(ErrorCode.INVALID_ORDER_STATUS_TRANSITION,
+                    "订单状态 " + this + " 不允许退款");
+        }
+        return REFUNDED;
     }
 }

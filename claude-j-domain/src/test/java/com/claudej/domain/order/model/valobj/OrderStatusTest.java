@@ -136,4 +136,73 @@ class OrderStatusTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("不允许取消");
     }
+
+    // --- Refund related tests ---
+
+    @Test
+    void should_allowRefund_when_paidOrShippedOrDelivered() {
+        // When & Then
+        assertThat(OrderStatus.PAID.canRefund()).isTrue();
+        assertThat(OrderStatus.SHIPPED.canRefund()).isTrue();
+        assertThat(OrderStatus.DELIVERED.canRefund()).isTrue();
+    }
+
+    @Test
+    void should_notAllowRefund_when_createdOrCancelledOrRefunded() {
+        // When & Then
+        assertThat(OrderStatus.CREATED.canRefund()).isFalse();
+        assertThat(OrderStatus.CANCELLED.canRefund()).isFalse();
+        assertThat(OrderStatus.REFUNDED.canRefund()).isFalse();
+    }
+
+    @Test
+    void should_transitionToRefunded_when_paid() {
+        // When
+        OrderStatus newStatus = OrderStatus.PAID.toRefunded();
+
+        // Then
+        assertThat(newStatus).isEqualTo(OrderStatus.REFUNDED);
+    }
+
+    @Test
+    void should_transitionToRefunded_when_shipped() {
+        // When
+        OrderStatus newStatus = OrderStatus.SHIPPED.toRefunded();
+
+        // Then
+        assertThat(newStatus).isEqualTo(OrderStatus.REFUNDED);
+    }
+
+    @Test
+    void should_transitionToRefunded_when_delivered() {
+        // When
+        OrderStatus newStatus = OrderStatus.DELIVERED.toRefunded();
+
+        // Then
+        assertThat(newStatus).isEqualTo(OrderStatus.REFUNDED);
+    }
+
+    @Test
+    void should_throwException_when_refundFromCreated() {
+        // When & Then
+        assertThatThrownBy(() -> OrderStatus.CREATED.toRefunded())
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不允许退款");
+    }
+
+    @Test
+    void should_throwException_when_refundFromCancelled() {
+        // When & Then
+        assertThatThrownBy(() -> OrderStatus.CANCELLED.toRefunded())
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不允许退款");
+    }
+
+    @Test
+    void should_throwException_when_refundFromRefunded() {
+        // When & Then
+        assertThatThrownBy(() -> OrderStatus.REFUNDED.toRefunded())
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不允许退款");
+    }
 }

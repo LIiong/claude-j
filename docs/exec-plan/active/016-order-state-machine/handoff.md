@@ -2,40 +2,59 @@
 
 ## 基本信息
 - **task-id**: 016-order-state-machine
-- **from**: architect
-- **to**: dev
-- **status**: approved
+- **from**: dev
+- **to**: qa
+- **status**: pending-review
 - **date**: 2026-04-22
 
 ## 产出物
-- `docs/exec-plan/active/016-order-state-machine/requirement-design.md`（含架构评审章节）
-- `docs/exec-plan/active/016-order-state-machine/task-plan.md`
-- `docs/exec-plan/active/016-order-state-machine/dev-log.md`
-
-## 设计要点摘要
-1. **Domain 层**：OrderStatus 新增 REFUNDED 枚举值 + canRefund()/toRefunded() 方法；Order 新增 refund()/isRefunded()
-2. **Application 层**：新增 shipOrder()/deliverOrder()/refundOrder() 三个用例方法，refundOrder 内含优惠券回滚逻辑（coupon.unuse() + order.removeCoupon()）
-3. **Adapter 层**：新增 POST /{orderId}/ship、/{orderId}/deliver、/{orderId}/refund 三个端点
-4. **Infrastructure 层**：无变更（OrderConverter 通过 OrderStatus.valueOf() 自动支持 REFUNDED）
-5. **DDL**：无变更（status 列为 VARCHAR(32)）
-
-## 关键决策
-- REFUNDED 为终态，不允许再做任何状态转换
-- 退款不额外入参（无退款原因/金额），与 pay/cancel 端点风格一致
-- 退款优惠券回滚逻辑与 cancelOrder 模式一致：先 unuse coupon，再 removeCoupon on order，最后 refund
-- 退款仅允许从 PAID/SHIPPED/DELIVERED 状态发起
-
-## 评审结论
-- **结论**：通过
-- **15 维检查项**：全部通过
-- **架构基线**：entropy-check.sh 退出码 0（0 FAIL, 12 WARN 均为预存问题）
-- **观察项（非阻塞）**：
-  1. isPaid() 不含 REFUNDED，对现有逻辑无影响，保持现状
-  2. OrderResponse 缺少优惠券字段（预存问题，非本任务范围）
-  3. refundOrder 优惠券回滚逻辑可简化为单一 if (hasCoupon())，避免照搬 cancelOrder 的双 if 结构
-
-## 待确认项
-- 无
+- `claude-j-domain/src/main/java/com/claudej/domain/order/model/valobj/OrderStatus.java` — 新增 REFUNDED + canRefund/toRefunded
+- `claude-j-domain/src/test/java/com/claudej/domain/order/model/valobj/OrderStatusTest.java` — 新增 8 个退款测试
+- `claude-j-domain/src/main/java/com/claudej/domain/order/model/aggregate/Order.java` — 新增 refund/isRefunded
+- `claude-j-domain/src/test/java/com/claudej/domain/order/model/aggregate/OrderTest.java` — 新增 5 个退款测试
+- `claude-j-application/src/main/java/com/claudej/application/order/service/OrderApplicationService.java` — 新增 shipOrder/deliverOrder/refundOrder
+- `claude-j-application/src/test/java/com/claudej/application/order/service/OrderApplicationServiceTest.java` — 新增 12 个测试
+- `claude-j-adapter/src/main/java/com/claudej/adapter/order/web/OrderController.java` — 新增 ship/deliver/refund 端点
+- `claude-j-adapter/src/test/java/com/claudej/adapter/order/web/OrderControllerTest.java` — 新增 9 个端点测试
 
 ## pre-flight
-- entropy-check.sh: 退出码 0, 0 FAIL, 12 WARN（均为预存问题）
+- mvn-test: pass — Tests run: 549, Failures: 0, Errors: 0, Skipped: 0
+- checkstyle: pass — 0 Checkstyle violations
+- entropy-check: pass — 0 FAIL, 12 WARN (status: PASS)
+
+## summary
+完成 Order 状态机发货/送达/退款完整链路开发。
+
+### Domain 层
+- OrderStatus 新增 REFUNDED 枚举值，实现 canRefund()（PAID/SHIPPED/DELIVERED 可退款）和 toRefunded() 转换方法
+- Order 新增 refund() 和 isRefunded() 方法
+
+### Application 层
+- shipOrder(orderId): find → ship → save → toDTO
+- deliverOrder(orderId): find → deliver → save → toDTO
+- refundOrder(orderId): find → hasCoupon? unuse+removeCoupon → refund → save → toDTO
+
+### Adapter 层
+- POST /api/v1/orders/{orderId}/ship
+- POST /api/v1/orders/{orderId}/deliver
+- POST /api/v1/orders/{orderId}/refund
+
+### 测试覆盖
+- Domain: 13 个新增测试（OrderStatusTest 8 + OrderTest 5）
+- Application: 12 个新增测试
+- Adapter: 9 个新增测试
+
+### TDD 执行
+- 所有代码均按 Red-Green-Refactor 流程开发
+- Domain/Application 测试预先编写，Red 阶段验证失败后实现
+- Adapter 测试预先编写，端点缺失返回 404 后实现
+
+## 待验收项
+1. 状态机转换规则正确性验证
+2. 退款优惠券回滚逻辑验证
+3. REST API 契约验证（请求/响应结构）
+4. 异常场景覆盖验证（非法状态转换、订单不存在、优惠券不存在）
+
+## 备注
+- refundOrder 采用简化写法（单一 if hasCoupon），符合架构评审建议
+- 无 Infrastructure 层变更（OrderConverter 通过 OrderStatus.valueOf() 自动支持 REFUNDED）
