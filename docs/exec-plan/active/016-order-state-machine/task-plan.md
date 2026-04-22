@@ -9,8 +9,8 @@
 | 3 | Application: OrderApplicationService 新增 shipOrder/deliverOrder/refundOrder + 测试 | dev | 验收通过 | TDD Red-Green 完成 |
 | 4 | Adapter: OrderController 新增 ship/deliver/refund 端点 + 测试 | dev | 验收通过 | TDD Red-Green 完成 |
 | 5 | 全量 mvn test + checkstyle + entropy-check | dev | 验收通过 | 549 tests, 0 checkstyle, entropy PASS |
-| 6 | QA: 测试用例设计 | qa | 待办 | |
-| 7 | QA: 验收测试 + 代码审查 | qa | 待办 | |
+| 6 | QA: 测试用例设计 | qa | 完成 | test-case-design.md 已编写 |
+| 7 | QA: 验收测试 + 代码审查 | qa | 完成 | test-report.md 已编写，验收通过 |
 
 ## 执行顺序
 domain -> application -> adapter -> 全量测试 -> QA 验收

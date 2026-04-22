@@ -2,9 +2,9 @@
 
 ## 基本信息
 - **task-id**: 016-order-state-machine
-- **from**: dev
-- **to**: qa
-- **status**: pending-review
+- **from**: qa
+- **to**: ralph
+- **status**: approved
 - **date**: 2026-04-22
 
 ## 产出物
@@ -58,3 +58,9 @@
 ## 备注
 - refundOrder 采用简化写法（单一 if hasCoupon），符合架构评审建议
 - 无 Infrastructure 层变更（OrderConverter 通过 OrderStatus.valueOf() 自动支持 REFUNDED）
+
+## QA 验收摘要
+- **三项预飞独立验证**：mvn test ✅ (549 tests, 0 failures), checkstyle ✅ (0 violations), entropy-check ✅ (0 FAIL, 12 WARN)
+- **代码审查**：依赖方向正确，领域模型封装良好，无 DO 泄漏，Controller 无业务逻辑
+- **测试覆盖**：34 个新增测试覆盖正向/逆向场景
+- **验收结论**：✅ 通过，无阻塞性问题
