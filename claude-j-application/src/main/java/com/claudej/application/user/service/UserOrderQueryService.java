@@ -1,7 +1,9 @@
 package com.claudej.application.user.service;
 
+import com.claudej.application.common.dto.PageDTO;
 import com.claudej.application.order.dto.OrderDTO;
 import com.claudej.application.order.service.OrderApplicationService;
+import com.claudej.domain.common.model.valobj.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,6 +31,17 @@ public class UserOrderQueryService {
         // 通过 OrderApplicationService 查询订单
         // Order.customerId 对应 User.userId
         return orderApplicationService.getOrdersByCustomerId(userId);
+    }
+
+    /**
+     * 分页查询用户订单列表
+     *
+     * @param userId 用户ID
+     * @param pageRequest 分页请求
+     * @return 分页订单结果
+     */
+    public PageDTO<OrderDTO> getUserOrders(String userId, PageRequest pageRequest) {
+        return orderApplicationService.getOrdersByCustomerId(userId, pageRequest);
     }
 
     /**

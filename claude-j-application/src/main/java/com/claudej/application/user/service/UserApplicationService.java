@@ -1,10 +1,13 @@
 package com.claudej.application.user.service;
 
+import com.claudej.application.common.assembler.PageAssembler;
+import com.claudej.application.common.dto.PageDTO;
 import com.claudej.application.user.assembler.UserAssembler;
 import com.claudej.application.user.command.CreateUserCommand;
 import com.claudej.application.user.dto.UserDTO;
 import com.claudej.domain.common.exception.BusinessException;
 import com.claudej.domain.common.exception.ErrorCode;
+import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.user.model.aggregate.User;
 import com.claudej.domain.user.model.valobj.Email;
 import com.claudej.domain.user.model.valobj.InviteCode;
@@ -27,13 +30,16 @@ public class UserApplicationService {
     private final UserRepository userRepository;
     private final UserAssembler userAssembler;
     private final InviteCodeGenerator inviteCodeGenerator;
+    private final PageAssembler pageAssembler;
 
     public UserApplicationService(UserRepository userRepository,
                                   UserAssembler userAssembler,
-                                  InviteCodeGenerator inviteCodeGenerator) {
+                                  InviteCodeGenerator inviteCodeGenerator,
+                                  PageAssembler pageAssembler) {
         this.userRepository = userRepository;
         this.userAssembler = userAssembler;
         this.inviteCodeGenerator = inviteCodeGenerator;
+        this.pageAssembler = pageAssembler;
     }
 
     /**
@@ -113,6 +119,14 @@ public class UserApplicationService {
     public List<UserDTO> getInvitedUsers(String userId) {
         List<User> users = userRepository.findByInviterId(new UserId(userId));
         return userAssembler.toDTOList(users);
+    }
+
+    /**
+     * 分页查询被邀请的用户列表
+     */
+    public PageDTO<UserDTO> getInvitedUsers(String userId, PageRequest pageRequest) {
+        com.claudej.domain.common.model.valobj.Page<User> page = userRepository.findByInviterId(new UserId(userId), pageRequest);
+        return pageAssembler.toPageDTO(page, userAssembler::toDTO);
     }
 
     /**

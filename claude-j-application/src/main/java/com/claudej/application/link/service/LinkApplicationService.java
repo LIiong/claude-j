@@ -1,5 +1,7 @@
 package com.claudej.application.link.service;
 
+import com.claudej.application.common.assembler.PageAssembler;
+import com.claudej.application.common.dto.PageDTO;
 import com.claudej.application.link.assembler.LinkAssembler;
 import com.claudej.application.link.command.CreateLinkCommand;
 import com.claudej.application.link.command.DeleteLinkCommand;
@@ -7,6 +9,7 @@ import com.claudej.application.link.command.UpdateLinkCommand;
 import com.claudej.application.link.dto.LinkDTO;
 import com.claudej.domain.common.exception.BusinessException;
 import com.claudej.domain.common.exception.ErrorCode;
+import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.link.model.aggregate.Link;
 import com.claudej.domain.link.model.valobj.LinkCategory;
 import com.claudej.domain.link.model.valobj.LinkName;
@@ -25,10 +28,12 @@ public class LinkApplicationService {
 
     private final LinkRepository linkRepository;
     private final LinkAssembler linkAssembler;
+    private final PageAssembler pageAssembler;
 
-    public LinkApplicationService(LinkRepository linkRepository, LinkAssembler linkAssembler) {
+    public LinkApplicationService(LinkRepository linkRepository, LinkAssembler linkAssembler, PageAssembler pageAssembler) {
         this.linkRepository = linkRepository;
         this.linkAssembler = linkAssembler;
+        this.pageAssembler = pageAssembler;
     }
 
     /**
@@ -103,5 +108,22 @@ public class LinkApplicationService {
         LinkCategory linkCategory = new LinkCategory(category);
         List<Link> links = linkRepository.findByCategory(linkCategory);
         return linkAssembler.toDTOList(links);
+    }
+
+    /**
+     * 分页查询所有链接
+     */
+    public PageDTO<LinkDTO> getAllLinks(PageRequest pageRequest) {
+        com.claudej.domain.common.model.valobj.Page<Link> page = linkRepository.findAll(pageRequest);
+        return pageAssembler.toPageDTO(page, linkAssembler::toDTO);
+    }
+
+    /**
+     * 分页查询指定分类的链接
+     */
+    public PageDTO<LinkDTO> getLinksByCategory(String category, PageRequest pageRequest) {
+        LinkCategory linkCategory = new LinkCategory(category);
+        com.claudej.domain.common.model.valobj.Page<Link> page = linkRepository.findByCategory(linkCategory, pageRequest);
+        return pageAssembler.toPageDTO(page, linkAssembler::toDTO);
     }
 }

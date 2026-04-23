@@ -1,11 +1,14 @@
 package com.claudej.application.coupon.service;
 
+import com.claudej.application.common.assembler.PageAssembler;
+import com.claudej.application.common.dto.PageDTO;
 import com.claudej.application.coupon.assembler.CouponAssembler;
 import com.claudej.application.coupon.command.CreateCouponCommand;
 import com.claudej.application.coupon.command.UseCouponCommand;
 import com.claudej.application.coupon.dto.CouponDTO;
 import com.claudej.domain.common.exception.BusinessException;
 import com.claudej.domain.common.exception.ErrorCode;
+import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.coupon.model.aggregate.Coupon;
 import com.claudej.domain.coupon.model.valobj.CouponId;
 import com.claudej.domain.coupon.model.valobj.DiscountType;
@@ -24,10 +27,12 @@ public class CouponApplicationService {
 
     private final CouponRepository couponRepository;
     private final CouponAssembler couponAssembler;
+    private final PageAssembler pageAssembler;
 
-    public CouponApplicationService(CouponRepository couponRepository, CouponAssembler couponAssembler) {
+    public CouponApplicationService(CouponRepository couponRepository, CouponAssembler couponAssembler, PageAssembler pageAssembler) {
         this.couponRepository = couponRepository;
         this.couponAssembler = couponAssembler;
+        this.pageAssembler = pageAssembler;
     }
 
     /**
@@ -78,6 +83,22 @@ public class CouponApplicationService {
     public List<CouponDTO> getAvailableCouponsByUserId(String userId) {
         List<Coupon> coupons = couponRepository.findAvailableByUserId(userId);
         return couponAssembler.toDTOList(coupons);
+    }
+
+    /**
+     * 分页查询用户所有优惠券
+     */
+    public PageDTO<CouponDTO> getCouponsByUserId(String userId, PageRequest pageRequest) {
+        com.claudej.domain.common.model.valobj.Page<Coupon> page = couponRepository.findByUserId(userId, pageRequest);
+        return pageAssembler.toPageDTO(page, couponAssembler::toDTO);
+    }
+
+    /**
+     * 分页查询用户可用优惠券
+     */
+    public PageDTO<CouponDTO> getAvailableCouponsByUserId(String userId, PageRequest pageRequest) {
+        com.claudej.domain.common.model.valobj.Page<Coupon> page = couponRepository.findAvailableByUserId(userId, pageRequest);
+        return pageAssembler.toPageDTO(page, couponAssembler::toDTO);
     }
 
     /**

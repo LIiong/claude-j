@@ -1,5 +1,7 @@
 package com.claudej.application.order.service;
 
+import com.claudej.application.common.assembler.PageAssembler;
+import com.claudej.application.common.dto.PageDTO;
 import com.claudej.application.order.assembler.OrderAssembler;
 import com.claudej.application.order.command.CreateOrderCommand;
 import com.claudej.application.order.command.CreateOrderFromCartCommand;
@@ -9,6 +11,7 @@ import com.claudej.domain.cart.model.entity.CartItem;
 import com.claudej.domain.cart.repository.CartRepository;
 import com.claudej.domain.common.exception.BusinessException;
 import com.claudej.domain.common.exception.ErrorCode;
+import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.coupon.model.aggregate.Coupon;
 import com.claudej.domain.coupon.model.valobj.CouponId;
 import com.claudej.domain.coupon.repository.CouponRepository;
@@ -35,13 +38,16 @@ public class OrderApplicationService {
     private final CartRepository cartRepository;
     private final CouponRepository couponRepository;
     private final OrderAssembler orderAssembler;
+    private final PageAssembler pageAssembler;
 
     public OrderApplicationService(OrderRepository orderRepository, CartRepository cartRepository,
-                                   CouponRepository couponRepository, OrderAssembler orderAssembler) {
+                                   CouponRepository couponRepository, OrderAssembler orderAssembler,
+                                   PageAssembler pageAssembler) {
         this.orderRepository = orderRepository;
         this.cartRepository = cartRepository;
         this.couponRepository = couponRepository;
         this.orderAssembler = orderAssembler;
+        this.pageAssembler = pageAssembler;
     }
 
     /**
@@ -94,6 +100,14 @@ public class OrderApplicationService {
     public List<OrderDTO> getOrdersByCustomerId(String customerId) {
         List<Order> orders = orderRepository.findByCustomerId(new CustomerId(customerId));
         return orderAssembler.toDTOList(orders);
+    }
+
+    /**
+     * 分页查询客户的订单列表
+     */
+    public PageDTO<OrderDTO> getOrdersByCustomerId(String customerId, PageRequest pageRequest) {
+        com.claudej.domain.common.model.valobj.Page<Order> page = orderRepository.findByCustomerId(new CustomerId(customerId), pageRequest);
+        return pageAssembler.toPageDTO(page, orderAssembler::toDTO);
     }
 
     /**
