@@ -17,8 +17,8 @@
 | 9 | Adapter: Controller 分页改造 + 测试 | dev | 验收通过 | 5 个 Controller |
 | 10 | 全量 mvn test | dev | 验收通过 | Tests: 52 |
 | 11 | QA: 测试用例设计 | qa | 完成 | test-case-design.md |
-| 12 | QA: 验收测试 + 代码审查 | qa | 完成 | test-report.md, 发现 Critical 路由冲突 |
-| 13 | QA: 接口集成测试 | qa | 待修复 | 路由冲突无法执行 |
+| 12 | QA: 验收测试 + 代码审查 | qa | 验收通过 | test-report.md, 第1轮发现问题已修复 |
+| 13 | QA: 接口集成测试 | qa | 验收通过 | 第2轮验收：路由冲突已修复，白名单校验生效 |
 
 ## 执行顺序
 

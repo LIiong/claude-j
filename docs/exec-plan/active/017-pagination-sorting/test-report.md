@@ -2,7 +2,7 @@
 
 **测试日期**：2026-04-23
 **测试人员**：@qa
-**版本状态**：待修复
+**版本状态**：验收通过
 **任务类型**：业务聚合（基础设施增强）
 
 ---
@@ -164,3 +164,55 @@ mvn checkstyle:check -B
 - 新增各层测试覆盖
 
 修复后需重新执行 QA 验收。
+
+---
+
+## 第 2 轮验收（2026-04-23）
+
+### 三项检查（独立重跑）
+
+```bash
+mvn clean test
+# Tests run: 604, Failures: 0, Errors: 0, Skipped: 0, BUILD SUCCESS
+
+mvn checkstyle:check -B
+# 0 Checkstyle violations, BUILD SUCCESS
+
+./scripts/entropy-check.sh
+# issues: 0, warnings: 12, status: PASS
+```
+
+### 问题修复验证
+
+| # | 原问题 | 修复方案 | 验证结果 |
+|---|--------|---------|---------|
+| 1 | **Critical: 路由冲突** — `/paged` 被 `/{id}` 拦截 | 路径改为 `/query/paged` | ✅ **已修复** — `should_return200WithPagedResult_when_getAllLinksPaged` 测试验证 `/api/v1/links/query/paged` 可访问，返回 200 |
+| 2 | **Major: 排序白名单校验缺失** | Controller 添加 `ALLOWED_SORT_FIELDS` + `validateSortField()` + GlobalExceptionHandler 处理 `INVALID_SORT_FIELD` → 400 | ✅ **已修复** — `should_return400_when_sortFieldNotInWhitelist` 测试验证非法字段返回 400 + errorCode: INVALID_SORT_FIELD |
+| 3 | **Major: 测试覆盖不足** | Application 层新增 2 个分页测试 + Adapter 层新增 4 个端点测试 | ✅ **已修复** — Application: `should_returnPagedResult_when_getAllLinksPaged` / `should_returnPagedResultByCategory_when_getLinksByCategoryPaged`; Adapter: 4 个分页测试 |
+
+### 新增测试清单
+
+| 层 | 测试类 | 新增方法 | 用例数 |
+|---|--------|---------|--------|
+| Application | LinkApplicationServiceTest | `should_returnPagedResult_when_getAllLinksPaged`, `should_returnPagedResultByCategory_when_getLinksByCategoryPaged` | 2 |
+| Adapter | LinkControllerTest | `should_return200WithPagedResult_when_getAllLinksPaged`, `should_return200WithPagedResult_when_getLinksByCategoryPaged`, `should_return400_when_sortFieldNotInWhitelist`, `should_return200_when_sortFieldInWhitelist` | 4 |
+
+### 代码审查复核
+
+| 检查项 | 结果 |
+|--------|------|
+| Controller 无业务逻辑，仅委托 application service | ✅ Pass — validateSortField() 为校验逻辑，符合 Controller 职责 |
+| 排序白名单正确定义 | ✅ Pass — ALLOWED_SORT_FIELDS = {createTime, updateTime, name} 符合 requirement-design.md |
+| GlobalExceptionHandler 正确映射 INVALID_SORT_FIELD → 400 | ✅ Pass — Line 88-89 正确处理 |
+| 路由路径设计无冲突 | ✅ Pass — `/query/paged` 与 `/{id}` 无冲突 |
+
+### 第 2 轮验收结论
+
+| 维度 | 结论 |
+|------|------|
+| 功能完整性 | ✅ 分页接口可正常访问；排序字段白名单校验生效 |
+| 测试覆盖 | ✅ Application + Adapter 层测试已补充（新增 6 tests） |
+| 架构合规 | ✅ 依赖方向正确，Domain 无外部依赖 |
+| 代码风格 | ✅ Java 8 兼容，Checkstyle 0 violations |
+
+### 最终状态：✅ 验收通过 — 所有问题已修复
