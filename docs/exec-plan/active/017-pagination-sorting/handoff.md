@@ -2,21 +2,77 @@
 
 ## 基本信息
 - **task-id**: 017-pagination-sorting
-- **from**: dev
-- **to**: qa
-- **status**: pending-review
+- **from**: qa
+- **to**: dev
+- **status**: changes-requested
 - **date**: 2026-04-23
 
-## Pre-flight 检查结果
+## QA 验收结果
 
+### 三项预飞（独立重跑）
 ```yaml
 pre-flight:
-  mvn-test: pass       # Tests: 52 run, 0 failures, 0 errors, 0 skipped
-  checkstyle: pass     # 0 Checkstyle violations
+  mvn-test: pass       # Tests: 52 run, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS
+  checkstyle: pass     # 0 Checkstyle violations, BUILD SUCCESS
   entropy-check: pass  # issues: 0, warnings: 12, status: PASS
 ```
 
-## 开发摘要
+### 验收结论：❌ 待修复
+
+**问题清单**：
+
+| # | 严重度 | 描述 | 建议 |
+|---|--------|------|------|
+| 1 | **Critical** | **LinkController 路由路径冲突**：`GET /api/v1/links/paged` 被 Spring MVC 匹配到 `GET /api/v1/links/{id}`（`{id}` 为 Long 类型），导致 `NumberFormatException: For input string: "paged"`。分页接口完全不可用。 | (1) 将 `/paged` 改为 `/api/v1/links-all/paged` 或 `/api/v1/links/query/paged`；(2) 或在原 `GET /api/v1/links` 上增加 Query 参数支持分页；(3) 或将 `{id}` 改为 String 类型并在 Service 层校验。 |
+| 2 | **Major** | **排序字段白名单校验缺失**：requirement-design.md 定义了排序字段白名单（link: createTime, updateTime, name），ErrorCode 定义了 `INVALID_SORT_FIELD`，但 Controller 层无校验逻辑。 | 在 Controller 或 Application 层增加白名单校验。 |
+| 3 | **Major** | **测试覆盖不足**：Application/Infrastructure/Adapter 层均无新增测试类，仅 Domain 层有测试。集成测试因路由冲突无法执行。 | 新增各层分页方法测试。 |
+
+### 测试覆盖情况
+- ✅ Domain 层：49 tests（PageRequest 19 + SortDirection 9 + Page 21）
+- ⚠️ Application 层：无新增测试
+- ⚠️ Infrastructure 层：无新增测试
+- ⚠️ Adapter 层：无新增测试
+- ❌ 集成测试：因路由冲突无法执行
+
+### 架构合规
+- ✅ 依赖方向正确（adapter → application → domain ← infrastructure）
+- ✅ Domain 层无 Spring/框架 import
+- ✅ 值对象不可变（final class + final fields）
+- ✅ Checkstyle 通过
+- ✅ ArchUnit 14 条规则通过
+
+---
+
+## 修复建议（优先级排序）
+
+### P0 — Critical 路由冲突（必须修复）
+
+**问题**：LinkController 的 `/{id}`（Long 类型）与 `/paged` 路径冲突。
+
+**推荐方案**（任选其一）：
+1. **路径重构**：将 `/paged` 改为 `/api/v1/links/query/paged` 或类似路径，与 `/{id}` 区分
+2. **Query 参数方案**：在原有 `GET /api/v1/links` 上增加可选 Query 参数 `page/size/sortField/sortDirection`，不新增 `/paged` 路径
+3. **类型修改**：将 `{id}` 改为 String 类型，在 Service 层校验是否为数字
+
+### P1 — Major 排序白名单（必须修复）
+
+**问题**：sortField 无白名单校验，可能导致 SQL 注入。
+
+**建议**：
+- 在 Controller 层增加校验逻辑，或
+- 在 Application 层增加统一的 `SortFieldValidator`
+
+### P2 — Major 测试覆盖（必须修复）
+
+**建议**：
+- 新增 `LinkApplicationServiceTest` 分页方法测试
+- 新增 `LinkRepositoryImplIT` 分页方法测试
+- 新增 `LinkControllerTest` 分页端点测试（MockMvc）
+- 修复路由后新增 `PaginationIntegrationTest`
+
+---
+
+## 开发摘要（原 from:dev）
 
 ### 变更范围
 - **Domain 层**：新增 `domain/common/model/valobj` 下三个值对象
@@ -30,10 +86,6 @@ pre-flight:
 - **Infrastructure 层**：新增 `PageHelper` 工具类 + RepositoryImpl 分页方法实现（4 个）
 - **Adapter 层**：新增 `PageResponse` + Controller 分页端点（5 个 Controller）
 
-### 测试覆盖
-- Domain 值对象测试：49 个测试用例（SortDirection 9 + PageRequest 19 + Page 21）
-- 全量测试：52 个测试通过（含 ArchUnit 14 条架构规则）
-
 ### Commits
 - `af1329f` feat(domain): 分页请求与结果值对象 PageRequest/SortDirection/Page<T>
 - `a55bb2c` feat(domain): Repository 接口新增分页方法
@@ -41,21 +93,11 @@ pre-flight:
 - `e466dcc` feat(application): ApplicationService 新增分页方法
 - `bc1bab2` feat(adapter): Controller 新增分页端点
 
-## 待验收清单
+---
 
-1. 分页参数校验（page>=0, size 1-100）
-2. 分页响应结构（content/totalElements/totalPages/page/size/first/last/empty）
-3. 排序方向解析（ASC/DESC）
-4. 向后兼容（原有列表接口保留）
-5. ArchUnit 架构规则全部通过
+## 交付物
 
-## 验收命令
+- test-case-design.md：测试用例设计（七节完整）
+- test-report.md：测试报告（含问题清单）
 
-```bash
-# 三项预飞
-mvn test && mvn checkstyle:check && ./scripts/entropy-check.sh
-
-# 验证分页接口（示例）
-curl "http://localhost:8080/api/v1/links/paged?page=0&size=10"
-curl "http://localhost:8080/api/v1/links/category/paged?category=tech&page=0&size=20"
-```
+修复完成后请通知 @qa 重新验收。
