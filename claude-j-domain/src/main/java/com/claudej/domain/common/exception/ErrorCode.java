@@ -84,7 +84,12 @@ public enum ErrorCode {
     PASSWORD_MISMATCH("PASSWORD_MISMATCH", "密码不匹配"),
     EMAIL_ALREADY_VERIFIED("EMAIL_ALREADY_VERIFIED", "邮箱已验证"),
     PHONE_ALREADY_VERIFIED("PHONE_ALREADY_VERIFIED", "手机号已验证"),
-    INVALID_SESSION("INVALID_SESSION", "无效或已过期的会话");
+    INVALID_SESSION("INVALID_SESSION", "无效或已过期的会话"),
+
+    // Pagination
+    PAGE_NUMBER_NEGATIVE("PAGE_NUMBER_NEGATIVE", "页码不能为负数"),
+    PAGE_SIZE_INVALID("PAGE_SIZE_INVALID", "每页条数必须在1-100之间"),
+    INVALID_SORT_FIELD("INVALID_SORT_FIELD", "无效的排序字段");
 
     private final String code;
     private final String message;
