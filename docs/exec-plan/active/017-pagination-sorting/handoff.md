@@ -1,15 +1,14 @@
 ---
 task-id: "017-pagination-sorting"
-from: dev
-to: architect
-status: pending-review
-timestamp: "2026-04-23T15:13:56Z"
+from: architect
+to: dev
+status: approved
+timestamp: "2026-04-23T15:35:00Z"
+review-date: "2026-04-23"
 pre-flight:
-  mvn-test: pending
-  checkstyle: pending
-  entropy-check: pending
+  entropy-check: pass  # Exit 0, 12 WARN, 0 FAIL
 artifacts:
   - requirement-design.md
   - task-plan.md
-summary: "为所有列表接口增加分页与排序支持。新增 PageRequest/Page/SortDirection 值对象（domain/common），改造 4 个 Repository 接口、5 个 ApplicationService、4 个 RepositoryImpl、5 个 Controller。无 DDL 变更。"
+summary: "架构评审通过。分页值对象设计合理（domain/common），Repository 新增方法保持向后兼容，排序白名单防止 SQL 注入。建议 Build 阶段注意：Adapter 层直接使用 domain PageRequest 值对象，无需重复定义。"
 ---
