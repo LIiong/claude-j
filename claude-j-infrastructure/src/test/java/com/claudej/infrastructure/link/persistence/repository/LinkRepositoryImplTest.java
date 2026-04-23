@@ -1,5 +1,8 @@
 package com.claudej.infrastructure.link.persistence.repository;
 
+import com.claudej.domain.common.model.valobj.PageRequest;
+import com.claudej.domain.common.model.valobj.Page;
+import com.claudej.domain.common.model.valobj.SortDirection;
 import com.claudej.domain.link.model.aggregate.Link;
 import com.claudej.domain.link.model.valobj.LinkCategory;
 import com.claudej.domain.link.model.valobj.LinkName;

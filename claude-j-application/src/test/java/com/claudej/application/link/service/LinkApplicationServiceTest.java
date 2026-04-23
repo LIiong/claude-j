@@ -1,11 +1,16 @@
 package com.claudej.application.link.service;
 
+import com.claudej.application.common.assembler.PageAssembler;
+import com.claudej.application.common.dto.PageDTO;
 import com.claudej.application.link.assembler.LinkAssembler;
 import com.claudej.application.link.command.CreateLinkCommand;
 import com.claudej.application.link.command.DeleteLinkCommand;
 import com.claudej.application.link.command.UpdateLinkCommand;
 import com.claudej.application.link.dto.LinkDTO;
 import com.claudej.domain.common.exception.BusinessException;
+import com.claudej.domain.common.model.valobj.PageRequest;
+import com.claudej.domain.common.model.valobj.Page;
+import com.claudej.domain.common.model.valobj.SortDirection;
 import com.claudej.domain.link.model.aggregate.Link;
 import com.claudej.domain.link.repository.LinkRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +27,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,6 +42,9 @@ class LinkApplicationServiceTest {
 
     @Mock
     private LinkAssembler linkAssembler;
+
+    @Mock
+    private PageAssembler pageAssembler;
 
     @InjectMocks
     private LinkApplicationService linkApplicationService;
@@ -204,5 +214,81 @@ class LinkApplicationServiceTest {
         // Then
         assertThat(result).hasSize(1);
         verify(linkRepository).findByCategory(any());
+    }
+
+    // ========== 分页方法测试 ==========
+
+    @Test
+    void should_returnPagedResult_when_getAllLinksPaged() {
+        // Given
+        PageRequest pageRequest = PageRequest.of(0, 20, "createTime", SortDirection.DESC);
+        Page<Link> mockPage = new Page<Link>(
+                Arrays.asList(mockLink),
+                1L,
+                0,
+                20
+        );
+
+        when(linkRepository.findAll(any(PageRequest.class))).thenReturn(mockPage);
+
+        // 使用 doAnswer 绕过泛型检查
+        doAnswer(invocation -> {
+            PageDTO<LinkDTO> result = new PageDTO<LinkDTO>();
+            result.setContent(Arrays.asList(mockLinkDTO));
+            result.setTotalElements(1L);
+            result.setTotalPages(1);
+            result.setPage(0);
+            result.setSize(20);
+            result.setFirst(true);
+            result.setLast(true);
+            result.setEmpty(false);
+            return result;
+        }).when(pageAssembler).toPageDTO(eq(mockPage), any());
+
+        // When
+        PageDTO<LinkDTO> result = linkApplicationService.getAllLinks(pageRequest);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getTotalElements()).isEqualTo(1L);
+        assertThat(result.getContent()).hasSize(1);
+        verify(linkRepository).findAll(any(PageRequest.class));
+    }
+
+    @Test
+    void should_returnPagedResultByCategory_when_getLinksByCategoryPaged() {
+        // Given
+        PageRequest pageRequest = PageRequest.of(0, 20, null, null);
+        Page<Link> mockPage = new Page<Link>(
+                Arrays.asList(mockLink),
+                1L,
+                0,
+                20
+        );
+
+        when(linkRepository.findByCategory(any(), any(PageRequest.class))).thenReturn(mockPage);
+
+        // 使用 doAnswer 绕过泛型检查
+        doAnswer(invocation -> {
+            PageDTO<LinkDTO> result = new PageDTO<LinkDTO>();
+            result.setContent(Arrays.asList(mockLinkDTO));
+            result.setTotalElements(1L);
+            result.setTotalPages(1);
+            result.setPage(0);
+            result.setSize(20);
+            result.setFirst(true);
+            result.setLast(true);
+            result.setEmpty(false);
+            return result;
+        }).when(pageAssembler).toPageDTO(eq(mockPage), any());
+
+        // When
+        PageDTO<LinkDTO> result = linkApplicationService.getLinksByCategory("tech", pageRequest);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getTotalElements()).isEqualTo(1L);
+        assertThat(result.getContent()).hasSize(1);
+        verify(linkRepository).findByCategory(any(), any(PageRequest.class));
     }
 }

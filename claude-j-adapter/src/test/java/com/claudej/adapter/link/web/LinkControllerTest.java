@@ -1,10 +1,12 @@
 package com.claudej.adapter.link.web;
 
 import com.claudej.adapter.common.ApiResult;
+import com.claudej.adapter.common.response.PageResponse;
 import com.claudej.adapter.link.web.request.CreateLinkRequest;
 import com.claudej.adapter.link.web.request.UpdateLinkRequest;
 import com.claudej.adapter.link.web.response.LinkResponse;
 import com.claudej.adapter.common.GlobalExceptionHandler;
+import com.claudej.application.common.dto.PageDTO;
 import com.claudej.application.link.command.CreateLinkCommand;
 import com.claudej.application.link.command.DeleteLinkCommand;
 import com.claudej.application.link.command.UpdateLinkCommand;
@@ -12,6 +14,7 @@ import com.claudej.application.link.dto.LinkDTO;
 import com.claudej.application.link.service.LinkApplicationService;
 import com.claudej.domain.common.exception.BusinessException;
 import com.claudej.domain.common.exception.ErrorCode;
+import com.claudej.domain.common.model.valobj.PageRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,11 +26,13 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
@@ -220,5 +225,108 @@ class LinkControllerTest {
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.data", hasSize(1)))
                 .andExpect(jsonPath("$.data[0].category", is("tech")));
+    }
+
+    // ========== 分页端点测试 ==========
+
+    @Test
+    void should_return200WithPagedResult_when_getAllLinksPaged() throws Exception {
+        // Given - 模拟分页返回结果
+        PageDTO<LinkDTO> pageDTO = new PageDTO<LinkDTO>();
+        pageDTO.setContent(Arrays.asList(mockLinkDTO));
+        pageDTO.setTotalElements(1);
+        pageDTO.setTotalPages(1);
+        pageDTO.setPage(0);
+        pageDTO.setSize(20);
+        pageDTO.setFirst(true);
+        pageDTO.setLast(true);
+        pageDTO.setEmpty(false);
+
+        when(linkApplicationService.getAllLinks(any(PageRequest.class))).thenReturn(pageDTO);
+
+        // When & Then - 验证分页端点路径 /api/v1/links/query/paged 可以正常访问
+        mockMvc.perform(get("/api/v1/links/query/paged")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.content", hasSize(1)))
+                .andExpect(jsonPath("$.data.totalElements", is(1)))
+                .andExpect(jsonPath("$.data.page", is(0)))
+                .andExpect(jsonPath("$.data.size", is(20)));
+    }
+
+    @Test
+    void should_return200WithPagedResult_when_getLinksByCategoryPaged() throws Exception {
+        // Given
+        PageDTO<LinkDTO> pageDTO = new PageDTO<LinkDTO>();
+        pageDTO.setContent(Arrays.asList(mockLinkDTO));
+        pageDTO.setTotalElements(1);
+        pageDTO.setTotalPages(1);
+        pageDTO.setPage(0);
+        pageDTO.setSize(20);
+        pageDTO.setFirst(true);
+        pageDTO.setLast(true);
+        pageDTO.setEmpty(false);
+
+        when(linkApplicationService.getLinksByCategory(eq("tech"), any(PageRequest.class))).thenReturn(pageDTO);
+
+        // When & Then
+        mockMvc.perform(get("/api/v1/links/category/paged")
+                        .param("category", "tech")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.content", hasSize(1)))
+                .andExpect(jsonPath("$.data.totalElements", is(1)));
+    }
+
+    @Test
+    void should_return400_when_sortFieldNotInWhitelist() throws Exception {
+        // Given - 使用非法排序字段
+        PageDTO<LinkDTO> pageDTO = new PageDTO<LinkDTO>();
+        pageDTO.setContent(new ArrayList<LinkDTO>());
+        pageDTO.setTotalElements(0);
+        pageDTO.setTotalPages(0);
+        pageDTO.setPage(0);
+        pageDTO.setSize(20);
+        pageDTO.setFirst(true);
+        pageDTO.setLast(true);
+        pageDTO.setEmpty(true);
+
+        // When & Then - 非法排序字段应返回 400
+        mockMvc.perform(get("/api/v1/links/query/paged")
+                        .param("page", "0")
+                        .param("size", "20")
+                        .param("sortField", "invalidField"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.errorCode", is("INVALID_SORT_FIELD")));
+    }
+
+    @Test
+    void should_return200_when_sortFieldInWhitelist() throws Exception {
+        // Given - 使用合法排序字段 createTime
+        PageDTO<LinkDTO> pageDTO = new PageDTO<LinkDTO>();
+        pageDTO.setContent(Arrays.asList(mockLinkDTO));
+        pageDTO.setTotalElements(1);
+        pageDTO.setTotalPages(1);
+        pageDTO.setPage(0);
+        pageDTO.setSize(20);
+        pageDTO.setFirst(true);
+        pageDTO.setLast(true);
+        pageDTO.setEmpty(false);
+
+        when(linkApplicationService.getAllLinks(any(PageRequest.class))).thenReturn(pageDTO);
+
+        // When & Then - 合法排序字段应返回 200
+        mockMvc.perform(get("/api/v1/links/query/paged")
+                        .param("page", "0")
+                        .param("size", "20")
+                        .param("sortField", "createTime")
+                        .param("sortDirection", "DESC"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)));
     }
 }

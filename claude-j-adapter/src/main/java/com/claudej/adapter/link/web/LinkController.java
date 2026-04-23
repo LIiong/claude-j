@@ -11,6 +11,8 @@ import com.claudej.application.link.command.DeleteLinkCommand;
 import com.claudej.application.link.command.UpdateLinkCommand;
 import com.claudej.application.link.dto.LinkDTO;
 import com.claudej.application.link.service.LinkApplicationService;
+import com.claudej.domain.common.exception.BusinessException;
+import com.claudej.domain.common.exception.ErrorCode;
 import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.common.model.valobj.SortDirection;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,7 +26,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -33,6 +38,13 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/links")
 public class LinkController {
+
+    /**
+     * Link聚合允许的排序字段白名单（防止 SQL注入）
+     */
+    private static final Set<String> ALLOWED_SORT_FIELDS = new HashSet<String>(
+            Arrays.asList("createTime", "updateTime", "name")
+    );
 
     private final LinkApplicationService linkApplicationService;
 
@@ -115,13 +127,16 @@ public class LinkController {
 
     /**
      * 分页查询所有链接
+     * 路径改为 /query/paged 以避免与/{id} 路径冲突
      */
-    @GetMapping("/paged")
+    @GetMapping("/query/paged")
     public ApiResult<PageResponse<LinkResponse>> getAllLinksPaged(
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size,
             @RequestParam(required = false) String sortField,
             @RequestParam(required = false) String sortDirection) {
+        // 排序字段白名单校验
+        validateSortField(sortField);
         PageRequest pageRequest = PageRequest.of(page, size, sortField, SortDirection.fromString(sortDirection));
         PageDTO<LinkDTO> pageDTO = linkApplicationService.getAllLinks(pageRequest);
         PageResponse<LinkResponse> response = convertToPageResponse(pageDTO);
@@ -151,10 +166,23 @@ public class LinkController {
             @RequestParam(required = false) Integer size,
             @RequestParam(required = false) String sortField,
             @RequestParam(required = false) String sortDirection) {
+        // 排序字段白名单校验
+        validateSortField(sortField);
         PageRequest pageRequest = PageRequest.of(page, size, sortField, SortDirection.fromString(sortDirection));
         PageDTO<LinkDTO> pageDTO = linkApplicationService.getLinksByCategory(category, pageRequest);
         PageResponse<LinkResponse> response = convertToPageResponse(pageDTO);
         return ApiResult.ok(response);
+    }
+
+    /**
+     * 校验排序字段是否在白名单中
+     */
+    private void validateSortField(String sortField) {
+        if (sortField != null && !sortField.trim().isEmpty()) {
+            if (!ALLOWED_SORT_FIELDS.contains(sortField.trim())) {
+                throw new BusinessException(ErrorCode.INVALID_SORT_FIELD);
+            }
+        }
     }
 
     private LinkResponse convertToResponse(LinkDTO dto) {

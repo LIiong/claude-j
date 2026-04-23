@@ -83,6 +83,9 @@ public class GlobalExceptionHandler {
             case INVALID_USER_ID:
             case INVALID_SESSION:
             case PASSWORD_MISMATCH:
+            case PAGE_NUMBER_NEGATIVE:
+            case PAGE_SIZE_INVALID:
+            case INVALID_SORT_FIELD:
                 return HttpStatus.BAD_REQUEST;
             case ORDER_ALREADY_PAID:
             case ORDER_NOT_PAID:
