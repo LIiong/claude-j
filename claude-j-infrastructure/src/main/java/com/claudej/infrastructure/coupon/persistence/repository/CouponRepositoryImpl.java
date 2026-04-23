@@ -1,10 +1,14 @@
 package com.claudej.infrastructure.coupon.persistence.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.coupon.model.aggregate.Coupon;
 import com.claudej.domain.coupon.model.valobj.CouponId;
 import com.claudej.domain.coupon.model.valobj.CouponStatus;
 import com.claudej.domain.coupon.repository.CouponRepository;
+import com.claudej.infrastructure.common.persistence.PageHelper;
 import com.claudej.infrastructure.coupon.persistence.converter.CouponConverter;
 import com.claudej.infrastructure.coupon.persistence.dataobject.CouponDO;
 import com.claudej.infrastructure.coupon.persistence.mapper.CouponMapper;
@@ -130,5 +134,48 @@ public class CouponRepositoryImpl implements CouponRepository {
         LambdaQueryWrapper<CouponDO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(CouponDO::getCouponId, couponId.getValue());
         return couponMapper.selectCount(wrapper) > 0;
+    }
+
+    @Override
+    public com.claudej.domain.common.model.valobj.Page<Coupon> findByUserId(String userId, PageRequest pageRequest) {
+        Page<CouponDO> mybatisPage = PageHelper.createMybatisPlusPage(pageRequest);
+        LambdaQueryWrapper<CouponDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(CouponDO::getUserId, userId);
+        IPage<CouponDO> iPage = couponMapper.selectPage(mybatisPage, wrapper);
+        return PageHelper.toDomainPage(iPage, couponConverter::toDomain);
+    }
+
+    @Override
+    public com.claudej.domain.common.model.valobj.Page<Coupon> findAvailableByUserId(String userId, PageRequest pageRequest) {
+        Page<CouponDO> mybatisPage = PageHelper.createMybatisPlusPage(pageRequest);
+        LambdaQueryWrapper<CouponDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(CouponDO::getUserId, userId);
+        wrapper.ne(CouponDO::getStatus, CouponStatus.USED.name());
+        IPage<CouponDO> iPage = couponMapper.selectPage(mybatisPage, wrapper);
+
+        // 过滤可用优惠券并处理懒过期
+        java.util.List<Coupon> availableCoupons = iPage.getRecords().stream()
+                .map(couponConverter::toDomain)
+                .filter(coupon -> {
+                    if (coupon == null) {
+                        return false;
+                    }
+                    if (coupon.getStatus() == CouponStatus.AVAILABLE) {
+                        if (coupon.checkAndExpire(java.time.LocalDateTime.now())) {
+                            CouponDO updatedDO = couponConverter.toDO(coupon);
+                            updatedDO.setUpdateTime(java.time.LocalDateTime.now());
+                            couponMapper.updateById(updatedDO);
+                        }
+                    }
+                    return coupon.getStatus() == CouponStatus.AVAILABLE;
+                })
+                .collect(java.util.stream.Collectors.toList());
+
+        return new com.claudej.domain.common.model.valobj.Page<Coupon>(
+                availableCoupons,
+                availableCoupons.size(),
+                (int) iPage.getCurrent() - 1,
+                (int) iPage.getSize()
+        );
     }
 }

@@ -1,9 +1,13 @@
 package com.claudej.infrastructure.link.persistence.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.link.model.aggregate.Link;
 import com.claudej.domain.link.model.valobj.LinkCategory;
 import com.claudej.domain.link.repository.LinkRepository;
+import com.claudej.infrastructure.common.persistence.PageHelper;
 import com.claudej.infrastructure.link.persistence.converter.LinkConverter;
 import com.claudej.infrastructure.link.persistence.dataobject.LinkDO;
 import com.claudej.infrastructure.link.persistence.mapper.LinkMapper;
@@ -78,5 +82,21 @@ public class LinkRepositoryImpl implements LinkRepository {
     public boolean existsById(Long id) {
         // MyBatis-Plus逻辑删除会自动过滤已删除记录
         return linkMapper.selectById(id) != null;
+    }
+
+    @Override
+    public com.claudej.domain.common.model.valobj.Page<Link> findAll(PageRequest pageRequest) {
+        Page<LinkDO> mybatisPage = PageHelper.createMybatisPlusPage(pageRequest);
+        IPage<LinkDO> iPage = linkMapper.selectPage(mybatisPage, null);
+        return PageHelper.toDomainPage(iPage, linkConverter::toDomain);
+    }
+
+    @Override
+    public com.claudej.domain.common.model.valobj.Page<Link> findByCategory(LinkCategory category, PageRequest pageRequest) {
+        Page<LinkDO> mybatisPage = PageHelper.createMybatisPlusPage(pageRequest);
+        LambdaQueryWrapper<LinkDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(LinkDO::getCategory, category.getValue());
+        IPage<LinkDO> iPage = linkMapper.selectPage(mybatisPage, wrapper);
+        return PageHelper.toDomainPage(iPage, linkConverter::toDomain);
     }
 }

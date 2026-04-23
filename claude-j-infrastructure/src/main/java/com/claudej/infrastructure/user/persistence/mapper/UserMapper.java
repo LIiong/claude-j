@@ -1,6 +1,8 @@
 package com.claudej.infrastructure.user.persistence.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.claudej.infrastructure.user.persistence.dataobject.UserDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -49,4 +51,10 @@ public interface UserMapper extends BaseMapper<UserDO> {
      */
     @Select("SELECT COUNT(*) > 0 FROM t_user WHERE invite_code = #{inviteCode} AND deleted = 0")
     boolean existsByInviteCode(@Param("inviteCode") String inviteCode);
+
+    /**
+     * 分页查询被邀请的用户列表
+     */
+    @Select("SELECT * FROM t_user WHERE inviter_id = #{inviterId} AND deleted = 0")
+    IPage<UserDO> selectPageByInviterId(Page<UserDO> page, @Param("inviterId") String inviterId);
 }

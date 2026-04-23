@@ -1,10 +1,14 @@
 package com.claudej.infrastructure.order.persistence.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.order.model.aggregate.Order;
 import com.claudej.domain.order.model.valobj.CustomerId;
 import com.claudej.domain.order.model.valobj.OrderId;
 import com.claudej.domain.order.repository.OrderRepository;
+import com.claudej.infrastructure.common.persistence.PageHelper;
 import com.claudej.infrastructure.order.persistence.converter.OrderConverter;
 import com.claudej.infrastructure.order.persistence.dataobject.OrderDO;
 import com.claudej.infrastructure.order.persistence.dataobject.OrderItemDO;
@@ -117,5 +121,29 @@ public class OrderRepositoryImpl implements OrderRepository {
         LambdaQueryWrapper<OrderDO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(OrderDO::getOrderId, orderId.getValue());
         return orderMapper.selectCount(wrapper) > 0;
+    }
+
+    @Override
+    public com.claudej.domain.common.model.valobj.Page<Order> findByCustomerId(CustomerId customerId, PageRequest pageRequest) {
+        Page<OrderDO> mybatisPage = PageHelper.createMybatisPlusPage(pageRequest);
+        LambdaQueryWrapper<OrderDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderDO::getCustomerId, customerId.getValue());
+        IPage<OrderDO> iPage = orderMapper.selectPage(mybatisPage, wrapper);
+
+        java.util.List<Order> orders = iPage.getRecords().stream()
+                .map(orderDO -> {
+                    LambdaQueryWrapper<OrderItemDO> itemWrapper = new LambdaQueryWrapper<>();
+                    itemWrapper.eq(OrderItemDO::getOrderId, orderDO.getOrderId());
+                    List<OrderItemDO> itemDOList = orderItemMapper.selectList(itemWrapper);
+                    return orderConverter.toDomain(orderDO, itemDOList);
+                })
+                .collect(Collectors.toList());
+
+        return new com.claudej.domain.common.model.valobj.Page<Order>(
+                orders,
+                iPage.getTotal(),
+                (int) iPage.getCurrent() - 1,
+                (int) iPage.getSize()
+        );
     }
 }

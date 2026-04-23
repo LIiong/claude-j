@@ -1,10 +1,14 @@
 package com.claudej.infrastructure.user.persistence.repository;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.user.model.aggregate.User;
 import com.claudej.domain.user.model.valobj.InviteCode;
 import com.claudej.domain.user.model.valobj.UserId;
 import com.claudej.domain.user.model.valobj.Username;
 import com.claudej.domain.user.repository.UserRepository;
+import com.claudej.infrastructure.common.persistence.PageHelper;
 import com.claudej.infrastructure.user.persistence.converter.UserConverter;
 import com.claudej.infrastructure.user.persistence.dataobject.UserDO;
 import com.claudej.infrastructure.user.persistence.mapper.UserMapper;
@@ -74,5 +78,12 @@ public class UserRepositoryImpl implements UserRepository {
     @Override
     public boolean existsByInviteCode(InviteCode inviteCode) {
         return userMapper.existsByInviteCode(inviteCode.getValue());
+    }
+
+    @Override
+    public com.claudej.domain.common.model.valobj.Page<User> findByInviterId(UserId inviterId, PageRequest pageRequest) {
+        Page<UserDO> mybatisPage = PageHelper.createMybatisPlusPage(pageRequest);
+        IPage<UserDO> iPage = userMapper.selectPageByInviterId(mybatisPage, inviterId.getValue());
+        return PageHelper.toDomainPage(iPage, userConverter::toDomain);
     }
 }
