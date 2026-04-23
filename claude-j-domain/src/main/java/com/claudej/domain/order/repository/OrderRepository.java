@@ -1,5 +1,7 @@
 package com.claudej.domain.order.repository;
 
+import com.claudej.domain.common.model.valobj.Page;
+import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.order.model.aggregate.Order;
 import com.claudej.domain.order.model.valobj.CustomerId;
 import com.claudej.domain.order.model.valobj.OrderId;
@@ -31,4 +33,9 @@ public interface OrderRepository {
      * 检查订单是否存在
      */
     boolean existsByOrderId(OrderId orderId);
+
+    /**
+     * 分页查询客户的订单列表
+     */
+    Page<Order> findByCustomerId(CustomerId customerId, PageRequest pageRequest);
 }

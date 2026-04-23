@@ -1,5 +1,7 @@
 package com.claudej.domain.user.repository;
 
+import com.claudej.domain.common.model.valobj.Page;
+import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.user.model.aggregate.User;
 import com.claudej.domain.user.model.valobj.InviteCode;
 import com.claudej.domain.user.model.valobj.UserId;
@@ -47,4 +49,9 @@ public interface UserRepository {
      * 检查邀请码是否存在
      */
     boolean existsByInviteCode(InviteCode inviteCode);
+
+    /**
+     * 分页查询被邀请的用户列表
+     */
+    Page<User> findByInviterId(UserId inviterId, PageRequest pageRequest);
 }

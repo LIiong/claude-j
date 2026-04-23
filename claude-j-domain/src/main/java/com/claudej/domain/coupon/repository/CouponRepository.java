@@ -1,5 +1,7 @@
 package com.claudej.domain.coupon.repository;
 
+import com.claudej.domain.common.model.valobj.Page;
+import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.coupon.model.aggregate.Coupon;
 import com.claudej.domain.coupon.model.valobj.CouponId;
 
@@ -35,4 +37,14 @@ public interface CouponRepository {
      * 判断优惠券是否存在
      */
     boolean existsByCouponId(CouponId couponId);
+
+    /**
+     * 分页查询用户所有优惠券
+     */
+    Page<Coupon> findByUserId(String userId, PageRequest pageRequest);
+
+    /**
+     * 分页查询用户可用优惠券
+     */
+    Page<Coupon> findAvailableByUserId(String userId, PageRequest pageRequest);
 }

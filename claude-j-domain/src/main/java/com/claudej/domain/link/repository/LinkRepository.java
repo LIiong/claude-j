@@ -1,5 +1,7 @@
 package com.claudej.domain.link.repository;
 
+import com.claudej.domain.common.model.valobj.Page;
+import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.link.model.aggregate.Link;
 import com.claudej.domain.link.model.valobj.LinkCategory;
 
@@ -40,4 +42,14 @@ public interface LinkRepository {
      * 检查链接是否存在
      */
     boolean existsById(Long id);
+
+    /**
+     * 分页查询所有链接
+     */
+    Page<Link> findAll(PageRequest pageRequest);
+
+    /**
+     * 分页查询指定分类的链接
+     */
+    Page<Link> findByCategory(LinkCategory category, PageRequest pageRequest);
 }
