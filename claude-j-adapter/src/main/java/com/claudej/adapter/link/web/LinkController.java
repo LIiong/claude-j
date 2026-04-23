@@ -1,14 +1,18 @@
 package com.claudej.adapter.link.web;
 
 import com.claudej.adapter.common.ApiResult;
+import com.claudej.adapter.common.response.PageResponse;
 import com.claudej.adapter.link.web.request.CreateLinkRequest;
 import com.claudej.adapter.link.web.request.UpdateLinkRequest;
 import com.claudej.adapter.link.web.response.LinkResponse;
+import com.claudej.application.common.dto.PageDTO;
 import com.claudej.application.link.command.CreateLinkCommand;
 import com.claudej.application.link.command.DeleteLinkCommand;
 import com.claudej.application.link.command.UpdateLinkCommand;
 import com.claudej.application.link.dto.LinkDTO;
 import com.claudej.application.link.service.LinkApplicationService;
+import com.claudej.domain.common.model.valobj.PageRequest;
+import com.claudej.domain.common.model.valobj.SortDirection;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -110,6 +114,21 @@ public class LinkController {
     }
 
     /**
+     * 分页查询所有链接
+     */
+    @GetMapping("/paged")
+    public ApiResult<PageResponse<LinkResponse>> getAllLinksPaged(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String sortField,
+            @RequestParam(required = false) String sortDirection) {
+        PageRequest pageRequest = PageRequest.of(page, size, sortField, SortDirection.fromString(sortDirection));
+        PageDTO<LinkDTO> pageDTO = linkApplicationService.getAllLinks(pageRequest);
+        PageResponse<LinkResponse> response = convertToPageResponse(pageDTO);
+        return ApiResult.ok(response);
+    }
+
+    /**
      * 根据分类查询链接
      */
     @GetMapping("/category")
@@ -122,6 +141,22 @@ public class LinkController {
         return ApiResult.ok(responseList);
     }
 
+    /**
+     * 分页查询指定分类的链接
+     */
+    @GetMapping("/category/paged")
+    public ApiResult<PageResponse<LinkResponse>> getLinksByCategoryPaged(
+            @RequestParam String category,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String sortField,
+            @RequestParam(required = false) String sortDirection) {
+        PageRequest pageRequest = PageRequest.of(page, size, sortField, SortDirection.fromString(sortDirection));
+        PageDTO<LinkDTO> pageDTO = linkApplicationService.getLinksByCategory(category, pageRequest);
+        PageResponse<LinkResponse> response = convertToPageResponse(pageDTO);
+        return ApiResult.ok(response);
+    }
+
     private LinkResponse convertToResponse(LinkDTO dto) {
         LinkResponse response = new LinkResponse();
         response.setId(dto.getId());
@@ -131,6 +166,21 @@ public class LinkController {
         response.setCategory(dto.getCategory());
         response.setCreateTime(dto.getCreateTime());
         response.setUpdateTime(dto.getUpdateTime());
+        return response;
+    }
+
+    private PageResponse<LinkResponse> convertToPageResponse(PageDTO<LinkDTO> pageDTO) {
+        PageResponse<LinkResponse> response = new PageResponse<LinkResponse>();
+        response.setContent(pageDTO.getContent().stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList()));
+        response.setTotalElements(pageDTO.getTotalElements());
+        response.setTotalPages(pageDTO.getTotalPages());
+        response.setPage(pageDTO.getPage());
+        response.setSize(pageDTO.getSize());
+        response.setFirst(pageDTO.isFirst());
+        response.setLast(pageDTO.isLast());
+        response.setEmpty(pageDTO.isEmpty());
         return response;
     }
 }

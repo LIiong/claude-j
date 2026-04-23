@@ -1,13 +1,17 @@
 package com.claudej.adapter.coupon.web;
 
 import com.claudej.adapter.common.ApiResult;
+import com.claudej.adapter.common.response.PageResponse;
 import com.claudej.adapter.coupon.web.request.CreateCouponRequest;
 import com.claudej.adapter.coupon.web.request.UseCouponRequest;
 import com.claudej.adapter.coupon.web.response.CouponResponse;
+import com.claudej.application.common.dto.PageDTO;
 import com.claudej.application.coupon.command.CreateCouponCommand;
 import com.claudej.application.coupon.command.UseCouponCommand;
 import com.claudej.application.coupon.dto.CouponDTO;
 import com.claudej.application.coupon.service.CouponApplicationService;
+import com.claudej.domain.common.model.valobj.PageRequest;
+import com.claudej.domain.common.model.valobj.SortDirection;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -91,6 +95,38 @@ public class CouponController {
     }
 
     /**
+     * 分页查询用户优惠券
+     */
+    @GetMapping("/paged")
+    public ApiResult<PageResponse<CouponResponse>> getCouponsByUserIdPaged(
+            @RequestParam String userId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String sortField,
+            @RequestParam(required = false) String sortDirection) {
+        PageRequest pageRequest = PageRequest.of(page, size, sortField, SortDirection.fromString(sortDirection));
+        PageDTO<CouponDTO> pageDTO = couponApplicationService.getCouponsByUserId(userId, pageRequest);
+        PageResponse<CouponResponse> response = convertToPageResponse(pageDTO);
+        return ApiResult.ok(response);
+    }
+
+    /**
+     * 分页查询用户可用优惠券
+     */
+    @GetMapping("/available/paged")
+    public ApiResult<PageResponse<CouponResponse>> getAvailableCouponsByUserIdPaged(
+            @RequestParam String userId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String sortField,
+            @RequestParam(required = false) String sortDirection) {
+        PageRequest pageRequest = PageRequest.of(page, size, sortField, SortDirection.fromString(sortDirection));
+        PageDTO<CouponDTO> pageDTO = couponApplicationService.getAvailableCouponsByUserId(userId, pageRequest);
+        PageResponse<CouponResponse> response = convertToPageResponse(pageDTO);
+        return ApiResult.ok(response);
+    }
+
+    /**
      * 使用优惠券
      */
     @PostMapping("/{couponId}/use")
@@ -120,6 +156,21 @@ public class CouponController {
         response.setUsedOrderId(dto.getUsedOrderId());
         response.setCreateTime(dto.getCreateTime());
         response.setUpdateTime(dto.getUpdateTime());
+        return response;
+    }
+
+    private PageResponse<CouponResponse> convertToPageResponse(PageDTO<CouponDTO> pageDTO) {
+        PageResponse<CouponResponse> response = new PageResponse<CouponResponse>();
+        response.setContent(pageDTO.getContent().stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList()));
+        response.setTotalElements(pageDTO.getTotalElements());
+        response.setTotalPages(pageDTO.getTotalPages());
+        response.setPage(pageDTO.getPage());
+        response.setSize(pageDTO.getSize());
+        response.setFirst(pageDTO.isFirst());
+        response.setLast(pageDTO.isLast());
+        response.setEmpty(pageDTO.isEmpty());
         return response;
     }
 }

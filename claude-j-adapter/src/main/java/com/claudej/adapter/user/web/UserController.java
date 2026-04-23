@@ -1,17 +1,22 @@
 package com.claudej.adapter.user.web;
 
 import com.claudej.adapter.common.ApiResult;
+import com.claudej.adapter.common.response.PageResponse;
 import com.claudej.adapter.user.web.request.CreateUserRequest;
 import com.claudej.adapter.user.web.request.ValidateInviteCodeRequest;
 import com.claudej.adapter.user.web.response.UserResponse;
+import com.claudej.application.common.dto.PageDTO;
 import com.claudej.application.user.command.CreateUserCommand;
 import com.claudej.application.user.dto.UserDTO;
 import com.claudej.application.user.service.UserApplicationService;
+import com.claudej.domain.common.model.valobj.PageRequest;
+import com.claudej.domain.common.model.valobj.SortDirection;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -104,6 +109,22 @@ public class UserController {
     }
 
     /**
+     * 分页查询被邀请的用户列表
+     */
+    @GetMapping("/{userId}/invited-users/paged")
+    public ApiResult<PageResponse<UserResponse>> getInvitedUsersPaged(
+            @PathVariable String userId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String sortField,
+            @RequestParam(required = false) String sortDirection) {
+        PageRequest pageRequest = PageRequest.of(page, size, sortField, SortDirection.fromString(sortDirection));
+        PageDTO<UserDTO> pageDTO = userApplicationService.getInvitedUsers(userId, pageRequest);
+        PageResponse<UserResponse> response = convertToPageResponse(pageDTO);
+        return ApiResult.ok(response);
+    }
+
+    /**
      * 验证邀请码
      */
     @PostMapping("/validate-invite-code")
@@ -124,6 +145,21 @@ public class UserController {
         response.setInviterId(dto.getInviterId());
         response.setCreateTime(dto.getCreateTime());
         response.setUpdateTime(dto.getUpdateTime());
+        return response;
+    }
+
+    private PageResponse<UserResponse> convertToPageResponse(PageDTO<UserDTO> pageDTO) {
+        PageResponse<UserResponse> response = new PageResponse<UserResponse>();
+        response.setContent(pageDTO.getContent().stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList()));
+        response.setTotalElements(pageDTO.getTotalElements());
+        response.setTotalPages(pageDTO.getTotalPages());
+        response.setPage(pageDTO.getPage());
+        response.setSize(pageDTO.getSize());
+        response.setFirst(pageDTO.isFirst());
+        response.setLast(pageDTO.isLast());
+        response.setEmpty(pageDTO.isEmpty());
         return response;
     }
 }

@@ -1,14 +1,18 @@
 package com.claudej.adapter.order.web;
 
 import com.claudej.adapter.common.ApiResult;
+import com.claudej.adapter.common.response.PageResponse;
 import com.claudej.adapter.order.web.request.CreateOrderFromCartRequest;
 import com.claudej.adapter.order.web.request.CreateOrderRequest;
 import com.claudej.adapter.order.web.response.OrderItemResponse;
 import com.claudej.adapter.order.web.response.OrderResponse;
+import com.claudej.application.common.dto.PageDTO;
 import com.claudej.application.order.command.CreateOrderCommand;
 import com.claudej.application.order.command.CreateOrderFromCartCommand;
 import com.claudej.application.order.dto.OrderDTO;
 import com.claudej.application.order.service.OrderApplicationService;
+import com.claudej.domain.common.model.valobj.PageRequest;
+import com.claudej.domain.common.model.valobj.SortDirection;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -83,6 +87,22 @@ public class OrderController {
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
         return ApiResult.ok(responseList);
+    }
+
+    /**
+     * 分页查询客户订单列表
+     */
+    @GetMapping("/paged")
+    public ApiResult<PageResponse<OrderResponse>> getOrdersByCustomerIdPaged(
+            @RequestParam String customerId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String sortField,
+            @RequestParam(required = false) String sortDirection) {
+        PageRequest pageRequest = PageRequest.of(page, size, sortField, SortDirection.fromString(sortDirection));
+        PageDTO<OrderDTO> pageDTO = orderApplicationService.getOrdersByCustomerId(customerId, pageRequest);
+        PageResponse<OrderResponse> response = convertToPageResponse(pageDTO);
+        return ApiResult.ok(response);
     }
 
     /**
@@ -177,6 +197,21 @@ public class OrderController {
         response.setQuantity(dto.getQuantity());
         response.setUnitPrice(dto.getUnitPrice());
         response.setSubtotal(dto.getSubtotal());
+        return response;
+    }
+
+    private PageResponse<OrderResponse> convertToPageResponse(PageDTO<OrderDTO> pageDTO) {
+        PageResponse<OrderResponse> response = new PageResponse<OrderResponse>();
+        response.setContent(pageDTO.getContent().stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList()));
+        response.setTotalElements(pageDTO.getTotalElements());
+        response.setTotalPages(pageDTO.getTotalPages());
+        response.setPage(pageDTO.getPage());
+        response.setSize(pageDTO.getSize());
+        response.setFirst(pageDTO.isFirst());
+        response.setLast(pageDTO.isLast());
+        response.setEmpty(pageDTO.isEmpty());
         return response;
     }
 }
