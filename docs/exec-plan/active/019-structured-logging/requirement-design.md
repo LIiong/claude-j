@@ -152,3 +152,90 @@ public class TraceIdFilter implements Filter {
 | requestId 响应头 | `should_return_x_request_id_header_when_any_request` |
 | requestId 贯穿 | `should_same_request_id_in_mdc_through_request_lifecycle` |
 | 三项预飞 | mvn test + checkstyle + entropy-check |
+
+## 架构评审
+
+**评审人**：@architect
+**日期**：2026-04-24
+**结论**：✅ 通过（含 2 项修正建议）
+
+### 基线确认
+
+**entropy-check.sh 退出码**：0（PASS）
+**结果摘要**：0 FAIL, 12 WARN — 无阻塞性问题
+
+### 评审检查项（15 维四类）
+
+**架构合规（7 项）**
+- [x] 聚合根边界合理（本任务不涉及聚合，为基础设施配置任务）
+- [x] 值对象识别充分（无新增值对象）
+- [x] Repository 端口粒度合适（无新增 Repository）
+- [x] 与已有聚合无循环依赖（仅改动 start 模块，不依赖 domain/application/infrastructure 业务层）
+- [x] DDL 设计与领域模型一致（无新增表）
+- [x] API 设计符合 RESTful 规范（无新增 REST API，仅增加响应头）
+- [x] 对象转换链正确（无涉及 DO/DTO/Domain 转换）
+
+**需求质量（3 项）**
+- [x] 需求无歧义：JSON 日志格式、requestId 生成规则（UUID 32字符）、响应头名称（X-Request-Id）均有明确定义
+- [x] 验收条件可验证：4 条验收条件均可转化为 `should_xxx_when_yyy` 测试
+- [x] 业务规则完备：requestId 唯一性规则、MDC 清理时机（请求结束）、响应头设置时机均已明确
+
+**计划可执行性（2 项）**
+- [x] task-plan 粒度合格：8 个原子任务，每项含文件路径 + 验证命令 + 预期输出 + commit 消息
+- [x] 依赖顺序正确：pom 依赖 → logback 配置 → Filter 实现 → Filter 注册 → 集成测试 → 三项验证（顺序合理）
+- ⚠️ **修正建议 1**：task-plan.md 的原子任务格式建议补齐「测试」字段（参考模板 `task-plan.template.md` 5 字段要求：文件路径、骨架片段、验证命令、预期输出、commit 消息）
+
+**可测性保障（3 项）**
+- [x] **AC 自动化全覆盖**：验收条件映射表 4 条均有测试方法（2 个 `@SpringBootTest` + 手动验证）
+- [x] **可测的注入方式**：TraceIdConfig 使用 `FilterRegistrationBean` 构造函数注入，无需字段注入
+- [x] **配置校验方式合规**：本任务不涉及敏感配置校验（不属于 ADR-005 覆盖范围）
+
+**心智原则（Karpathy — 动手前自检）**
+- [x] **简洁性**：设计仅包含必要组件（logback-spring.xml、TraceIdFilter、TraceIdConfig），无过度抽象
+- [x] **外科性**：仅改动 start 模块，不涉及 domain/application/infrastructure/adapter 业务层
+- [x] **假设显性**：requirement-design.md「假设与待确认」已列出 4 项假设 + 1 项待确认
+
+### 评审意见
+
+#### 1. 版本兼容性确认（✅）
+- Spring Boot 2.7.18 → logback-classic:1.2.12（实测确认）
+- logstash-logback-encoder 6.6 → 要求 logback 1.2+（官方兼容）
+- **结论**：版本兼容性无问题
+
+#### 2. Filter 注册方式确认（✅）
+- 使用 `FilterRegistrationBean` + `new TraceIdFilter()` 是正确的
+- TraceIdFilter 不依赖其他 Spring Bean，无需 `@Bean` 注入方式
+- `Ordered.HIGHEST_PRECEDENCE` 确保 requestId 在其他 Filter 之前生成
+
+#### 3. 与 actuator 配置兼容性（✅）
+- TraceIdFilter 应用到 `/*`，包括 `/actuator/*`
+- 符合设计意图「actuator 端点也携带 requestId（便于健康检查调试）」
+- 无冲突：actuator 配置位于 application.yml，日志配置位于 logback-spring.xml，职责分离
+
+#### 4. 设计文档错误（⚠️ 修正建议）
+- **task-plan.md 中 logback-spring.xml 骨架有 XML 错误**：
+  ```xml
+  <!-- 错误 -->
+  <level>level</timestamp>
+  <!-- 应改为 -->
+  <level>level</level>
+  ```
+- **影响**：Build 阶段复制此骨架会导致运行时日志级别字段被错误命名为 `timestamp`
+- **建议**：@dev 在 Build 阶段实现时修正此错误，无需打回 Spec 阶段
+
+#### 5. 集成测试数量合规（✅）
+- 仅 2 个 `@SpringBootTest`（小于 3 个限制）
+- 测试命名符合 `should_xxx_when_yyy` 规范
+
+#### 6. Java 8 语法合规（✅）
+- 使用 `UUID.randomUUID().toString().replace("-", "")` 而非 `var`
+- 使用 `javax.servlet.Filter`（Spring Boot 2.7.x 使用 javax 包，非 jakarta）
+
+### 需要新增的 ADR
+
+**不需要新增 ADR**。本任务为基础设施配置任务，不涉及架构决策变更。logstash-logback-encoder 选型为生产主流方案，无需特殊记录。
+
+### 修正要求
+
+1. **Build 阶段修正**：task-plan.md 中 logback-spring.xml 的 `<level>level</timestamp>` 错误，@dev 实现时自行修正
+2. **可选优化**：task-plan.md 原子任务格式补齐「测试」字段（轻微问题，不阻塞）
