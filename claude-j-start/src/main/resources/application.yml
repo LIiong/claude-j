@@ -25,3 +25,24 @@ jwt:
 logging:
   level:
     com.claudej: debug
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db
+    info:
+      enabled: true
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s

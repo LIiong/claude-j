@@ -1,15 +1,24 @@
 ---
 task-id: "018-actuator-health"
-from: architect
-to: dev
-status: approved
-timestamp: "2026-04-24T11:30:00Z"
+from: dev
+to: qa
+status: pending-review
+timestamp: "2026-04-24T07:21:00Z"
 pre-flight:
-  entropy-check: pass        # Exit 0, 0 errors, 12 warnings
+  mvn-test: pass       # Tests run: 58, Failures: 0, Errors: 0, Skipped: 0
+  checkstyle: pass     # 0 Checkstyle violations, Exit 0
+  entropy-check: pass  # 0 errors, 12 warnings, status: PASS
 artifacts:
-  - requirement-design.md（含架构评审章节）
+  - requirement-design.md
   - task-plan.md
-summary: "架构评审通过。纯基础设施配置任务，配置 Spring Boot Actuator 健康检查端点（health/liveness/readiness），为 K8s 探针提供基础支持。"
+  - dev-log.md
+  - test-case-design.md
+  - ActuatorHealthIntegrationTest.java
+  - application.yml（已修改）
+  - application-dev.yml（已修改）
+  - application-staging.yml（已修改）
+  - application-prod.yml（已修改）
+summary: "Build 阶段完成。配置 Spring Boot Actuator 健康检查端点（health/liveness/readiness），6 个集成测试全部通过，三项预飞检查通过。"
 ---
 
 # 交接文档
@@ -19,42 +28,47 @@ summary: "架构评审通过。纯基础设施配置任务，配置 Spring Boot 
 
 ## 交接说明
 
-### 任务性质
-本次任务为**纯基础设施配置任务**，不涉及业务聚合，无需按传统 DDD 分层开发。
+### 开发内容
 
-### 核心内容
-1. 配置 Spring Boot Actuator 基础端点（health/info）
-2. 启用 liveness/readiness 分离（K8s 探针支持）
-3. 各环境差异化配置（dev/staging/prod）
+1. **配置文件修改**
+   - `application.yml`: 添加基础 actuator 配置（probes.enabled + health group）
+   - `application-dev.yml`: 扩展端点（health,info,metrics,env,liveness,readiness）
+   - `application-staging.yml`: 调整端点（health,info,liveness,readiness）
+   - `application-prod.yml`: 最小化端点（health,liveness,readiness，移除 info）
 
-### 技术方案
-- 采用方案 A：无安全框架，依赖 K8s 网络层保护
-- 暂不引入 Spring Security，避免过度设计
+2. **集成测试**
+   - 创建 `ActuatorHealthIntegrationTest`（6 个测试方法）
+   - 覆盖：health/liveness/readiness/info/metrics 端点可用性
+
+### TDD 循环
+
+- **Red**: 先写测试 → 2 failures（liveness/readiness 404）
+- **Green**: 修改配置 → 6 tests pass
+- **Refactor**: 无需重构
 
 ### 关键决策
-1. 生产环境仅开放 health/liveness/readiness 三个端点（移除 info 防止信息泄露）
-2. show-details 在生产环境设为 never
-3. 暂不实现自定义健康指示器
 
-### 已知风险
-- 项目未引入 Spring Security，actuator 端点依赖网络层保护
-- 需确保 K8s 部署时 actuator 端点仅在内网可访问
+1. 生产环境移除 info 端点（防止应用信息泄露）——符合架构评审建议
+2. readiness 包含 db 检查（确保数据库可用才接收流量）
 
-## 评审回复
+### 端点清单
 
-**评审结论**：✅ 通过
-
-**评审检查项**：15 项全部通过（架构合规 7/N/A、需求质量 3、计划可执行性 2、可测性保障 2、心智原则 3）
-
-**评审建议（非阻断）**：
-1. Build 阰段需同步创建 test-case-design.md，明确 AC ↔ 测试用例映射
-2. 集成测试可考虑增加 dev 环境的 metrics/env 端点验证（可选）
-
-**entropy-check 基线**：Exit 0，无 FAIL 级问题
+| 端点 | dev | staging | prod |
+|------|-----|---------|------|
+| /actuator/health | 启用 | 启用 | 启用 |
+| /actuator/health/liveness | 启用 | 启用 | 启用 |
+| /actuator/health/readiness | 启用 | 启用 | 启用 |
+| /actuator/info | 启用 | 启用 | 禁用 |
+| /actuator/metrics | 启用 | 禁用 | 禁用 |
+| /actuator/env | 启用 | 禁用 | 禁用 |
 
 ---
 
 ## 交接历史
+
+### 2026-04-24 — @dev → @qa
+- 状态：pending-review
+- 说明：Build 阶段完成，三项预飞检查通过，提交 QA 验收
 
 ### 2026-04-24 — @architect → @dev
 - 状态：approved

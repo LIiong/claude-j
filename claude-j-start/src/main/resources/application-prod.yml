@@ -46,11 +46,18 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,liveness,readiness
       base-path: /actuator
   endpoint:
     health:
       show-details: never
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS}

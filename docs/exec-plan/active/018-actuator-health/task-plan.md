@@ -11,14 +11,14 @@
 
 | # | 任务 | 负责人 | 状态 | 备注 |
 |---|------|--------|------|------|
-| 1 | Start: application.yml 基础 actuator 配置 | dev | 待办 | 启用 probes + 健康组配置 |
-| 2 | Start: application-dev.yml 端点扩展 | dev | 待办 | 添加 metrics/env 端点 |
-| 3 | Start: application-staging.yml 端点调整 | dev | 待办 | 调整 show-details |
-| 4 | Start: application-prod.yml 最小化端点 | dev | 待办 | 仅保留 health/liveness/readiness |
-| 5 | Start: 集成测试 ActuatorHealthIntegrationTest | dev | 待办 | 验证端点可用性 |
-| 6 | 全量 mvn test | dev | 待办 | 含 ArchUnit 架构规则 |
+| 1 | Start: application.yml 基础 actuator 配置 | dev | 单测通过 | 启用 probes + 健康组配置 |
+| 2 | Start: application-dev.yml 端点扩展 | dev | 单测通过 | 添加 metrics/env 端点 |
+| 3 | Start: application-staging.yml 端点调整 | dev | 单测通过 | 调整 show-details |
+| 4 | Start: application-prod.yml 最小化端点 | dev | 单测通过 | 仅保留 health/liveness/readiness |
+| 5 | Start: 集成测试 ActuatorHealthIntegrationTest | dev | 单测通过 | 6 个测试全部通过 |
+| 6 | 全量 mvn test | dev | 单测通过 | 58 个测试全部通过 |
 | 7 | QA: 测试用例设计 | qa | 待办 | |
-| 8 | QA: 验收测试 + 代码审查 | qa | 待办 | |
+| 8 | QA: 验收测试 + 代码审查 | qa | 待验收 | |
 
 ## 执行顺序
 
@@ -166,9 +166,10 @@ base-config → dev-config → staging-config → prod-config → integration-te
 ## 开发完成记录
 
 <!-- dev 完成后填写 -->
-- 全量 `mvn clean test`：x/x 用例通过
-- 架构合规检查：
-- 通知 @qa 时间：
+- 全量 `mvn clean test`: 58/58 用例通过
+- 架构合规检查: entropy-check 0 errors, 12 warnings
+- checkstyle: 0 violations
+- 通知 @qa 时间: 2026-04-24 07:21
 
 ## QA 验收记录
 
