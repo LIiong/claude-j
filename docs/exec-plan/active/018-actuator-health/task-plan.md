@@ -17,8 +17,8 @@
 | 4 | Start: application-prod.yml 最小化端点 | dev | 单测通过 | 仅保留 health/liveness/readiness |
 | 5 | Start: 集成测试 ActuatorHealthIntegrationTest | dev | 单测通过 | 6 个测试全部通过 |
 | 6 | 全量 mvn test | dev | 单测通过 | 58 个测试全部通过 |
-| 7 | QA: 测试用例设计 | qa | 待办 | |
-| 8 | QA: 验收测试 + 代码审查 | qa | 待验收 | |
+| 7 | QA: 测试用例设计 | qa | 完成 | test-case-design.md 已由 @dev 创建 |
+| 8 | QA: 验收测试 + 代码审查 | qa | 完成 | test-report.md 验收通过 |
 
 ## 执行顺序
 
@@ -174,8 +174,8 @@ base-config → dev-config → staging-config → prod-config → integration-te
 ## QA 验收记录
 
 <!-- qa 验收后填写 -->
-- 全量测试（含集成测试）：x/x 用例通过
-- 代码审查结果：
-- 代码风格检查：
-- 问题清单：详见 test-report.md
-- **最终状态**：
+- 全量测试（含集成测试）：58/58 用例通过
+- 代码审查结果：配置文件正确，环境差异化配置合理
+- 代码风格检查：checkstyle 0 violations, entropy-check PASS
+- 问题清单：1 个低级别建议（TDD commit 未分离）
+- **最终状态**：✅ 验收通过，可归档
