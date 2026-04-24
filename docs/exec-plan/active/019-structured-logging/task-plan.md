@@ -14,8 +14,8 @@
 | 6 | 全量 mvn test | dev | 验收通过 | Tests run: 59, Failures: 0 |
 | 7 | mvn checkstyle:check | dev | 验收通过 | 0 violations |
 | 8 | ./scripts/entropy-check.sh | dev | 验收通过 | 0 FAIL, 12 WARN |
-| 9 | QA: 测试用例设计 | qa | 待办 | |
-| 10 | QA: 验收测试 + 代码审查 | qa | 待办 | |
+| 9 | QA: 测试用例设计 | qa | 验收通过 | test-case-design.md |
+| 10 | QA: 验收测试 + 代码审查 | qa | 验收通过 | test-report.md |
 
 ## 执行顺序
 
@@ -215,8 +215,8 @@
 
 ## QA 验收记录
 <!-- qa 验收后填写 -->
-- 全量测试（含集成测试）：待填写
-- 代码审查结果：待填写
-- 代码风格检查：待填写
-- 问题清单：详见 test-report.md
-- **最终状态**：待填写
+- 全量测试（含集成测试）：Tests run: 59, Failures: 0, Errors: 0, Skipped: 0
+- 代码审查结果：通过（TraceIdFilter/TraceIdConfig/logback-spring.xml 实现正确）
+- 代码风格检查：0 Checkstyle violations
+- 问题清单：无阻塞问题
+- **最终状态**：验收通过
