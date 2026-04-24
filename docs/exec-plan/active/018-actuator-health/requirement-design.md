@@ -202,3 +202,75 @@ management:
 3. `/actuator/info` 返回应用基本信息
 4. 生产环境配置 `show-details: never` 生效
 5. 各环境差异化配置正确生效
+
+---
+
+## 架构评审
+
+**评审人**：@architect
+**日期**：2026-04-24
+**结论**：✅ 通过
+
+### 评审检查项（15 维四类）
+
+**架构合规（7 项）**
+- [x] 聚合根边界合理（纯配置任务，不涉及聚合根，N/A）
+- [x] 值对象识别充分（纯配置任务，不涉及值对象，N/A）
+- [x] Repository 端口粒度合适（纯配置任务，不涉及 Repository，N/A）
+- [x] 与已有聚合无循环依赖（不涉及任何聚合，无新增依赖）
+- [x] DDL 设计与领域模型一致（无数据库变更）
+- [x] API 设计符合 RESTful 规范（Actuator 端点均为标准 GET）
+- [x] 对象转换链正确（纯配置任务，无对象转换）
+
+**需求质量（3 项）**
+- [x] 需求无歧义：探针路径（/actuator/health/liveness）、端点暴露范围、响应结构均有明确定义
+- [x] 验收条件可验证：每条 AC 可转化为 `should_return_200_when_actuator_health_xxx` 测试用例
+- [x] 业务规则完备：环境差异化配置规则（dev/staging/prod 的 show-details 和端点暴露）已列明
+
+**计划可执行性（2 项）**
+- [x] task-plan 粒度合格：按配置任务已分解到原子级（每项含文件路径 + 验证命令 + 预期输出 + commit 消息）
+- [x] 依赖顺序正确：纯配置任务无分层依赖，按 base-config → env-config → test → verify 顺序合理
+
+**可测性保障（3 项）**
+- [ ] AC 自动化全覆盖：test-case-design.md 尚未创建，需在 Build 阶段由 @dev 同步补充（评审建议，非阻断）
+- [x] 可测的注入方式：纯配置任务，不涉及新 Spring Bean
+- [x] 配置校验方式合规：不涉及敏感配置校验，无需 @ConfigurationProperties + @Validated（ADR-005 不适用）
+
+**心智原则（Karpathy — 动手前自检）**
+- [x] 简洁性：生产环境仅开放 health/liveness/readiness 三端点，移除 info（防止应用信息泄露），未引入 Spring Security
+- [x] 外科性：仅修改 start 模块配置文件，无其他模块改动
+- [x] 假设显性：K8s 网络层保护假设已在「假设与待确认」列出
+
+### entropy-check 基线确认
+
+```bash
+./scripts/entropy-check.sh
+# 退出码: 0
+# 结果: PASS (0 errors, 12 warnings)
+# 关键项:
+# - Domain 纯净性: PASS
+# - 依赖方向: PASS
+# - Java 8 兼容性: PASS
+# - DO 泄漏: PASS
+```
+
+### 评审意见
+
+**设计合理性**：
+1. 端点开放策略符合最小权限原则：生产环境仅保留 K8s 探针必需的 health/liveness/readiness，移除 info 端点（防止应用信息泄露）
+2. 采用方案 A（无 Spring Security）符合 Karpathy 原则 2（简洁优先）：当前需求仅为 K8s 探针支持，引入完整安全框架属于过度设计
+3. liveness/readiness 分离配置是 Spring Boot 2.3+ 的标准做法，group 配置正确（readiness 包含 db 检查）
+
+**现有配置与设计的衔接**：
+- application-dev.yml 已有 actuator 配置（expose: health,info,metrics），设计在现有基础上扩展 env/liveness/readiness
+- application-staging.yml 已有 actuator 配置（expose: health,info），设计调整为 health,info,liveness,readiness
+- application-prod.yml 已有 actuator 配置（expose: health），设计调整为 health,liveness,readiness（移除 info）
+- 设计描述准确反映了「增量调整」而非「全新添加」的实际改动范围
+
+**评审建议（非阻断）**：
+1. Build 阶段需同步创建 test-case-design.md，明确 AC ↔ 测试用例映射
+2. 集成测试 ActuatorHealthIntegrationTest 可考虑增加 dev 环境的 metrics/env 端点验证（可选）
+
+### 需要新增的 ADR
+
+无需新增 ADR。本任务为纯配置变更，不涉及架构决策变更。安全策略（无 Spring Security）已作为备选方案在设计中说明。

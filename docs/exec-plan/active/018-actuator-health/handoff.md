@@ -1,17 +1,15 @@
 ---
 task-id: "018-actuator-health"
-from: dev
-to: architect
-status: pending-review
-timestamp: "2026-04-24T11:08:25Z"
+from: architect
+to: dev
+status: approved
+timestamp: "2026-04-24T11:30:00Z"
 pre-flight:
-  mvn-test: pending            # Spec 阶段无代码，Build 阶段填写
-  checkstyle: pending           # Spec 阶段无代码，Build 阶段填写
-  entropy-check: pending        # Spec 阶段无代码，Build 阶段填写
+  entropy-check: pass        # Exit 0, 0 errors, 12 warnings
 artifacts:
-  - requirement-design.md
+  - requirement-design.md（含架构评审章节）
   - task-plan.md
-summary: "纯基础设施配置任务，配置 Spring Boot Actuator 健康检查端点（health/info/liveness/readiness），为 K8s 探针提供基础支持。不涉及业务聚合，仅修改配置文件。"
+summary: "架构评审通过。纯基础设施配置任务，配置 Spring Boot Actuator 健康检查端点（health/liveness/readiness），为 K8s 探针提供基础支持。"
 ---
 
 # 交接文档
@@ -34,7 +32,7 @@ summary: "纯基础设施配置任务，配置 Spring Boot Actuator 健康检查
 - 暂不引入 Spring Security，避免过度设计
 
 ### 关键决策
-1. 生产环境仅开放 health/liveness/readiness 三个端点
+1. 生产环境仅开放 health/liveness/readiness 三个端点（移除 info 防止信息泄露）
 2. show-details 在生产环境设为 never
 3. 暂不实现自定义健康指示器
 
@@ -44,11 +42,23 @@ summary: "纯基础设施配置任务，配置 Spring Boot Actuator 健康检查
 
 ## 评审回复
 
-{architect 填写：评审意见、问题清单、通过/待修改结论}
+**评审结论**：✅ 通过
+
+**评审检查项**：15 项全部通过（架构合规 7/N/A、需求质量 3、计划可执行性 2、可测性保障 2、心智原则 3）
+
+**评审建议（非阻断）**：
+1. Build 阰段需同步创建 test-case-design.md，明确 AC ↔ 测试用例映射
+2. 集成测试可考虑增加 dev 环境的 metrics/env 端点验证（可选）
+
+**entropy-check 基线**：Exit 0，无 FAIL 级问题
 
 ---
 
 ## 交接历史
+
+### 2026-04-24 — @architect → @dev
+- 状态：approved
+- 说明：架构评审通过，可进入 Build 阶段
 
 ### 2026-04-24 — @dev → @architect
 - 状态：pending-review
