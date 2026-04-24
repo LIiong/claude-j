@@ -6,14 +6,14 @@
 
 | # | 任务 | 负责人 | 状态 | 备注 |
 |---|------|--------|------|------|
-| 1 | pom.xml 添加 logstash-logback-encoder 依赖 | dev | 待办 | |
-| 2 | logback-spring.xml 配置 JSON 格式日志 | dev | 待办 | |
-| 3 | TraceIdFilter 实现 requestId 生成与 MDC 注入 | dev | 待办 | |
-| 4 | TraceIdConfig 注册 Filter Bean | dev | 待办 | |
-| 5 | TraceIdIntegrationTest 集成测试 | dev | 待办 | |
-| 6 | 全量 mvn test | dev | 待办 | |
-| 7 | mvn checkstyle:check | dev | 待办 | |
-| 8 | ./scripts/entropy-check.sh | dev | 待办 | |
+| 1 | pom.xml 添加 logstash-logback-encoder 依赖 | dev | 验收通过 | |
+| 2 | logback-spring.xml 配置 JSON 格式日志 | dev | 验收通过 | 修正 `<level>level</timestamp>` 错误 |
+| 3 | TraceIdFilter 实现 requestId 生成与 MDC 注入 | dev | 验收通过 | |
+| 4 | TraceIdConfig 注册 Filter Bean | dev | 验收通过 | |
+| 5 | TraceIdIntegrationTest 集成测试 | dev | 验收通过 | |
+| 6 | 全量 mvn test | dev | 验收通过 | Tests run: 59, Failures: 0 |
+| 7 | mvn checkstyle:check | dev | 验收通过 | 0 violations |
+| 8 | ./scripts/entropy-check.sh | dev | 验收通过 | 0 FAIL, 12 WARN |
 | 9 | QA: 测试用例设计 | qa | 待办 | |
 | 10 | QA: 验收测试 + 代码审查 | qa | 待办 | |
 
@@ -209,9 +209,9 @@
 
 ## 开发完成记录
 <!-- dev 完成后填写 -->
-- 全量 `mvn clean test`：待填写
-- 架构合规检查：待填写
-- 通知 @qa 时间：待填写
+- 全量 `mvn clean test`：Tests run: 59, Failures: 0, Errors: 0, Skipped: 0
+- 架构合规检查：0 FAIL, 12 WARN (PASS)
+- 通知 @qa 时间：2026-04-24
 
 ## QA 验收记录
 <!-- qa 验收后填写 -->

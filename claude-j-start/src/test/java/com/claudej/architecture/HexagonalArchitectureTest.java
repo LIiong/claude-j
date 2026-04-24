@@ -142,7 +142,7 @@ class HexagonalArchitectureTest {
 
     @Nested
     @DisplayName("测试方法命名: should_xxx_when_yyy")
-    class TestMethodNaming {
+    static class TestMethodNaming {
 
         private static JavaClasses testClasses;
 
