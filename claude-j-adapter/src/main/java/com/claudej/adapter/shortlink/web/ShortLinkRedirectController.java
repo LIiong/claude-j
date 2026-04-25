@@ -12,6 +12,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+/**
+ * 短链跳转 Controller
+ *
+ * 权限说明：
+ * - 短链跳转公开访问，无需认证
+ */
 @Tag(name = "短链跳转", description = "短链接跳转服务")
 @Controller
 @RequestMapping("/s")

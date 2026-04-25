@@ -35,6 +35,9 @@ import javax.validation.Valid;
 
 /**
  * 认证 Controller
+ *
+ * 权限说明：
+ * - 所有端点公开（permitAll），无需认证即可访问
  */
 @Tag(name = "认证服务", description = "用户注册、登录、Token 刷新等认证相关接口")
 @RestController

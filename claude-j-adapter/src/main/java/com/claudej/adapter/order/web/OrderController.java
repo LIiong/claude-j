@@ -13,6 +13,7 @@ import com.claudej.application.order.dto.OrderDTO;
 import com.claudej.application.order.service.OrderApplicationService;
 import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.common.model.valobj.SortDirection;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,10 +31,17 @@ import java.util.stream.Collectors;
 
 /**
  * 订单 Controller
+ *
+ * 权限说明：
+ * - 创建订单：USER
+ * - 查询订单：USER
+ * - 支付/取消订单：USER
+ * - 发货/退款：ADMIN
  */
 @Tag(name = "订单服务", description = "订单创建、查询、支付、取消")
 @RestController
 @RequestMapping("/api/v1/orders")
+@PreAuthorize("hasRole('USER')")
 public class OrderController {
 
     private final OrderApplicationService orderApplicationService;
@@ -152,6 +160,7 @@ public class OrderController {
      * 发货
      */
     @Operation(summary = "发货", description = "订单发货操作")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{orderId}/ship")
     public ApiResult<OrderResponse> shipOrder(@PathVariable String orderId) {
         OrderDTO dto = orderApplicationService.shipOrder(orderId);
@@ -174,6 +183,7 @@ public class OrderController {
      * 退款
      */
     @Operation(summary = "退款", description = "订单退款操作")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{orderId}/refund")
     public ApiResult<OrderResponse> refundOrder(@PathVariable String orderId) {
         OrderDTO dto = orderApplicationService.refundOrder(orderId);

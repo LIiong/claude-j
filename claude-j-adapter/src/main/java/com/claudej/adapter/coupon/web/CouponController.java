@@ -12,6 +12,7 @@ import com.claudej.application.coupon.dto.CouponDTO;
 import com.claudej.application.coupon.service.CouponApplicationService;
 import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.common.model.valobj.SortDirection;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,10 +30,15 @@ import java.util.stream.Collectors;
 
 /**
  * 优惠券 Controller
+ *
+ * 权限说明：
+ * - 创建优惠券：ADMIN（系统发放）
+ * - 查询/使用优惠券：USER
  */
 @Tag(name = "优惠券服务", description = "优惠券创建、领取、使用、查询")
 @RestController
 @RequestMapping("/api/v1/coupons")
+@PreAuthorize("hasRole('USER')")
 public class CouponController {
 
     private final CouponApplicationService couponApplicationService;
@@ -45,6 +51,7 @@ public class CouponController {
      * 创建优惠券
      */
     @Operation(summary = "创建优惠券", description = "为用户创建一张优惠券")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ApiResult<CouponResponse> createCoupon(@Valid @RequestBody CreateCouponRequest request) {
         CreateCouponCommand command = new CreateCouponCommand();

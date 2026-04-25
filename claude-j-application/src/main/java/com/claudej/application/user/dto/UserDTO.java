@@ -3,6 +3,7 @@ package com.claudej.application.user.dto;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 /**
  * 用户 DTO
@@ -17,6 +18,7 @@ public class UserDTO {
     private String status;
     private String inviteCode;
     private String inviterId;
+    private Set<String> roles;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

@@ -1,6 +1,7 @@
 package com.claudej.adapter.user.web;
 
 import com.claudej.adapter.common.GlobalExceptionHandler;
+import com.claudej.adapter.test.TestSecurityConfig;
 import com.claudej.adapter.user.web.request.CreateUserRequest;
 import com.claudej.adapter.user.web.request.ValidateInviteCodeRequest;
 import com.claudej.application.user.dto.UserDTO;
@@ -11,8 +12,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
@@ -30,6 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest
+@AutoConfigureMockMvc(addFilters = false)
 @ContextConfiguration(classes = {UserController.class, GlobalExceptionHandler.class})
 class UserControllerTest {
 

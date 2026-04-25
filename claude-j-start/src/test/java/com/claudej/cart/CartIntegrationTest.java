@@ -23,8 +23,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 购物车服务全链路集成测试
  */
 @SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("dev")
+@AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
 class CartIntegrationTest {
 
     @Autowired

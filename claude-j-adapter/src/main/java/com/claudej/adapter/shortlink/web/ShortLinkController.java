@@ -6,6 +6,7 @@ import com.claudej.adapter.shortlink.web.response.ShortLinkResponse;
 import com.claudej.application.shortlink.command.CreateShortLinkCommand;
 import com.claudej.application.shortlink.dto.ShortLinkDTO;
 import com.claudej.application.shortlink.service.ShortLinkApplicationService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,9 +18,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
+/**
+ * 短链服务 Controller
+ *
+ * 权限说明：
+ * - 创建短链：USER
+ * - 短链跳转（/s/{code}）：公开
+ */
 @Tag(name = "短链服务", description = "短链接创建与跳转")
 @RestController
 @RequestMapping("/api/v1/short-links")
+@PreAuthorize("hasRole('USER')")
 public class ShortLinkController {
 
     private final ShortLinkApplicationService shortLinkApplicationService;

@@ -17,18 +17,18 @@ public class FlywayVerificationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void should_record_8_migrations_when_flyway_migrates() {
+    void should_record_9_migrations_when_flyway_migrates() {
         List<Map<String, Object>> results = jdbcTemplate.queryForList(
             "SELECT \"version\", \"description\", \"success\" FROM \"flyway_schema_history\" WHERE \"version\" IS NOT NULL ORDER BY \"version\""
         );
 
-        assertThat(results).hasSize(8);
+        assertThat(results).hasSize(9);
         assertThat(results.get(0).get("version")).isEqualTo("1");
         assertThat(results.get(0).get("description")).isEqualTo("user init");
         assertThat(results.get(0).get("success")).isEqualTo(true);
-        assertThat(results.get(7).get("version")).isEqualTo("8");
-        assertThat(results.get(7).get("description")).isEqualTo("product init");
-        assertThat(results.get(7).get("success")).isEqualTo(true);
+        assertThat(results.get(8).get("version")).isEqualTo("9");
+        assertThat(results.get(8).get("description")).isEqualTo("add user roles");
+        assertThat(results.get(8).get("success")).isEqualTo(true);
     }
 
     @Test

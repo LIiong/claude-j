@@ -20,11 +20,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * 短链服务全链路集成测试。
- * HTTP Request → Controller → ApplicationService → Repository → H2 Database
+ * HTTP Request -> Controller -> ApplicationService -> Repository -> H2 Database
  */
 @SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("dev")
+@AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
 class ShortLinkIntegrationTest {
 
     @Autowired

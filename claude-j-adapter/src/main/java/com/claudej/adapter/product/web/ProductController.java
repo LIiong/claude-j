@@ -15,6 +15,7 @@ import com.claudej.domain.common.model.valobj.SortDirection;
 import com.claudej.domain.product.model.valobj.ProductStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,10 +31,15 @@ import java.util.stream.Collectors;
 
 /**
  * 商品 Controller
+ *
+ * 权限说明：
+ * - 查询商品：USER
+ * - 创建/调价/上架/下架：ADMIN
  */
 @Tag(name = "商品服务", description = "商品创建、查询、调价、上架、下架")
 @RestController
 @RequestMapping("/api/v1/products")
+@PreAuthorize("hasRole('USER')")
 public class ProductController {
 
     private final ProductApplicationService productApplicationService;
@@ -46,6 +52,7 @@ public class ProductController {
      * 创建商品
      */
     @Operation(summary = "创建商品", description = "创建一个新商品")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ApiResult<ProductResponse> createProduct(@Valid @RequestBody CreateProductRequest request) {
         CreateProductCommand command = new CreateProductCommand();
@@ -77,6 +84,7 @@ public class ProductController {
      * 调价
      */
     @Operation(summary = "调整商品价格", description = "更新商品原价和促销价")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{productId}/price")
     public ApiResult<ProductResponse> updatePrice(@PathVariable String productId,
                                                    @Valid @RequestBody UpdatePriceRequest request) {
@@ -93,6 +101,7 @@ public class ProductController {
      * 上架商品
      */
     @Operation(summary = "上架商品", description = "将商品上架销售")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{productId}/activate")
     public ApiResult<ProductResponse> activateProduct(@PathVariable String productId) {
         ProductDTO dto = productApplicationService.activateProduct(productId);
@@ -104,6 +113,7 @@ public class ProductController {
      * 下架商品
      */
     @Operation(summary = "下架商品", description = "将商品下架停止销售")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{productId}/deactivate")
     public ApiResult<ProductResponse> deactivateProduct(@PathVariable String productId) {
         ProductDTO dto = productApplicationService.deactivateProduct(productId);

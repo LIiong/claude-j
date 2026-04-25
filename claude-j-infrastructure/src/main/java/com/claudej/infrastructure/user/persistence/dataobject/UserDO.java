@@ -32,6 +32,8 @@ public class UserDO {
 
     private String inviterId;
 
+    private String roles;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;

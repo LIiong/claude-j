@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 验证：dev 环境默认 JWT secret 能正常启动，且 JWT Token 生成与刷新功能正常。
  */
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("dev")
 class JwtSecretIntegrationTest {
 

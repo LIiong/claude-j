@@ -13,6 +13,6 @@ CREATE TABLE IF NOT EXISTS t_product (
     update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     deleted INT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
     UNIQUE KEY uk_product_id (product_id),
-    KEY idx_status (status),
+    KEY idx_product_status (status),
     KEY idx_sku_code (sku_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品表';

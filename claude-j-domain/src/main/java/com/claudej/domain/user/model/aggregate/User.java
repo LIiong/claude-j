@@ -5,12 +5,17 @@ import com.claudej.domain.common.exception.ErrorCode;
 import com.claudej.domain.user.model.valobj.Email;
 import com.claudej.domain.user.model.valobj.InviteCode;
 import com.claudej.domain.user.model.valobj.Phone;
+import com.claudej.domain.user.model.valobj.Role;
 import com.claudej.domain.user.model.valobj.UserId;
 import com.claudej.domain.user.model.valobj.UserStatus;
 import com.claudej.domain.user.model.valobj.Username;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 用户聚合根 - 封装用户业务不变量
@@ -26,12 +31,14 @@ public class User {
     private UserStatus status;
     private InviteCode inviteCode;
     private UserId inviterId;
+    private Set<Role> roles;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
     private User(Username username, LocalDateTime createTime) {
         this.username = username;
         this.status = UserStatus.ACTIVE;
+        this.roles = new HashSet<>(Arrays.asList(Role.USER));
         this.createTime = createTime;
         this.updateTime = createTime;
     }
@@ -57,7 +64,7 @@ public class User {
      */
     public static User reconstruct(Long id, UserId userId, Username username,
                                    Email email, Phone phone, UserStatus status,
-                                   InviteCode inviteCode, UserId inviterId,
+                                   InviteCode inviteCode, UserId inviterId, Set<Role> roles,
                                    LocalDateTime createTime, LocalDateTime updateTime) {
         User user = new User(username, createTime);
         user.id = id;
@@ -67,6 +74,7 @@ public class User {
         user.status = status;
         user.inviteCode = inviteCode;
         user.inviterId = inviterId;
+        user.roles = roles != null ? new HashSet<>(roles) : new HashSet<>(Arrays.asList(Role.USER));
         user.updateTime = updateTime;
         return user;
     }
@@ -174,5 +182,54 @@ public class User {
      */
     public String getInviterIdValue() {
         return inviterId != null ? inviterId.getValue() : null;
+    }
+
+    /**
+     * 是否拥有指定角色
+     */
+    public boolean hasRole(Role role) {
+        return roles != null && roles.contains(role);
+    }
+
+    /**
+     * 是否为管理员
+     */
+    public boolean isAdmin() {
+        return hasRole(Role.ADMIN);
+    }
+
+    /**
+     * 添加角色
+     */
+    public void addRole(Role role) {
+        if (roles == null) {
+            roles = new HashSet<>();
+        }
+        roles.add(role);
+        this.updateTime = LocalDateTime.now();
+    }
+
+    /**
+     * 移除角色（但不能移除最后一个角色）
+     */
+    public void removeRole(Role role) {
+        if (roles == null || roles.size() <= 1) {
+            // 用户必须至少有一个角色
+            return;
+        }
+        roles.remove(role);
+        this.updateTime = LocalDateTime.now();
+    }
+
+    /**
+     * 获取角色字符串（逗号分隔）
+     */
+    public String getRolesAsString() {
+        if (roles == null || roles.isEmpty()) {
+            return Role.USER.name();
+        }
+        return roles.stream()
+                .map(Role::name)
+                .collect(Collectors.joining(","));
     }
 }

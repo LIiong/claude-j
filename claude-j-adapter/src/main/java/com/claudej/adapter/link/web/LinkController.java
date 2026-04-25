@@ -17,6 +17,7 @@ import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.common.model.valobj.SortDirection;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,10 +37,14 @@ import java.util.stream.Collectors;
 
 /**
  * 链接管理 Controller
+ *
+ * 权限说明：
+ * - 所有操作需要 USER 角色
  */
 @Tag(name = "链接管理", description = "链接的创建、更新、删除、查询")
 @RestController
 @RequestMapping("/api/v1/links")
+@PreAuthorize("hasRole('USER')")
 public class LinkController {
 
     /**

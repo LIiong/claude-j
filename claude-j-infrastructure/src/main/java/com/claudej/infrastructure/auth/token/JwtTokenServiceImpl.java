@@ -2,6 +2,7 @@ package com.claudej.infrastructure.auth.token;
 
 import com.claudej.domain.auth.model.valobj.JwtToken;
 import com.claudej.domain.auth.service.TokenService;
+import com.claudej.domain.user.model.valobj.Role;
 import com.claudej.domain.user.model.valobj.UserId;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -15,7 +16,11 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * JWT Token 服务实现
@@ -40,12 +45,26 @@ public class JwtTokenServiceImpl implements TokenService {
 
     @Override
     public JwtToken generateTokenPair(UserId userId) {
+        // 默认只有 USER 角色
+        Set<Role> defaultRoles = new HashSet<>();
+        defaultRoles.add(Role.USER);
+        return generateTokenPair(userId, defaultRoles);
+    }
+
+    @Override
+    public JwtToken generateTokenPair(UserId userId, Set<Role> roles) {
         Instant now = Instant.now();
+
+        // 将角色转换为字符串列表
+        List<String> roleNames = roles.stream()
+                .map(Role::name)
+                .collect(Collectors.toList());
 
         // Access Token - 1小时
         String accessToken = Jwts.builder()
                 .subject(userId.getValue())
                 .claim("typ", "access")
+                .claim("roles", roleNames)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(accessTokenExpirationMinutes, ChronoUnit.MINUTES)))
                 .signWith(accessTokenKey)
@@ -101,6 +120,28 @@ public class JwtTokenServiceImpl implements TokenService {
             return new UserId(userId);
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    @Override
+    public Set<Role> extractRolesFromToken(String accessToken) {
+        try {
+            Claims claims = parseToken(accessToken, accessTokenKey);
+            List<String> roleNames = claims.get("roles", List.class);
+            if (roleNames == null || roleNames.isEmpty()) {
+                // 默认 USER 角色
+                Set<Role> defaultRoles = new HashSet<>();
+                defaultRoles.add(Role.USER);
+                return defaultRoles;
+            }
+            return roleNames.stream()
+                    .map(Role::valueOf)
+                    .collect(Collectors.toSet());
+        } catch (Exception e) {
+            // 解析失败返回默认角色
+            Set<Role> defaultRoles = new HashSet<>();
+            defaultRoles.add(Role.USER);
+            return defaultRoles;
         }
     }
 

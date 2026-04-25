@@ -11,6 +11,7 @@ import com.claudej.application.user.dto.UserDTO;
 import com.claudej.application.user.service.UserApplicationService;
 import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.common.model.valobj.SortDirection;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,6 +29,11 @@ import java.util.stream.Collectors;
 
 /**
  * 用户 Controller
+ *
+ * 权限说明：
+ * - 创建用户：公开（通过邀请码注册）
+ * - 查询用户：需要 USER 角色
+ * - 冻结/解冻用户：需要 ADMIN 角色
  */
 @Tag(name = "用户服务", description = "用户注册、查询、管理")
 @RestController
@@ -62,6 +68,7 @@ public class UserController {
      * 根据用户ID查询用户
      */
     @Operation(summary = "根据ID查询用户", description = "根据用户ID获取用户信息")
+    @PreAuthorize("hasRole('USER')")
     @GetMapping("/{userId}")
     public ApiResult<UserResponse> getUserById(@PathVariable String userId) {
         UserDTO dto = userApplicationService.getUserById(userId);
@@ -73,6 +80,7 @@ public class UserController {
      * 根据用户名查询用户
      */
     @Operation(summary = "根据用户名查询", description = "根据用户名获取用户信息")
+    @PreAuthorize("hasRole('USER')")
     @GetMapping("/by-username/{username}")
     public ApiResult<UserResponse> getUserByUsername(@PathVariable String username) {
         UserDTO dto = userApplicationService.getUserByUsername(username);
@@ -84,6 +92,7 @@ public class UserController {
      * 冻结用户
      */
     @Operation(summary = "冻结用户", description = "冻结指定用户账号")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{userId}/freeze")
     public ApiResult<UserResponse> freezeUser(@PathVariable String userId) {
         UserDTO dto = userApplicationService.freezeUser(userId);
@@ -95,6 +104,7 @@ public class UserController {
      * 解冻用户
      */
     @Operation(summary = "解冻用户", description = "解冻被冻结的用户账号")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{userId}/unfreeze")
     public ApiResult<UserResponse> unfreezeUser(@PathVariable String userId) {
         UserDTO dto = userApplicationService.unfreezeUser(userId);
@@ -106,6 +116,7 @@ public class UserController {
      * 查询被邀请的用户列表
      */
     @Operation(summary = "查询被邀请用户", description = "查询用户邀请的所有用户")
+    @PreAuthorize("hasRole('USER')")
     @GetMapping("/{userId}/invited-users")
     public ApiResult<List<UserResponse>> getInvitedUsers(@PathVariable String userId) {
         List<UserDTO> dtoList = userApplicationService.getInvitedUsers(userId);
@@ -119,6 +130,7 @@ public class UserController {
      * 分页查询被邀请的用户列表
      */
     @Operation(summary = "分页查询被邀请用户", description = "分页查询用户邀请的用户列表")
+    @PreAuthorize("hasRole('USER')")
     @GetMapping("/{userId}/invited-users/paged")
     public ApiResult<PageResponse<UserResponse>> getInvitedUsersPaged(
             @PathVariable String userId,

@@ -9,6 +9,7 @@ import com.claudej.application.cart.command.AddCartItemCommand;
 import com.claudej.application.cart.command.UpdateCartItemQuantityCommand;
 import com.claudej.application.cart.dto.CartDTO;
 import com.claudej.application.cart.service.CartApplicationService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,10 +29,14 @@ import java.util.stream.Collectors;
 
 /**
  * 购物车 Controller
+ *
+ * 权限说明：
+ * - 所有操作需要 USER 角色
  */
 @Tag(name = "购物车服务", description = "购物车商品添加、更新、删除、查询")
 @RestController
 @RequestMapping("/api/v1/carts")
+@PreAuthorize("hasRole('USER')")
 public class CartController {
 
     private final CartApplicationService cartApplicationService;

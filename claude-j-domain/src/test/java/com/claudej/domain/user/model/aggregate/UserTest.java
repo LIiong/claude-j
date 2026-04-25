@@ -4,12 +4,16 @@ import com.claudej.domain.common.exception.BusinessException;
 import com.claudej.domain.user.model.valobj.Email;
 import com.claudej.domain.user.model.valobj.InviteCode;
 import com.claudej.domain.user.model.valobj.Phone;
+import com.claudej.domain.user.model.valobj.Role;
 import com.claudej.domain.user.model.valobj.UserId;
 import com.claudej.domain.user.model.valobj.UserStatus;
 import com.claudej.domain.user.model.valobj.Username;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -34,6 +38,7 @@ class UserTest {
         assertThat(user.isActive()).isTrue();
         assertThat(user.isFrozen()).isFalse();
         assertThat(user.isInvited()).isFalse();
+        assertThat(user.getRoles()).containsExactly(Role.USER);
     }
 
     @Test
@@ -69,12 +74,13 @@ class UserTest {
         UserStatus status = UserStatus.ACTIVE;
         InviteCode inviteCode = new InviteCode("ABC234");
         UserId inviterId = UserId.generate();
+        Set<Role> roles = new HashSet<>(Arrays.asList(Role.USER));
         LocalDateTime createTime = LocalDateTime.now();
         LocalDateTime updateTime = LocalDateTime.now();
 
         // Act
         User user = User.reconstruct(id, userId, username, email, phone, status,
-                inviteCode, inviterId, createTime, updateTime);
+                inviteCode, inviterId, roles, createTime, updateTime);
 
         // Assert
         assertThat(user.getId()).isEqualTo(id);
@@ -86,6 +92,7 @@ class UserTest {
         assertThat(user.getInviteCode()).isEqualTo(inviteCode);
         assertThat(user.getInviterId()).isEqualTo(inviterId);
         assertThat(user.isInvited()).isTrue();
+        assertThat(user.getRoles()).isEqualTo(roles);
     }
 
     @Test
