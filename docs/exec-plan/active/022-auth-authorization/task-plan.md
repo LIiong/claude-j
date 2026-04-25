@@ -20,7 +20,7 @@
 | 14 | **Fix: JwtAuthenticationFilterTest（adapter 层）** | dev | ✅ 完成 | 6 tests passed |
 | 15 | **Fix: UserControllerSecurityTest（adapter 层）** | dev | ✅ 完成 | 5 tests passed |
 | 16 | **Fix: 三项预飞重新验证** | dev | ✅ 完成 | mvn test: 59 passed, checkstyle: 0, entropy: PASS |
-| 17 | **QA: 重新验收** | qa | ⏳ 待验收 | 等待 @qa 验证修复后的测试 |
+| 17 | **QA: 重新验收** | qa | ✅ 完成 | 3 高严重度问题已修复，测试覆盖满足 AC 要求，三项预飞通过 |
 
 ## 执行顺序
 

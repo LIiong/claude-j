@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-`dev` → `qa` 待验收
+`qa` → 验收通过
 
 ## 状态
 
@@ -13,8 +13,9 @@
 - [x] qa: 测试验收完成（第一次）
 - [x] qa: 代码审查完成
 - [x] qa: 问题反馈完成
-- [x] **dev: 问题修复完成**
-- [ ] **qa: 重新验收**（待 @qa 处理）
+- [x] dev: 问题修复完成
+- [x] **qa: 重新验收完成**
+- [x] **qa: 验收通过**
 
 ## 设计摘要
 
@@ -22,74 +23,97 @@
 
 ## 交接人
 
-- 从: dev (Claude Code)
-- 至: qa (Claude Code QA)
+- 从: qa (Claude Code QA)
+- 至: ship (可归档)
 - 日期: 2026-04-25
-
-## QA 第一次验收打回问题
-
-### 问题清单（3 高 + 3 中/低）
-
-| # | 严重度 | 描述 |
-|---|--------|------|
-| 1 | **高** | AC5 要求的 `JwtAuthenticationFilterTest` 缺失 |
-| 2 | **高** | AC5 要求的 `UserControllerSecurityTest` 缺失 |
-| 3 | **高** | AC2 要求的 `JwtTokenServiceImpl.extractRolesFromToken` 测试缺失 |
-
-## dev 修复完成
-
-### 修复 1：JwtTokenServiceImplTest（infrastructure 层）
-
-新增测试文件：`claude-j-infrastructure/src/test/java/com/claudej/infrastructure/auth/token/JwtTokenServiceImplTest.java`
-
-测试用例：
-- `should_extractRolesFromValidToken` - 验证从有效 token 提取 USER/ADMIN 角色
-- `should_returnDefaultUserRole_when_tokenHasNoRoles` - 验证无角色 token 返回默认 USER 角色
-- `should_returnDefaultUserRole_when_tokenInvalid` - 验证无效 token 返回默认 USER 角色
-- 其他辅助测试（validateAccessToken、extractUserIdFromToken）
-
-### 修复 2：JwtAuthenticationFilterTest（adapter 层）
-
-新增测试文件：`claude-j-adapter/src/test/java/com/claudej/adapter/auth/security/JwtAuthenticationFilterTest.java`
-
-测试用例：
-- `should_buildGrantedAuthorities_when_tokenContainsRoles` - 验证 token 角色转换为 GrantedAuthority
-- `should_defaultToUserRole_when_tokenHasNoRoles` - 验证无角色 token 默认为 ROLE_USER
-- `should_clearSecurityContext_when_tokenInvalid` - 验证无效 token 清空 SecurityContext
-- 其他辅助测试
-
-### 修复 3：UserControllerSecurityTest（adapter 层）
-
-新增测试文件：`claude-j-adapter/src/test/java/com/claudej/adapter/auth/security/UserControllerSecurityTest.java`
-
-测试用例：
-- `should_return403_when_userAccessAdminEndpoint` - 验证 USER 角色 403 Forbidden
-- `should_return200_when_adminAccessAdminEndpoint` - 验证 ADMIN 角色 200 OK
-- `should_return401_when_noTokenProvided` - 验证无 token 401 Unauthorized
-- `should_return401_when_invalidTokenProvided` - 验证无效 token 401 Unauthorized
-- `should_return200_when_userAccessUserEndpoint` - 验证 USER 角色 200 OK
-
-技术挑战：
-- 配置 ObjectMapper 处理 LocalDateTime 序列化（JavaTimeModule）
-- 添加 @ExceptionHandler 处理方法级安全抛出的 AccessDeniedException
-
-## 三项预飞（修复后重新验证）
-
-| 检查项 | 命令 | 结果 | 证据 |
-|--------|------|------|------|
-| mvn test | `mvn test 2>&1 | tail -30` | PASS | Tests run: 59, Failures: 0, Errors: 0, Skipped: 0, BUILD SUCCESS |
-| checkstyle:check | `mvn checkstyle:check 2>&1` | PASS | You have 0 Checkstyle violations, BUILD SUCCESS |
-| entropy-check | `./scripts/entropy-check.sh 2>&1` | PASS | 错误 (FAIL): 0, 警告 (WARN): 12, status: PASS |
-
-## 等待 qa 重新验收
-
-请验证新增的 3 个测试文件是否满足 AC2/AC5 要求。
 
 ---
 
-## 关键文件变更
+## QA 第一轮验收打回问题（已修复）
+
+### 问题清单（3 高 + 3 中/低）
+
+| # | 严重度 | 描述 | 修复状态 |
+|---|--------|------|---------|
+| 1 | **高** | AC5 要求的 `JwtAuthenticationFilterTest` 缺失 | ✅ 已修复 |
+| 2 | **高** | AC5 要求的 `UserControllerSecurityTest` 缺失 | ✅ 已修复 |
+| 3 | **高** | AC2 要求的 `JwtTokenServiceImpl.extractRolesFromToken` 测试缺失 | ✅ 已修复 |
+
+---
+
+## QA 第二轮验收结果
+
+### 三项预飞独立验证（QA 重新运行）
+
+| 检查项 | 命令 | 结果 | 证据 |
+|--------|------|------|------|
+| mvn test | `mvn test 2>&1 | tail -50` | PASS | Tests run: 59, Failures: 0, Errors: 0, Skipped: 0, BUILD SUCCESS |
+| checkstyle:check | `mvn checkstyle:check 2>&1` | PASS | You have 0 Checkstyle violations, BUILD SUCCESS |
+| entropy-check | `./scripts/entropy-check.sh 2>&1` | PASS | 错误 (FAIL): 0, 警告 (WARN): 12, status: PASS |
+
+### 新增测试验证
+
+| 测试文件 | 用例数 | 通过 | 验证命令 |
+|---------|--------|------|---------|
+| JwtTokenServiceImplTest | 7 | 7 | `mvn test -pl claude-j-infrastructure -Dtest=JwtTokenServiceImplTest` → BUILD SUCCESS |
+| JwtAuthenticationFilterTest | 6 | 6 | `mvn test -pl claude-j-adapter -Dtest=JwtAuthenticationFilterTest` → BUILD SUCCESS |
+| UserControllerSecurityTest | 5 | 5 | `mvn test -pl claude-j-adapter -Dtest=UserControllerSecurityTest` → BUILD SUCCESS |
+
+### AC 自动化覆盖矩阵（最终）
+
+| AC | 验收条件 | 对应测试 | 状态 |
+|----|---------|---------|------|
+| AC2 | JwtTokenProvider 能解析角色 | JwtTokenServiceImplTest.should_extractRolesFromValidToken | ✅ |
+| AC5 | JwtAuthenticationFilterTest | 6 tests (GrantedAuthority 构建 + SecurityContext 清空) | ✅ |
+| AC5 | UserControllerSecurityTest | 5 tests (401/403 安全端点测试) | ✅ |
+| AC5 | 集成测试不破坏 | 59 tests passed | ✅ |
+
+### 测试命名规范验证
+
+所有新增测试遵循 `should_xxx_when_yyy` 格式：
+- JwtTokenServiceImplTest: 7 tests ✅
+- JwtAuthenticationFilterTest: 6 tests ✅
+- UserControllerSecurityTest: 5 tests ✅
+
+### 代码质量审查
+
+| 检查项 | 结果 |
+|--------|------|
+| AAA 结构 | ✅ 清晰 |
+| Java 8 兼容 | ✅ 无 var/records/List.of |
+| Mock 配置 | ✅ 正确（ObjectMapper + ExceptionHandler） |
+| 测试命名 | ✅ should_xxx_when_yyy |
+
+---
+
+## 验收结论
+
+**状态**: ✅ **approved**
+
+**第二轮验收通过**：
+- 三个高严重度问题已修复
+- 测试覆盖满足 AC2/AC5 要求
+- 三项预飞独立验证全部通过
+- 测试命名规范符合要求
+
+**非阻塞问题**：
+- AC7 docs/ops/authorization.md 缺失（中严重度，建议后续补充）
+- entropy-check 12 WARN（低严重度，不阻塞验收）
+
+---
+
+## 关键文件清单
 
 新增测试文件：
 - `claude-j-infrastructure/src/test/java/com/claudej/infrastructure/auth/token/JwtTokenServiceImplTest.java`
 - `claude-j-adapter/src/test/java/com/claudej/adapter/auth/security/JwtAuthenticationFilterTest.java`
 - `claude-j-adapter/src/test/java/com/claudej/adapter/auth/security/UserControllerSecurityTest.java`
+
+新增生产文件（第一轮）：
+- `claude-j-domain/src/main/java/com/claudej/domain/user/model/valobj/Role.java`
+- `claude-j-infrastructure/src/main/java/com/claudej/infrastructure/auth/token/JwtTokenServiceImpl.java`
+- `claude-j-adapter/src/main/java/com/claudej/adapter/auth/security/SecurityConfig.java`
+- `claude-j-adapter/src/main/java/com/claudej/adapter/auth/security/JwtAuthenticationFilter.java`
+- `claude-j-adapter/src/main/java/com/claudej/adapter/auth/security/JwtAuthenticationEntryPoint.java`
+- `claude-j-adapter/src/main/java/com/claudej/adapter/auth/security/JwtAccessDeniedHandler.java`
+- `claude-j-start/src/main/resources/db/migration/V9__add_user_roles.sql`

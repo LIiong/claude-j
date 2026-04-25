@@ -2,7 +2,7 @@
 
 **测试日期**：2026-04-25
 **测试人员**：@qa
-**版本状态**：待修复
+**版本状态**：验收通过
 **任务类型**：基础设施（Spring Security 授权体系）
 
 ---
@@ -173,9 +173,123 @@
 
 ---
 
-## 验证证据
+## 七、第二轮验收（2026-04-25）
 
-### 三项预飞独立验证
+### 三项预飞独立验证（第二轮）
+
+| 检查项 | 命令 | 结果 | 证据 |
+|--------|------|------|------|
+| mvn test | `mvn test 2>&1 | tail -50` | PASS | Tests run: 59, Failures: 0, Errors: 0, Skipped: 0, BUILD SUCCESS |
+| checkstyle:check | `mvn checkstyle:check 2>&1` | PASS | You have 0 Checkstyle violations, BUILD SUCCESS |
+| entropy-check | `./scripts/entropy-check.sh 2>&1` | PASS | 错误 (FAIL): 0, 警告 (WARN): 12, status: PASS |
+
+### 新增测试文件验证
+
+| 测试文件 | 位置 | 用例数 | 通过 | 验证命令 |
+|---------|------|--------|------|---------|
+| JwtTokenServiceImplTest | infrastructure 层 | 7 | 7 | `mvn test -pl claude-j-infrastructure -Dtest=JwtTokenServiceImplTest` |
+| JwtAuthenticationFilterTest | adapter 层 | 6 | 6 | `mvn test -pl claude-j-adapter -Dtest=JwtAuthenticationFilterTest` |
+| UserControllerSecurityTest | adapter 层 | 5 | 5 | `mvn test -pl claude-j-adapter -Dtest=UserControllerSecurityTest` |
+
+### 测试命名规范验证
+
+所有新增测试遵循 `should_xxx_when_yyy` 格式：
+
+**JwtTokenServiceImplTest (7 tests)**:
+- `should_extractRolesFromValidToken`
+- `should_returnDefaultUserRole_when_tokenHasNoRoles`
+- `should_returnDefaultUserRole_when_tokenInvalid`
+- `should_validateAccessToken_when_valid`
+- `should_notValidateAccessToken_when_invalid`
+- `should_extractUserIdFromValidToken`
+- `should_returnNullUserId_when_tokenInvalid`
+
+**JwtAuthenticationFilterTest (6 tests)**:
+- `should_buildGrantedAuthorities_when_tokenContainsRoles`
+- `should_defaultToUserRole_when_tokenHasNoRoles`
+- `should_clearSecurityContext_when_tokenInvalid`
+- `should_clearSecurityContext_when_noTokenProvided`
+- `should_clearSecurityContext_when_tokenServiceThrowsException`
+- `should_notProcessToken_when_headerNotBearerFormat`
+
+**UserControllerSecurityTest (5 tests)**:
+- `should_return403_when_userAccessAdminEndpoint`
+- `should_return200_when_adminAccessAdminEndpoint`
+- `should_return401_when_noTokenProvided`
+- `should_return401_when_invalidTokenProvided`
+- `should_return200_when_userAccessUserEndpoint`
+
+### AC 自动化覆盖矩阵（第二轮更新）
+
+| AC | 验收条件 | 对应测试/验证 | 状态 |
+|----|---------|--------------|------|
+| AC1 | Role 枚举定义 USER/ADMIN | RoleTest (5 cases) | ✅ |
+| AC1 | User 聚合根持有 Set<Role> | UserTest.should_createUser_when_validInput | ✅ |
+| AC1 | t_user.roles 字段 + Flyway V9 | V9__add_user_roles.sql 存在 | ✅ |
+| AC2 | JWT claims 包含 roles | JwtTokenServiceImpl 源码审查 | ✅ |
+| AC2 | JwtTokenProvider 能解析角色 | **JwtTokenServiceImplTest.should_extractRolesFromValidToken** | ✅ **已修复** |
+| AC3 | SecurityFilterChain 配置 | SecurityConfig 源码审查 | ✅ |
+| AC3 | JwtAuthenticationFilter 构建 GrantedAuthority | **JwtAuthenticationFilterTest.should_buildGrantedAuthorities_when_tokenContainsRoles** | ✅ **已修复** |
+| AC3 | @EnableMethodSecurity | SecurityConfig 源码审查 | ✅ |
+| AC3 | 401/403 自定义响应 | JwtAuthenticationEntryPoint/JwtAccessDeniedHandler 源码审查 | ✅ |
+| AC4 | 所有 Controller @PreAuthorize 标注 | 源码审查（10 个 Controller） | ✅ |
+| AC5 | JwtAuthenticationFilterTest | **已补充 (6 tests)** | ✅ **已修复** |
+| AC5 | SecurityConfigTest 或 @WebMvcTest | UserControllerSecurityTest (@WebMvcTest + 启用安全) | ✅ |
+| AC5 | UserControllerSecurityTest（403 测试） | **已补充 (5 tests)** | ✅ **已修复** |
+| AC5 | 集成测试不破坏 | 59 tests passed | ✅ |
+| AC6 | 三项预飞通过 | 独立重跑验证 | ✅ |
+| AC7 | docs/ops/authorization.md | **缺失** | ⚠️ 中严重度，非阻塞 |
+
+### 新增测试代码审查
+
+| 检查项 | 结果 | 说明 |
+|--------|------|------|
+| 测试命名规范 | ✅ | 全部遵循 should_xxx_when_yyy 格式 |
+| AAA 结构 | ✅ | Arrange/Act/Assert 结构清晰 |
+| 无 Spring 上下文（infrastructure 单测） | ✅ | JwtTokenServiceImplTest 纯 JUnit 5 |
+| 无 Mockito 禁止项（domain 测试） | ✅ | JwtTokenServiceImplTest 不涉及 domain 层 |
+| 无 Thread.sleep / @Order | ✅ | 无违规 |
+| Java 8 兼容 | ✅ | 无 var/records/List.of |
+| Mock 配置正确 | ✅ | UserControllerSecurityTest 正确配置 ObjectMapper + ExceptionHandler |
+
+### 第一轮问题状态更新
+
+| # | 严重度 | 描述 | 状态 |
+|---|--------|------|------|
+| 1 | **高** | AC5 要求的 JwtAuthenticationFilterTest 缺失 | ✅ **已修复** |
+| 2 | **高** | AC5 要求的 UserControllerSecurityTest 缺失 | ✅ **已修复** |
+| 3 | **高** | AC2 要求的 JwtTokenProvider extractRolesFromToken 测试缺失 | ✅ **已修复** |
+| 4 | **中** | WebMvcTest 使用 `addFilters = false` 绕过安全测试 | ⚠️ UserControllerSecurityTest 已启用安全过滤器，其他业务测试仍禁用（合理设计） |
+| 5 | **中** | AC7 要求的 docs/ops/authorization.md 缺失 | ⚠️ 非阻塞，建议后续补充 |
+| 6 | **低** | entropy-check 12 WARN | ⚠️ 非阻塞 |
+| 7 | **低** | ADR 缺少状态节 | ⚠️ 非阻塞 |
+| 8 | **低** | TestSecurityConfig 使用已废弃 API | ⚠️ 非阻塞 |
+
+---
+
+## 八、最终验收结论（第二轮）
+
+| 维度 | 结论 |
+|------|------|
+| 功能完整性 | ✅ Spring Security 配置完整，Controller @PreAuthorize 标注完整，安全测试已补充 |
+| 测试覆盖 | ✅ AC5 要求的 3 项安全测试已补充（JwtAuthenticationFilterTest 6 tests, UserControllerSecurityTest 5 tests, JwtTokenServiceImplTest 7 tests） |
+| 架构合规 | ✅ Domain 纯净、依赖方向正确、DO 不泄漏 |
+| 代码风格 | ✅ Checkstyle 0 violations |
+| 数据库设计 | ✅ V9 迁移脚本正确 |
+
+### 最终状态：✅ 验收通过
+
+**关键验证**：
+- AC2 extractRolesFromToken 测试 ✅ JwtTokenServiceImplTest.covered
+- AC5 JwtAuthenticationFilterTest ✅ 6 tests passed
+- AC5 UserControllerSecurityTest ✅ 5 tests passed（含 403 测试）
+- 集成测试不破坏 ✅ 59 tests passed
+
+---
+
+## 第二轮验证证据
+
+### 三项预飞独立验证（第二轮）
 
 ```bash
 # mvn test
@@ -196,45 +310,36 @@ $ ./scripts/entropy-check.sh 2>&1
 架构合规检查通过。
 ```
 
-### 安全配置审查关键代码片段
-
-```java
-// SecurityConfig.java - @EnableGlobalMethodSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
-@Profile("!test")
-public class SecurityConfig { ... }
-
-// JwtAuthenticationFilter.java - GrantedAuthority 构建
-List<SimpleGrantedAuthority> authorities = roles.stream()
-    .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name()))
-    .collect(Collectors.toList());
-
-// JwtTokenServiceImpl.java - roles claim
-String accessToken = Jwts.builder()
-    .subject(userId.getValue())
-    .claim("typ", "access")
-    .claim("roles", roleNames)  // 角色携带
-    ...
-
-// UserController.java - ADMIN 端点标注
-@PreAuthorize("hasRole('ADMIN')")
-@PostMapping("/{userId}/freeze")
-public ApiResult<UserResponse> freezeUser(@PathVariable String userId) { ... }
-```
-
-### 缺失测试确认
+### 新增测试独立验证
 
 ```bash
-# JwtAuthenticationFilterTest 不存在
-$ find . -name "JwtAuthenticationFilterTest.java"
-# 无结果
+# JwtTokenServiceImplTest
+$ mvn test -pl claude-j-infrastructure -Dtest=JwtTokenServiceImplTest 2>&1
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
 
-# UserControllerSecurityTest 不存在
-$ find . -name "*SecurityTest.java"
-# 无结果
+# JwtAuthenticationFilterTest
+$ mvn test -pl claude-j-adapter -Dtest=JwtAuthenticationFilterTest 2>&1
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
 
-# WebMvcTest 禁用安全过滤器
-$ grep -r "addFilters = false" claude-j-adapter/src/test/
-claude-j-adapter/src/test/java/com/claudej/adapter/user/web/UserControllerTest.java:
-@AutoConfigureMockMvc(addFilters = false)
+# UserControllerSecurityTest
+$ mvn test -pl claude-j-adapter -Dtest=UserControllerSecurityTest 2>&1
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+### Git Commit 验证
+
+```bash
+$ git log --oneline -5
+81d98f6 fix: 022-auth-authorization QA 打回问题修复
+83162c1 docs: 022-auth-authorization QA验收打回
+...
+
+$ git show 81d98f6 --name-only
+claude-j-adapter/src/test/java/com/claudej/adapter/auth/security/JwtAuthenticationFilterTest.java
+claude-j-adapter/src/test/java/com/claudej/adapter/auth/security/UserControllerSecurityTest.java
+claude-j-infrastructure/src/test/java/com/claudej/infrastructure/auth/token/JwtTokenServiceImplTest.java
+...
 ```
