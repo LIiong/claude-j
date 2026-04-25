@@ -1,19 +1,19 @@
 ---
 task-id: "021-product-aggregate"
-from: dev
-to: architect
-status: pending-review
-timestamp: "2026-04-25T14:30:00"
+from: architect
+to: dev
+status: approved
+timestamp: "2026-04-25T15:00:00"
 pre-flight:
   mvn-test: pending            # Build 阶段填写
-  checkstyle: pending           # Build 阶段填写
-  entropy-check: pass           # Spec 阶段已执行 (exit 0, 12 WARN, 0 FAIL)
+  checkstyle: pending           # Build 阇段填写
+  entropy-check: pass           # 本轮评审执行 (exit 0, 12 WARN, 0 FAIL)
   tdd-evidence: []              # Build 阶段填写
 artifacts:
   - requirement-design.md
   - task-plan.md
   - test-case-design.md
-summary: "Spec 阶段完成（已修复 architect 评审发现的问题）：AC-2 定价规则歧义已明确决策（上架后允许调价，禁止负数/零）、test-case-design.md 已补充（6 条 AC 全部映射到自动化测试）。待 architect 重新评审。"
+summary: "Spec 阶段完成，架构评审（第二轮）通过。AC-2 定价规则歧义已明确决策（上架后允许调价，禁止负数/零）、test-case-design.md 已补充完整（6 条 AC 全覆盖）。@dev 可进入 Build 阶段。"
 ---
 
 # 交接文档
@@ -64,7 +64,36 @@ summary: "Spec 阶段完成（已修复 architect 评审发现的问题）：AC-
 
 ---
 
-## 评审回复
+## 评审回复（第二轮）
+
+**评审人**：@architect
+**日期**：2026-04-25
+**结论**：✅ approved（评审通过）
+
+### 修正项确认
+
+1. **AC-2 定价规则歧义 — ✅ 已修复**
+   - 原 AC-2：「价格调整仅允许 DRAFT 状态（上架后不可调价？需确认）」含歧义标记
+   - 修正后 AC-2：「价格调整允许 DRAFT/ACTIVE/INACTIVE 状态，但禁止调整为负数或零」
+   - 假设与待确认章节新增 #5 条目明确上架后调价规则
+
+2. **test-case-design.md 补充 — ✅ 已修复**
+   - 已补充 AC 自动化覆盖矩阵（6 条 AC 全部映射）
+   - Domain/Application/Infrastructure/Adapter 层测试场景完整
+   - 集成测试 3 个场景（符合 ≤ 3 个 @SpringBootTest 规则）
+
+### entropy-check.sh 基线（本轮）
+
+- 退出码：0
+- FAIL：0
+- WARN：12
+- 结论：架构基线通过
+
+详见 requirement-design.md「架构评审（第二轮）」章节。
+
+---
+
+## 评审回复（第一轮）
 
 **评审人**：@architect
 **日期**：2026-04-25
@@ -100,6 +129,10 @@ summary: "Spec 阶段完成（已修复 architect 评审发现的问题）：AC-
 ---
 
 ## 交接历史
+
+### 2026-04-25 — @architect → @dev（评审通过）
+- 状态：approved
+- 说明：架构评审（第二轮）通过，AC-2 定价规则歧义已明确、test-case-design.md 已补充完整，@dev 可进入 Build 阶段
 
 ### 2026-04-25 — @dev → @architect（重新提交）
 - 状态：pending-review
