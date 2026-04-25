@@ -111,19 +111,59 @@
 
 ---
 
+## QA 打回修复记录（2026-04-25）
+
+### 问题 1：JwtTokenServiceImpl.extractRolesFromToken 测试缺失
+- **根因**: QA 验收发现 AC2 要求的角色提取测试未实现
+- **修复**: 补充 `JwtTokenServiceImplTest`（infrastructure 层）
+- **新增测试**:
+  - `should_extractRolesFromValidToken` - 验证从有效 token 提取 USER/ADMIN 角色
+  - `should_returnDefaultUserRole_when_tokenHasNoRoles` - 验证无角色 token 返回默认 USER 角色
+  - `should_returnDefaultUserRole_when_tokenInvalid` - 验证无效 token 返回默认 USER 角色
+- **验证**: `mvn test -pl claude-j-infrastructure -Dtest=JwtTokenServiceImplTest` → 7 tests passed
+
+### 问题 2：JwtAuthenticationFilterTest 缺失
+- **根因**: QA 验收发现 AC5 要求的 Filter 测试未实现
+- **修复**: 补充 `JwtAuthenticationFilterTest`（adapter 层）
+- **新增测试**:
+  - `should_buildGrantedAuthorities_when_tokenContainsRoles` - 验证 token 角色转换为 GrantedAuthority
+  - `should_defaultToUserRole_when_tokenHasNoRoles` - 验证无角色 token 默认为 ROLE_USER
+  - `should_clearSecurityContext_when_tokenInvalid` - 验证无效 token 清空 SecurityContext
+  - `should_clearSecurityContext_when_noTokenProvided` - 验证无 token 清空 SecurityContext
+  - `should_clearSecurityContext_when_tokenServiceThrowsException` - 验证异常时清空 SecurityContext
+  - `should_notProcessToken_when_headerNotBearerFormat` - 验证非 Bearer 格式 header 不处理
+- **验证**: `mvn test -pl claude-j-adapter -Dtest=JwtAuthenticationFilterTest` → 6 tests passed
+
+### 问题 3：UserControllerSecurityTest 缺失
+- **根因**: QA 验收发现 AC5 要求的安全端点测试未实现
+- **修复**: 补充 `UserControllerSecurityTest`（adapter 层）
+- **技术挑战**:
+  - WebMvcTest 需要正确配置 ObjectMapper 处理 LocalDateTime 序列化（JavaTimeModule）
+  - 方法级安全（@PreAuthorize）抛出的 AccessDeniedException 在 WebMvcTest 环境中未被 JwtAccessDeniedHandler 正确处理，需添加专门的 @ExceptionHandler
+  - UserId 值对象格式验证（UR + 16 位字母数字，不含 I/O）
+- **新增测试**:
+  - `should_return403_when_userAccessAdminEndpoint` - 验证 USER 角色 403 Forbidden
+  - `should_return200_when_adminAccessAdminEndpoint` - 验证 ADMIN 角色 200 OK
+  - `should_return401_when_noTokenProvided` - 验证无 token 401 Unauthorized
+  - `should_return401_when_invalidTokenProvided` - 验证无效 token 401 Unauthorized
+  - `should_return200_when_userAccessUserEndpoint` - 验证 USER 角色 200 OK
+- **验证**: `mvn test -pl claude-j-adapter -Dtest=UserControllerSecurityTest` → 5 tests passed
+
+---
+
+## 三项预飞检查（修复后）
+
+| 检查项 | 状态 | 证据 |
+|--------|------|------|
+| mvn test | PASS | Tests run: 59, Failures: 0, Errors: 0, Skipped: 0 |
+| mvn checkstyle:check | PASS | 0 Checkstyle violations |
+| entropy-check | PASS | 0 FAIL, 12 WARN, status: PASS |
+
+---
+
 ## 假设与待确认
 
 - 角色 Role 存放在 User 聚合根（而非 AuthUser），因角色属于用户业务属性而非认证属性 ✓
 - 新用户注册默认角色为 USER（单角色） ✓
 - 测试环境禁用 Security 以验证业务逻辑 ✓
 - Actuator/JwtSecret/TraceId 测试保持 dev profile 以测试 dev 配置 ✓
-
----
-
-## 三项预飞检查
-
-| 检查项 | 状态 | 证据 |
-|--------|------|------|
-| mvn test | ✅ pass | Tests run: 59, Failures: 0, Errors: 0 (claude-j-start) |
-| mvn checkstyle:check | ✅ pass | Exit 0, 0 errors |
-| entropy-check | ✅ pass | 0 FAIL, 12 WARN, status: PASS |

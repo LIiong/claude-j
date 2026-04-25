@@ -16,10 +16,15 @@
 | 10 | Docs: 授权体系文档 + 端点权限映射表 | dev | ⏸ 暂缓 | 非核心需求，可在 QA 验收后补充 |
 | 11 | QA: 测试用例设计 + 验收测试 | qa | ⚠️ 验收打回 | 3 高严重度问题缺失测试 |
 | 12 | QA: 代码审查 + 手动渗透测试 | qa | ✅ 完成 | 代码审查通过，三项预飞通过 |
+| 13 | **Fix: JwtTokenServiceImplTest（infrastructure 层）** | dev | ✅ 完成 | 7 tests passed |
+| 14 | **Fix: JwtAuthenticationFilterTest（adapter 层）** | dev | ✅ 完成 | 6 tests passed |
+| 15 | **Fix: UserControllerSecurityTest（adapter 层）** | dev | ✅ 完成 | 5 tests passed |
+| 16 | **Fix: 三项预飞重新验证** | dev | ✅ 完成 | mvn test: 59 passed, checkstyle: 0, entropy: PASS |
+| 17 | **QA: 重新验收** | qa | ⏳ 待验收 | 等待 @qa 验证修复后的测试 |
 
 ## 执行顺序
 
-domain → infrastructure → application → adapter → start → 全量测试 → QA 验收
+domain → infrastructure → application → adapter → start → 全量测试 → QA 验收 → **Fix → QA 重新验收**
 
 ## 测试策略
 
