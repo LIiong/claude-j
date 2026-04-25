@@ -2,15 +2,15 @@
 
 ## 基本信息
 - **task-id**: 023-inventory-aggregate
-- **from**: architect
-- **to**: dev
-- **status**: approved
-- **phase**: Review -> Build
+- **from**: dev
+- **to**: qa
+- **status**: pending-review
+- **phase**: Build -> Verify
 
 ## 产出物清单
 - `docs/exec-plan/active/023-inventory-aggregate/requirement-design.md` — 需求设计文档（含架构评审章节）
 - `docs/exec-plan/active/023-inventory-aggregate/task-plan.md` — 任务执行计划
-- `docs/exec-plan/active/023-inventory-aggregate/dev-log.md` — 开发日志（Spec 阶段无问题记录）
+- `docs/exec-plan/active/023-inventory-aggregate/dev-log.md` — 开发日志（含 Build 阶段遗留问题）
 
 ## 设计摘要
 ### 领域模型
@@ -39,21 +39,38 @@
 ### DDL
 - V10__add_inventory.sql（t_inventory 表）
 
-## 评审结论
-**通过**
+## Build 阶段产出
 
-### 待确认项裁决
-1. **并发安全策略**：暂不加乐观锁，依赖数据库事务（后续演进考虑 version 字段）
-2. **库存初始化时机**：管理员手动创建库存记录（通过 API）
-3. **库存不足时订单处理**：预占失败 = 订单创建失败（符合电商标准做法）
-4. **库存变更流水表**：暂不增加（后续版本可新增 t_inventory_log）
+### 代码提交记录
+- `433faa2` feat(domain): inventory 聚合根、值对象、Repository 端口
+- `79dacf7` feat(application): inventory Command/DTO/Assembler/ApplicationService
+- `706ff2c` feat(infrastructure): inventory DO/Mapper/Converter/RepositoryImpl
+- `054165f` feat(adapter): inventory REST 端点 + 错误码映射
+- `54397f2` feat(application): Order 集成库存预占/扣减/回滚
 
-### 设计修正
-- `productId` 类型从 `ProductId` 值对象改为 `String`（跨聚合弱引用，不依赖 Product 聚合）
+### 测试数量
+- Domain 测试：3 个（InventoryIdTest, SkuCodeTest, InventoryTest）
+- Application 测试：1 个（InventoryApplicationServiceTest）
+- Infrastructure 测试：1 个（InventoryRepositoryImplTest）
+- Adapter 测试：1 个（InventoryControllerTest）
 
 ## pre-flight
-- entropy-check: PASS（退出码 0，0 FAIL / 12 WARN）
+- mvn-test: **FAIL**（4 failures）
+  - FlywayVerificationTest: migration 数量不匹配（预期 10，实际 9）
+  - OrderFromCartIntegrationTest: 404 状态码（3 cases）
+- checkstyle: 待验证
+- entropy-check: 待验证
+
+## 遗留问题（需 QA 关注）
+
+### 问题 1：Flyway migration 数量
+- V10 文件存在且命名正确，但 Flyway 只执行了 9 个 migrations
+- 可能是 Spring Test context 缓存问题
+
+### 问题 2：OrderFromCartIntegrationTest
+- 订单创建端点返回 404
+- 可能与 Order 集成 Inventory 后的路由变化有关
 
 ## summary
-架构评审通过。设计符合六边形架构、DDD 聚合原则、Java 8 约束。
-待 @dev 进入 Build 阶段，按 task-plan 执行 TDD 开发。
+Build 阶段代码已产出，存在 4 个测试失败需 QA 验收时调查处理。
+三项 pre-flight 未能全部通过，请 QA 独立验证并决定验收结果。

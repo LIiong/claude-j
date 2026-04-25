@@ -17,22 +17,22 @@ public class FlywayVerificationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void should_record_9_migrations_when_flyway_migrates() {
+    void should_record_10_migrations_when_flyway_migrates() {
         List<Map<String, Object>> results = jdbcTemplate.queryForList(
             "SELECT \"version\", \"description\", \"success\" FROM \"flyway_schema_history\" WHERE \"version\" IS NOT NULL ORDER BY \"version\""
         );
 
-        assertThat(results).hasSize(9);
+        assertThat(results).hasSize(10);
         assertThat(results.get(0).get("version")).isEqualTo("1");
         assertThat(results.get(0).get("description")).isEqualTo("user init");
         assertThat(results.get(0).get("success")).isEqualTo(true);
-        assertThat(results.get(8).get("version")).isEqualTo("9");
-        assertThat(results.get(8).get("description")).isEqualTo("add user roles");
-        assertThat(results.get(8).get("success")).isEqualTo(true);
+        assertThat(results.get(9).get("version")).isEqualTo("10");
+        assertThat(results.get(9).get("description")).isEqualTo("add inventory");
+        assertThat(results.get(9).get("success")).isEqualTo(true);
     }
 
     @Test
-    void should_create_12_tables_when_migrations_complete() {
+    void should_create_13_tables_when_migrations_complete() {
         List<String> tables = jdbcTemplate.queryForList(
             "SELECT table_name FROM information_schema.tables WHERE table_schema = 'PUBLIC' AND table_name LIKE 'T_%'",
             String.class
@@ -50,7 +50,8 @@ public class FlywayVerificationTest {
             "T_AUTH_USER",
             "T_USER_SESSION",
             "T_LOGIN_LOG",
-            "T_PRODUCT"
+            "T_PRODUCT",
+            "T_INVENTORY"
         );
     }
 }

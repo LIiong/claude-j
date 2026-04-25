@@ -12,6 +12,7 @@ spring:
     baseline-on-migrate: true
     validate-on-migrate: false
     clean-disabled: false
+    out-of-order: true
 
 jwt:
   secret: test-jwt-secret-key-for-start-tests-32-bytes-long
