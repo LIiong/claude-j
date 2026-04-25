@@ -50,6 +50,7 @@ public class GlobalExceptionHandler {
             case AUTH_USER_NOT_FOUND:
             case SESSION_NOT_FOUND:
             case PRODUCT_NOT_FOUND:
+            case INVENTORY_NOT_FOUND:
                 return HttpStatus.NOT_FOUND;
             case INVALID_SHORT_CODE:
             case INVALID_ORIGINAL_URL:
@@ -96,6 +97,17 @@ public class GlobalExceptionHandler {
             case PRODUCT_PRICE_NEGATIVE:
             case PRODUCT_PRICE_ZERO:
             case INVALID_PRODUCT_STATUS_TRANSITION:
+            case INVENTORY_ID_EMPTY:
+            case SKU_CODE_EMPTY:
+            case SKU_CODE_TOO_LONG:
+            case STOCK_NEGATIVE:
+            case INVENTORY_INSUFFICIENT:
+            case RESERVE_NEGATIVE:
+            case DEDUCT_NEGATIVE:
+            case RELEASE_NEGATIVE:
+            case RESERVE_EXCEEDS_AVAILABLE:
+            case DEDUCT_EXCEEDS_RESERVED:
+            case RELEASE_EXCEEDS_RESERVED:
                 return HttpStatus.BAD_REQUEST;
             case ORDER_ALREADY_PAID:
             case ORDER_NOT_PAID:
