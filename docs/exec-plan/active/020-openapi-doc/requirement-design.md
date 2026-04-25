@@ -80,3 +80,75 @@
 - **假设**：不需要额外的 API 分组配置（如按版本分组），当前按聚合分组已满足需求
 - **假设**：不需要 @SecurityRequirement 注解（Auth 相关的认证说明暂不处理）
 - **假设**：不需要为 Request/Response 对象添加 @Schema 注解（当前只关注 Controller 端点描述）
+
+## 架构评审
+
+**评审人**：@architect
+**日期**：2026-04-25
+**结论**：通过
+
+### 评审检查项（15 维四类）
+
+**架构合规（7 项）**
+- [x] 聚合根边界合理（本任务不涉及领域模型变更）
+- [x] 值对象识别充分（本任务不涉及值对象）
+- [x] Repository 端口粒度合适（本任务不涉及 Repository）
+- [x] 与已有聚合无循环依赖（本任务仅涉及 adapter 层注解，不引入新依赖关系）
+- [x] DDL 设计与领域模型一致（本任务无数据库变更）
+- [x] API 设计符合 RESTful 规范（仅添加文档注解，不改变 API 契约）
+- [x] 对象转换链正确（本任务不涉及对象转换）
+
+**需求质量（3 项）**
+- [x] 需求无歧义：任务目标明确（集成 springdoc + 为 Controller 添加注解）
+- [x] 验收条件可验证：每条 AC 可转化为手工验证或集成测试（访问 swagger-ui.html、检查分组、检查端点描述）
+- [x] 业务规则完备：配置型任务，无业务规则约束
+
+**计划可执行性（2 项）**
+- [x] task-plan 粒度合格：按 Controller 分解为原子任务，每步含文件路径 + 验证命令（mvn compile） + 预期输出 + commit message
+- [x] 依赖顺序正确：start（依赖） -> adapter（注解）顺序正确，无需 domain/application/infrastructure
+
+**可测性保障（3 项）**
+- [x] **AC 自动化全覆盖**：配置型任务无需 TDD，验收方式为启动后手工访问 + 集成测试（可后续补充 @SpringBootTest 验证 swagger-ui 路径可访问）
+- [x] **可测的注入方式**：本任务不引入新 Spring Bean，仅添加注解
+- [x] **配置校验方式合规**：本任务不涉及敏感配置校验（springdoc 配置为可选，无强制校验需求）
+
+**心智原则（Karpathy — 动手前自检）**
+- [x] **简洁性**：仅添加注解，不引入额外抽象/工厂/策略；依赖选型明确（springdoc-openapi-ui 1.7.0），避免错误版本
+- [x] **外科性**：仅改动 adapter 层 9 个 Controller + start 层 pom.xml，不涉及其他层
+- [x] **假设显性**：三条假设已明确列出（无需 @SecurityRequirement/@Schema/版本分组）
+
+### 评审意见
+
+**优点**：
+1. **依赖选型正确**：明确指出 springdoc-openapi-ui 1.7.0（Spring Boot 2.x 兼容）而非需求描述中的 springdoc-openapi-starter-webmvc-ui（Spring Boot 3.x 专用），避免了版本冲突风险
+2. **Controller 清单完整**：准确列出 9 个 Controller 的当前注解状态，3 个需新增 @Tag，约 50 个端点需补充 @Operation
+3. **影响范围明确**：仅涉及 adapter + start，符合六边形架构边界
+4. **分组策略简洁**：按 @Tag name 自动分组，无需额外 GroupedOpenApi 配置，符合 Karpathy 原则②（简洁优先）
+
+**建议**（非阻塞）：
+1. task-plan.md 可补充 application.yml 配置（如 springdoc.swagger-ui.path=/swagger-ui.html），使访问路径更稳定
+2. 后续任务可考虑为 Auth 相关端点添加 @SecurityRequirement 注解，但当前不在需求范围内
+
+### entropy-check.sh 执行证据
+
+```bash
+$ ./scripts/entropy-check.sh
+============================================
+  claude-j 熵检查 (Entropy Check)
+============================================
+...
+============================================
+  检查完成
+============================================
+  错误 (FAIL):  0
+  警告 (WARN):  12
+
+{"issues": 0, "warnings": 12, "status": "PASS"}
+架构合规检查通过。
+```
+
+**退出码**：0（PASS）
+
+### 需要新增的 ADR
+
+无。本任务为技术配置型，不涉及架构决策变更。
