@@ -21,6 +21,8 @@ import com.claudej.domain.order.model.valobj.CustomerId;
 import com.claudej.domain.order.model.valobj.Money;
 import com.claudej.domain.order.model.valobj.OrderId;
 import com.claudej.domain.order.repository.OrderRepository;
+import com.claudej.domain.inventory.model.aggregate.Inventory;
+import com.claudej.domain.inventory.repository.InventoryRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,15 +39,17 @@ public class OrderApplicationService {
     private final OrderRepository orderRepository;
     private final CartRepository cartRepository;
     private final CouponRepository couponRepository;
+    private final InventoryRepository inventoryRepository;
     private final OrderAssembler orderAssembler;
     private final PageAssembler pageAssembler;
 
     public OrderApplicationService(OrderRepository orderRepository, CartRepository cartRepository,
-                                   CouponRepository couponRepository, OrderAssembler orderAssembler,
-                                   PageAssembler pageAssembler) {
+                                   CouponRepository couponRepository, InventoryRepository inventoryRepository,
+                                   OrderAssembler orderAssembler, PageAssembler pageAssembler) {
         this.orderRepository = orderRepository;
         this.cartRepository = cartRepository;
         this.couponRepository = couponRepository;
+        this.inventoryRepository = inventoryRepository;
         this.orderAssembler = orderAssembler;
         this.pageAssembler = pageAssembler;
     }
@@ -75,6 +79,9 @@ public class OrderApplicationService {
             );
             order.addItem(item);
         }
+
+        // 预占库存（创建订单时）
+        reserveStockForOrder(order);
 
         // 处理优惠券
         if (command.getCouponId() != null && !command.getCouponId().trim().isEmpty()) {
@@ -126,6 +133,9 @@ public class OrderApplicationService {
             couponRepository.save(coupon);
         }
 
+        // 扣减库存（支付成功时，预占转为扣减）
+        deductStockForOrder(order);
+
         order.pay();
         order = orderRepository.save(order);
         return orderAssembler.toDTO(order);
@@ -151,6 +161,9 @@ public class OrderApplicationService {
         if (order.hasCoupon()) {
             order.removeCoupon();
         }
+
+        // 回滚库存（取消订单时）
+        releaseStockForOrder(order);
 
         order.cancel();
         order = orderRepository.save(order);
@@ -191,19 +204,22 @@ public class OrderApplicationService {
             order.addItem(orderItem);
         }
 
-        // 5. 处理优惠券
+        // 5. 预占库存（创建订单时）
+        reserveStockForOrder(order);
+
+        // 6. 处理优惠券
         if (command.getCouponId() != null && !command.getCouponId().trim().isEmpty()) {
             applyCouponToOrder(order, command.getCouponId(), command.getCustomerId());
         }
 
-        // 6. 保存订单
+        // 7. 保存订单
         order = orderRepository.save(order);
 
-        // 7. 清空购物车并保存
+        // 8. 清空购物车并保存
         cart.clear();
         cartRepository.save(cart);
 
-        // 8. 返回订单DTO
+        // 9. 返回订单DTO
         return orderAssembler.toDTO(order);
     }
 
@@ -282,5 +298,44 @@ public class OrderApplicationService {
         order.refund();
         order = orderRepository.save(order);
         return orderAssembler.toDTO(order);
+    }
+
+    /**
+     * 预占订单库存
+     */
+    private void reserveStockForOrder(Order order) {
+        for (OrderItem item : order.getItems()) {
+            Inventory inventory = inventoryRepository.findByProductId(item.getProductId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND,
+                            "商品库存不存在: " + item.getProductId()));
+            inventory.reserve(item.getQuantity());
+            inventoryRepository.save(inventory);
+        }
+    }
+
+    /**
+     * 扣减订单库存（支付成功时）
+     */
+    private void deductStockForOrder(Order order) {
+        for (OrderItem item : order.getItems()) {
+            Inventory inventory = inventoryRepository.findByProductId(item.getProductId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND,
+                            "商品库存不存在: " + item.getProductId()));
+            inventory.deduct(item.getQuantity());
+            inventoryRepository.save(inventory);
+        }
+    }
+
+    /**
+     * 回滚订单库存（取消订单时）
+     */
+    private void releaseStockForOrder(Order order) {
+        for (OrderItem item : order.getItems()) {
+            Inventory inventory = inventoryRepository.findByProductId(item.getProductId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND,
+                            "商品库存不存在: " + item.getProductId()));
+            inventory.release(item.getQuantity());
+            inventoryRepository.save(inventory);
+        }
     }
 }
