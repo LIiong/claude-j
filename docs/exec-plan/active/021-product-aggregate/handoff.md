@@ -2,8 +2,8 @@
 task-id: "021-product-aggregate"
 from: dev
 to: architect
-status: changes-requested
-timestamp: "2026-04-25T12:00:00"
+status: pending-review
+timestamp: "2026-04-25T14:30:00"
 pre-flight:
   mvn-test: pending            # Build 阶段填写
   checkstyle: pending           # Build 阶段填写
@@ -12,7 +12,8 @@ pre-flight:
 artifacts:
   - requirement-design.md
   - task-plan.md
-summary: "Spec 阶段完成：Product 聚合领域建模（ProductId/ProductName/SKU 值对象、ProductStatus 状态机、Product 聚合根）、API 设计（6 个端点）、DDL 设计（V8__product_init.sql）、与 OrderItem 解耦边界明确。待 architect 评审。"
+  - test-case-design.md
+summary: "Spec 阶段完成（已修复 architect 评审发现的问题）：AC-2 定价规则歧义已明确决策（上架后允许调价，禁止负数/零）、test-case-design.md 已补充（6 条 AC 全部映射到自动化测试）。待 architect 重新评审。"
 ---
 
 # 交接文档
@@ -25,6 +26,7 @@ summary: "Spec 阶段完成：Product 聚合领域建模（ProductId/ProductName
 **Spec 阶段产出**：
 1. `requirement-design.md` — 领域分析（Product 聚合根 + 3 个值对象 + ProductStatus 枚举 + Repository 端口）、API 设计（创建/查询/调价/上架/下架/分页）、DDL 设计、与 OrderItem 的解耦边界
 2. `task-plan.md` — 按 domain→application→infrastructure→adapter→start 拆解 14 个原子任务，含验证命令和预期输出
+3. `test-case-design.md` — 分层测试设计（Domain/Application/Infrastructure/Adapter），AC 自动化覆盖矩阵（6 条 AC 全部映射）
 
 **设计要点**：
 - SKU 作为值对象嵌入 Product（不独立实体化）
@@ -32,10 +34,35 @@ summary: "Spec 阶段完成：Product 聚合领域建模（ProductId/ProductName
 - 状态机：DRAFT → ACTIVE → INACTIVE（上架/下架操作）
 - 与 OrderItem 解耦：OrderItem 仅持 productId + snapshotPrice
 
-**待确认**（见 requirement-design.md 「假设与待确认」章节）：
+**假设与待确认**（见 requirement-design.md 「假设与待确认」章节）：
 1. SKU 单一设计 vs 多 SKU 变体
-2. 上架后是否允许调价
-3. 价格范围校验
+2. 上架后允许调价（电商常见场景：促销结束恢复原价）
+3. 价格范围校验（必须 > 0）
+
+## 修正说明
+
+**修正项 1：AC-2 定价规则歧义已明确**
+- 原问题：AC-2 写法「价格调整仅允许 DRAFT 状态（上架后不可调价？需确认）」含歧义标记
+- 修正决策：上架后允许调价（电商常见场景如促销结束恢复原价），但禁止调整为负数或零
+- 修正后 AC-2：「价格调整允许 DRAFT/ACTIVE/INACTIVE 状态，但禁止调整为负数或零」
+- 相关更新：
+  - requirement-design.md 验收条件章节已更新
+  - 假设与待确认章节新增 #5 条目明确上架后调价规则
+  - 需求质量检查项已全部标记为通过
+
+**修正项 2：test-case-design.md 已补充**
+- 原问题：缺失测试设计文档，违反可测性检查项「AC 自动化全覆盖」
+- 修正内容：
+  - AC 自动化覆盖矩阵（6 条 AC 全部映射到自动化测试）
+  - Domain 层测试场景（40 个场景：ProductId/ProductName/SKU/ProductStatus/Product）
+  - Application 层测试场景（12 个场景：创建/查询/调价/上架/下架/分页）
+  - Infrastructure 层测试场景（7 个场景：保存/查询/转换/逻辑删除）
+  - Adapter 层测试场景（12 个场景：HTTP 契约 200/400/404）
+  - 集成测试场景（3 个场景：完整生命周期）
+- 相关更新：
+  - 可测性保障检查项已标记为通过
+
+---
 
 ## 评审回复
 
@@ -73,6 +100,10 @@ summary: "Spec 阶段完成：Product 聚合领域建模（ProductId/ProductName
 ---
 
 ## 交接历史
+
+### 2026-04-25 — @dev → @architect（重新提交）
+- 状态：pending-review
+- 说明：已修复 2 项必须修改（AC-2 定价规则歧义 + test-case-design.md 补充），请求重新评审
 
 ### 2026-04-25 — @architect → @dev
 - 状态：changes-requested

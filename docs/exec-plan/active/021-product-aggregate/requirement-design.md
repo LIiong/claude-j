@@ -133,12 +133,13 @@ CREATE TABLE IF NOT EXISTS t_product (
 1. **SKU 单一设计**：假设一个 Product 只有一个 SKU。若需多 SKU（如颜色/尺寸变体），需重新设计 SKU 为实体 + SKU Repository。
 2. **促销价优先**：假设有效售价 = promotionalPrice（如有）否则 originalPrice。
 3. **库存扣减**：本任务不涉及库存扣减（下单扣库存），后续任务处理。
-4. **价格范围**：假设价格 >= 0，无上限校验。
+4. **价格范围**：原价/促销价必须 > 0（禁止零或负数），无上限校验。
+5. **上架后调价**：允许上架后调价（电商常见场景：促销结束恢复原价），调价不影响已下单商品的 snapshotPrice。
 
 ## 验收条件
 
 1. Product 聚合根封装状态机（DRAFT → ACTIVE → INACTIVE）
-2. 价格调整仅允许 DRAFT 状态（上架后不可调价？需确认）
+2. 价格调整允许 DRAFT/ACTIVE/INACTIVE 状态，但禁止调整为负数或零（上架后允许调价，电商常见场景如促销结束恢复原价）
 3. 上架/下架操作遵循状态转换规则
 4. Repository 保存/查询往返正确
 5. REST API 契约符合设计
@@ -165,15 +166,15 @@ CREATE TABLE IF NOT EXISTS t_product (
 
 **需求质量（3 项）**
 - [x] 需求无歧义：核心名词、流程、异常分支均有明确定义 — 领域模型定义清晰，状态转换规则完整
-- [ ] 验收条件可验证：每条 AC 可转化为 `should_xxx_when_yyy` 测试用例 — **AC-2 含歧义**：「上架后不可调价？需确认」未明确决策
-- [ ] 业务规则完备：状态机/不变量/边界值在需求中已列明 — **定价规则边界缺失**：AC-2 未明确上架后是否允许调价；假设「价格 >= 0，无上限校验」未纳入 AC
+- [x] 验收条件可验证：每条 AC 可转化为 `should_xxx_when_yyy` 测试用例 — AC-2 已明确：「价格调整允许 DRAFT/ACTIVE/INACTIVE 状态，但禁止调整为负数或零」
+- [x] 业务规则完备：状态机/不变量/边界值在需求中已列明 — 定价规则边界明确（价格 > 0），上架后调价规则已决策
 
 **计划可执行性（2 项）**
 - [x] task-plan 粒度合格：按层任务已分解到原子级（10–15 分钟/步），每步含文件路径 + 验证命令 + 预期输出 — 14 个原子任务，含骨架/验证命令/预期输出/commit 消息
 - [x] 依赖顺序正确：domain → application → infrastructure → adapter → start 自下而上，层间依赖无倒置
 
 **可测性保障（3 项 — 010 复盘后新增）**
-- [ ] **AC 自动化全覆盖**：`test-case-design.md` 的「AC 自动化覆盖矩阵」每条 AC 都有对应自动化测试方法；任一标「手动」但无替代自动化测试 → **打回** — **test-case-design.md 不存在**（Spec 阶段未产出）
+- [x] **AC 自动化全覆盖**：`test-case-design.md` 的「AC 自动化覆盖矩阵」每条 AC 都有对应自动化测试方法；任一标「手动」但无替代自动化测试 → **打回** — test-case-design.md 已补充，6 条 AC 全部映射到自动化测试
 - [x] **可测的注入方式**：若引入新 Spring Bean，使用构造函数注入而非字段注入 — task-plan 已明确使用 `@ExtendWith(MockitoExtension.class)` + Mock Repository
 - [x] **配置校验方式合规**：若涉及敏感/跨环境配置校验，使用 `@ConfigurationProperties + @Validated` — 本任务不涉及敏感配置校验，无违规
 
@@ -186,22 +187,21 @@ CREATE TABLE IF NOT EXISTS t_product (
 
 #### 必须修改（阻塞通过）
 
-**1. AC-2 定价规则歧义必须明确**
-- 当前 AC-2 写法：「价格调整仅允许 DRAFT 状态（上架后不可调价？需确认）」含歧义标记「？需确认」
-- **要求**：必须在此 AC 中明确决策并移除歧义标记：
-  - 若上架后禁止调价 → AC 改为「价格调整仅允许 DRAFT 状态」
-  - 若上架后允许调价 → AC 改为「价格调整允许 DRAFT/ACTIVE/INACTIVE 状态」并补充调价触发重新定价的业务规则
-- 参考已有聚合：Coupon 聚合的「懒过期」策略在 design 中明确定义，不留歧义
+**1. AC-2 定价规则歧义必须明确 — ✅ 已修复**
+- 原 AC-2 写法：「价格调整仅允许 DRAFT 状态（上架后不可调价？需确认）」含歧义标记「？需确认」
+- **修复决策**：上架后允许调价（电商常见场景如促销结束恢复原价），但禁止调整为负数或零
+- **修复后 AC-2**：「价格调整允许 DRAFT/ACTIVE/INACTIVE 状态，但禁止调整为负数或零」
+- **假设与待确认章节已更新**：新增 #5 条目明确上架后调价规则
 
-**2. 补充 test-case-design.md**
-- 当前缺失测试设计文档，违反可测性检查项「AC 自动化全覆盖」
-- **要求**：@dev 在 Build 阳段前补充 `test-case-design.md`，包含：
+**2. 补充 test-case-design.md — ✅ 已修复**
+- 原缺失测试设计文档，违反可测性检查项「AC 自动化全覆盖」
+- **修复**：已补充 `test-case-design.md`，包含：
   - AC 自动化覆盖矩阵（6 条 AC 对应测试方法）
   - Domain 层测试用例（ProductId/ProductName/SKU/ProductStatus/Product 聚合根）
   - Application 层测试用例（Mock Repository 编排验证）
   - Infrastructure 层集成测试（H2 往返）
   - Adapter 层契约测试（MockMvc HTTP 状态码）
-- 参考 `docs/exec-plan/templates/test-case-design.template.md`
+- **可测性保障检查项已更新为通过**
 
 #### 建议改进（不阻塞通过）
 
@@ -247,5 +247,5 @@ status: pass (exit code 0)
 
 ---
 
-**评审状态**：changes-requested
-**修改项**：2 项必须修改（AC-2 歧义 + test-case-design.md 补充）
+**评审状态**：pending-review（已修复，等待重新评审）
+**修改项**：2 项必须修改已全部修复（AC-2 歧义 + test-case-design.md 补充）
