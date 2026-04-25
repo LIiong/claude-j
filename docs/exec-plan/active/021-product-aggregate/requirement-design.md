@@ -143,3 +143,109 @@ CREATE TABLE IF NOT EXISTS t_product (
 4. Repository 保存/查询往返正确
 5. REST API 契约符合设计
 6. JaCoCo 阈值：domain 90% / application 80%
+
+---
+
+## 架构评审
+
+**评审人**：@architect
+**日期**：2026-04-25
+**结论**：❌ 待修改
+
+### 评审检查项（15 维四类）
+
+**架构合规（7 项）**
+- [x] 聚合根边界合理（遵循事务一致性原则）— Product 聚合根封装 SKU 值对象，符合 DDD 原则；SKU 不独立实体化简化模型
+- [x] 值对象识别充分（金额、标识符等应为 VO）— ProductId/ProductName/SKU/Money 值对象识别充分；SKU 包含 skuCode + stock，嵌入聚合
+- [x] Repository 端口粒度合适（方法不多不少）— 5 个方法（save/findById/findByProductId/findByStatus/findAll）粒度合适
+- [x] 与已有聚合无循环依赖 — Product 聚合不依赖 Order；OrderItem 仅持 productId + snapshotPrice，通过 Application 层查询 Product
+- [x] DDL 设计与领域模型一致（字段映射、索引合理）— 表名 t_product、列名 snake_case、唯一索引 uk_product_id、索引 idx_status/idx_sku_code 合理
+- [x] API 设计符合 RESTful 规范 — POST/GET/PUT 端点符合规范；activate/deactivate 使用 PUT 而非 POST，符合语义
+- [x] 对象转换链正确（DO ↔ Domain ↔ DTO ↔ Request/Response）— 转换链完整，MapStruct 转换器设计合理
+
+**需求质量（3 项）**
+- [x] 需求无歧义：核心名词、流程、异常分支均有明确定义 — 领域模型定义清晰，状态转换规则完整
+- [ ] 验收条件可验证：每条 AC 可转化为 `should_xxx_when_yyy` 测试用例 — **AC-2 含歧义**：「上架后不可调价？需确认」未明确决策
+- [ ] 业务规则完备：状态机/不变量/边界值在需求中已列明 — **定价规则边界缺失**：AC-2 未明确上架后是否允许调价；假设「价格 >= 0，无上限校验」未纳入 AC
+
+**计划可执行性（2 项）**
+- [x] task-plan 粒度合格：按层任务已分解到原子级（10–15 分钟/步），每步含文件路径 + 验证命令 + 预期输出 — 14 个原子任务，含骨架/验证命令/预期输出/commit 消息
+- [x] 依赖顺序正确：domain → application → infrastructure → adapter → start 自下而上，层间依赖无倒置
+
+**可测性保障（3 项 — 010 复盘后新增）**
+- [ ] **AC 自动化全覆盖**：`test-case-design.md` 的「AC 自动化覆盖矩阵」每条 AC 都有对应自动化测试方法；任一标「手动」但无替代自动化测试 → **打回** — **test-case-design.md 不存在**（Spec 阶段未产出）
+- [x] **可测的注入方式**：若引入新 Spring Bean，使用构造函数注入而非字段注入 — task-plan 已明确使用 `@ExtendWith(MockitoExtension.class)` + Mock Repository
+- [x] **配置校验方式合规**：若涉及敏感/跨环境配置校验，使用 `@ConfigurationProperties + @Validated` — 本任务不涉及敏感配置校验，无违规
+
+**心智原则（Karpathy — 动手前自检）**
+- [x] **简洁性**：需求未要求的抽象/配置/工厂已移除 — SKU 嵌入 Product（不独立实体化）符合简洁原则；无过度抽象
+- [x] **外科性**：设计仅改动任务直接相关的文件 — 新增 Product 聚合，不改动已有聚合；ErrorCode 扩展最小化
+- [x] **假设显性**：需求里含糊的字段/边界/异常，requirement-design 已在「假设与待确认」列出 — SKU 单一设计/上架后调价/库存扣减/价格范围均已列出
+
+### 评审意见
+
+#### 必须修改（阻塞通过）
+
+**1. AC-2 定价规则歧义必须明确**
+- 当前 AC-2 写法：「价格调整仅允许 DRAFT 状态（上架后不可调价？需确认）」含歧义标记「？需确认」
+- **要求**：必须在此 AC 中明确决策并移除歧义标记：
+  - 若上架后禁止调价 → AC 改为「价格调整仅允许 DRAFT 状态」
+  - 若上架后允许调价 → AC 改为「价格调整允许 DRAFT/ACTIVE/INACTIVE 状态」并补充调价触发重新定价的业务规则
+- 参考已有聚合：Coupon 聚合的「懒过期」策略在 design 中明确定义，不留歧义
+
+**2. 补充 test-case-design.md**
+- 当前缺失测试设计文档，违反可测性检查项「AC 自动化全覆盖」
+- **要求**：@dev 在 Build 阳段前补充 `test-case-design.md`，包含：
+  - AC 自动化覆盖矩阵（6 条 AC 对应测试方法）
+  - Domain 层测试用例（ProductId/ProductName/SKU/ProductStatus/Product 聚合根）
+  - Application 层测试用例（Mock Repository 编排验证）
+  - Infrastructure 层集成测试（H2 往返）
+  - Adapter 层契约测试（MockMvc HTTP 状态码）
+- 参考 `docs/exec-plan/templates/test-case-design.template.md`
+
+#### 建议改进（不阻塞通过）
+
+**1. SKU 单一设计假设需用户确认**
+- 「假设与待确认」#1：「若需多 SKU（如颜色/尺寸变体），需重新设计 SKU 为实体 + SKU Repository」
+- 建议在正式开工前向用户确认：当前业务场景是否需要多 SKU 变体支持
+- 若确认单一 SKU，可在 requirement-design.md 「关键算法/技术方案」章节补充决策理由（已列出，符合 Karpathy #1）
+
+**2. 价格范围校验补充到 AC**
+- 当前假设：「价格 >= 0，无上限校验」
+- 建议将此边界值规则补充到验收条件：「原价/促销价 >= 0，无上限校验」
+
+**3. 状态机参考 CouponStatus 模式**
+- 设计已参考 CouponStatus 模式（canActivate/canDeactivate + toActive/toInactive），符合已有代码风格
+- 确认状态转换异常码命名规范：`INVALID_PRODUCT_STATUS_TRANSITION`（参考 `INVALID_COUPON_STATUS_TRANSITION`）
+
+### entropy-check.sh 基线证据
+
+```bash
+$ ./scripts/entropy-check.sh
+============================================
+  claude-j 熵检测 (Entropy Check)
+============================================
+--- [1/13] Domain 层纯净性 ---
+PASS: domain 层零 Spring import
+PASS: domain 层零 MyBatis-Plus import
+...
+--- [检查完成] ---
+错误 (FAIL): 0
+警告 (WARN): 12
+status: pass (exit code 0)
+```
+
+### 需要新增的 ADR
+
+无。SKU 嵌入设计已在 requirement-design.md「关键算法/技术方案」章节记录，符合「决策显性化」原则，无需单独 ADR。
+
+### 下一步行动
+
+1. @dev 修改 requirement-design.md AC-2，明确定价规则决策
+2. @dev 补充 test-case-design.md（AC 覆盖矩阵 + 分层测试用例）
+3. 修改完成后重新提交评审
+
+---
+
+**评审状态**：changes-requested
+**修改项**：2 项必须修改（AC-2 歧义 + test-case-design.md 补充）

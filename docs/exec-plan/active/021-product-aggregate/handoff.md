@@ -2,12 +2,12 @@
 task-id: "021-product-aggregate"
 from: dev
 to: architect
-status: pending-review
+status: changes-requested
 timestamp: "2026-04-25T12:00:00"
 pre-flight:
   mvn-test: pending            # Build 阶段填写
   checkstyle: pending           # Build 阶段填写
-  entropy-check: pending        # Build 阶段填写
+  entropy-check: pass           # Spec 阶段已执行 (exit 0, 12 WARN, 0 FAIL)
   tdd-evidence: []              # Build 阶段填写
 artifacts:
   - requirement-design.md
@@ -39,11 +39,44 @@ summary: "Spec 阶段完成：Product 聚合领域建模（ProductId/ProductName
 
 ## 评审回复
 
-{architect 填写}
+**评审人**：@architect
+**日期**：2026-04-25
+**结论**：❌ changes-requested（2 项必须修改）
+
+### 必须修改项
+
+1. **AC-2 定价规则歧义必须明确**
+   - 当前：「价格调整仅允许 DRAFT 状态（上架后不可调价？需确认）」含歧义标记
+   - 要求：明确定价规则决策并移除歧义标记
+   - 参考：Coupon 聚合设计无歧义标记，验收条件明确
+
+2. **补充 test-case-design.md**
+   - 当前缺失，违反可测性检查项「AC 自动化全覆盖」
+   - 要求：补充 AC 自动化覆盖矩阵 + 分层测试用例设计
+   - 参考：`docs/exec-plan/templates/test-case-design.template.md`
+
+### 建议改进（不阻塞）
+
+- SKU 单一设计假设需用户确认后再开工
+- 价格范围校验规则（>=0，无上限）补充到 AC
+- ErrorCode 命名参考 `INVALID_COUPON_STATUS_TRANSITION`
+
+### entropy-check.sh 基线
+
+- 退出码：0
+- FAIL：0
+- WARN：12
+- 结论：架构基线通过
+
+详见 requirement-design.md「架构评审」章节。
 
 ---
 
 ## 交接历史
+
+### 2026-04-25 — @architect → @dev
+- 状态：changes-requested
+- 说明：2 项必须修改，修改后重新提交评审
 
 ### 2026-04-25 — @dev → @architect
 - 状态：pending-review
