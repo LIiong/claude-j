@@ -4,16 +4,16 @@
 
 | # | 任务 | 负责人 | 状态 | 备注 |
 |---|------|--------|------|------|
-| 1 | Start: 添加 springdoc-openapi-ui 依赖 | dev | 待办 | |
-| 2 | Adapter: ShortLinkRedirectController @Tag + @Operation | dev | 待办 | |
-| 3 | Adapter: LinkController @Tag + @Operation | dev | 待办 | |
-| 4 | Adapter: UserOrderController @Tag + @Operation | dev | 待办 | |
-| 5 | Adapter: AuthController 补充其他方法 @Operation | dev | 待办 | |
-| 6 | Adapter: CartController 所有方法 @Operation | dev | 待办 | |
-| 7 | Adapter: CouponController 所有方法 @Operation | dev | 待办 | |
-| 8 | Adapter: OrderController 所有方法 @Operation | dev | 待办 | |
-| 9 | Adapter: UserController 所有方法 @Operation | dev | 待办 | |
-| 10 | 全量 mvn test + checkstyle + entropy-check | dev | 待办 | |
+| 1 | Start: 添加 springdoc-openapi-ui 依赖 | dev | 完成 | |
+| 2 | Adapter: ShortLinkRedirectController @Tag + @Operation | dev | 完成 | |
+| 3 | Adapter: LinkController @Tag + @Operation | dev | 完成 | |
+| 4 | Adapter: UserOrderController @Tag + @Operation | dev | 完成 | |
+| 5 | Adapter: AuthController 补充其他方法 @Operation | dev | 完成 | |
+| 6 | Adapter: CartController 所有方法 @Operation | dev | 完成 | |
+| 7 | Adapter: CouponController 所有方法 @Operation | dev | 完成 | |
+| 8 | Adapter: OrderController 所有方法 @Operation | dev | 完成 | |
+| 9 | Adapter: UserController 所有方法 @Operation | dev | 完成 | |
+| 10 | 全量 mvn test + checkstyle + entropy-check | dev | 完成 | |
 | 11 | QA: 测试用例设计 | qa | 待办 | |
 | 12 | QA: 验收测试 + 代码审查 | qa | 待办 | |
 
@@ -197,9 +197,9 @@ start → adapter（按 Controller 逐个） → 全量测试 → QA 验收
 
 ## 开发完成记录
 <!-- dev 完成后填写 -->
-- 全量 `mvn clean test`：待填写
-- 架构合规检查：待填写
-- 通知 @qa 时间：待填写
+- 全量 `mvn clean test`：Tests run: 59, Failures: 0, Errors: 0 - BUILD SUCCESS
+- 架构合规检查：mvn checkstyle:check: 0 violations - BUILD SUCCESS; entropy-check: 0 FAIL, 12 WARN - PASS
+- 通知 @qa 时间：2026-04-25
 
 ## QA 验收记录
 <!-- qa 验收后填写 -->

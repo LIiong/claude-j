@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import javax.validation.Valid;
@@ -43,6 +44,7 @@ public class CouponController {
     /**
      * 创建优惠券
      */
+    @Operation(summary = "创建优惠券", description = "为用户创建一张优惠券")
     @PostMapping
     public ApiResult<CouponResponse> createCoupon(@Valid @RequestBody CreateCouponRequest request) {
         CreateCouponCommand command = new CreateCouponCommand();
@@ -63,6 +65,7 @@ public class CouponController {
     /**
      * 根据优惠券ID查询
      */
+    @Operation(summary = "根据ID查询优惠券", description = "根据优惠券ID获取优惠券详情")
     @GetMapping("/{couponId}")
     public ApiResult<CouponResponse> getCouponById(@PathVariable String couponId) {
         CouponDTO dto = couponApplicationService.getCouponById(couponId);
@@ -73,6 +76,7 @@ public class CouponController {
     /**
      * 根据用户ID查询优惠券列表
      */
+    @Operation(summary = "查询用户优惠券列表", description = "获取用户的所有优惠券")
     @GetMapping
     public ApiResult<List<CouponResponse>> getCouponsByUserId(@RequestParam String userId) {
         List<CouponDTO> dtoList = couponApplicationService.getCouponsByUserId(userId);
@@ -85,6 +89,7 @@ public class CouponController {
     /**
      * 根据用户ID查询可用优惠券
      */
+    @Operation(summary = "查询用户可用优惠券", description = "获取用户当前可使用的优惠券")
     @GetMapping("/available")
     public ApiResult<List<CouponResponse>> getAvailableCouponsByUserId(@RequestParam String userId) {
         List<CouponDTO> dtoList = couponApplicationService.getAvailableCouponsByUserId(userId);
@@ -97,6 +102,7 @@ public class CouponController {
     /**
      * 分页查询用户优惠券
      */
+    @Operation(summary = "分页查询用户优惠券", description = "分页获取用户的优惠券列表")
     @GetMapping("/paged")
     public ApiResult<PageResponse<CouponResponse>> getCouponsByUserIdPaged(
             @RequestParam String userId,
@@ -113,6 +119,7 @@ public class CouponController {
     /**
      * 分页查询用户可用优惠券
      */
+    @Operation(summary = "分页查询可用优惠券", description = "分页获取用户可用的优惠券")
     @GetMapping("/available/paged")
     public ApiResult<PageResponse<CouponResponse>> getAvailableCouponsByUserIdPaged(
             @RequestParam String userId,
@@ -129,6 +136,7 @@ public class CouponController {
     /**
      * 使用优惠券
      */
+    @Operation(summary = "使用优惠券", description = "在订单中使用指定优惠券")
     @PostMapping("/{couponId}/use")
     public ApiResult<CouponResponse> useCoupon(@PathVariable String couponId,
                                                @Valid @RequestBody UseCouponRequest request) {

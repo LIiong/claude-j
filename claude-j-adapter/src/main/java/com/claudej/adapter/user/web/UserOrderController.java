@@ -9,6 +9,8 @@ import com.claudej.application.order.dto.OrderDTO;
 import com.claudej.application.user.service.UserOrderQueryService;
 import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.common.model.valobj.SortDirection;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 /**
  * 用户订单 Controller
  */
+@Tag(name = "用户订单", description = "查询用户的订单列表和详情")
 @RestController
 @RequestMapping("/api/v1/users/{userId}/orders")
 public class UserOrderController {
@@ -34,6 +37,7 @@ public class UserOrderController {
     /**
      * 查询用户订单列表
      */
+    @Operation(summary = "查询用户订单列表", description = "根据用户ID查询该用户的所有订单")
     @GetMapping
     public ApiResult<List<OrderResponse>> getUserOrders(@PathVariable String userId) {
         List<OrderDTO> dtoList = userOrderQueryService.getUserOrders(userId);
@@ -46,6 +50,7 @@ public class UserOrderController {
     /**
      * 分页查询用户订单列表
      */
+    @Operation(summary = "分页查询用户订单", description = "分页查询用户的订单列表")
     @GetMapping("/paged")
     public ApiResult<PageResponse<OrderResponse>> getUserOrdersPaged(
             @PathVariable String userId,
@@ -62,6 +67,7 @@ public class UserOrderController {
     /**
      * 查询用户订单详情
      */
+    @Operation(summary = "查询用户订单详情", description = "查询指定订单的详细信息")
     @GetMapping("/{orderId}")
     public ApiResult<OrderResponse> getUserOrderDetail(@PathVariable String userId, @PathVariable String orderId) {
         OrderDTO dto = userOrderQueryService.getUserOrderDetail(userId, orderId);

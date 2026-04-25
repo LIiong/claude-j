@@ -15,6 +15,8 @@ import com.claudej.domain.common.exception.BusinessException;
 import com.claudej.domain.common.exception.ErrorCode;
 import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.common.model.valobj.SortDirection;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
 /**
  * 链接管理 Controller
  */
+@Tag(name = "链接管理", description = "链接的创建、更新、删除、查询")
 @RestController
 @RequestMapping("/api/v1/links")
 public class LinkController {
@@ -55,6 +58,7 @@ public class LinkController {
     /**
      * 创建链接
      */
+    @Operation(summary = "创建链接", description = "创建一个新的链接记录")
     @PostMapping
     public ApiResult<LinkResponse> createLink(@Valid @RequestBody CreateLinkRequest request) {
         CreateLinkCommand command = new CreateLinkCommand();
@@ -72,6 +76,7 @@ public class LinkController {
     /**
      * 更新链接
      */
+    @Operation(summary = "更新链接", description = "根据ID更新链接信息")
     @PutMapping("/{id}")
     public ApiResult<LinkResponse> updateLink(@PathVariable Long id,
                                                @Valid @RequestBody UpdateLinkRequest request) {
@@ -91,6 +96,7 @@ public class LinkController {
     /**
      * 删除链接
      */
+    @Operation(summary = "删除链接", description = "根据ID删除链接")
     @DeleteMapping("/{id}")
     public ApiResult<Void> deleteLink(@PathVariable Long id) {
         DeleteLinkCommand command = new DeleteLinkCommand();
@@ -104,6 +110,7 @@ public class LinkController {
     /**
      * 根据ID查询链接
      */
+    @Operation(summary = "根据ID查询链接", description = "根据链接ID获取链接详情")
     @GetMapping("/{id}")
     public ApiResult<LinkResponse> getLinkById(@PathVariable Long id) {
         LinkDTO dto = linkApplicationService.getLinkById(id);
@@ -115,6 +122,7 @@ public class LinkController {
     /**
      * 查询所有链接
      */
+    @Operation(summary = "查询所有链接", description = "获取所有链接列表")
     @GetMapping
     public ApiResult<List<LinkResponse>> getAllLinks() {
         List<LinkDTO> dtoList = linkApplicationService.getAllLinks();
@@ -129,6 +137,7 @@ public class LinkController {
      * 分页查询所有链接
      * 路径改为 /query/paged 以避免与/{id} 路径冲突
      */
+    @Operation(summary = "分页查询所有链接", description = "分页获取链接列表，支持排序")
     @GetMapping("/query/paged")
     public ApiResult<PageResponse<LinkResponse>> getAllLinksPaged(
             @RequestParam(required = false) Integer page,
@@ -146,6 +155,7 @@ public class LinkController {
     /**
      * 根据分类查询链接
      */
+    @Operation(summary = "根据分类查询链接", description = "获取指定分类下的所有链接")
     @GetMapping("/category")
     public ApiResult<List<LinkResponse>> getLinksByCategory(@RequestParam String category) {
         List<LinkDTO> dtoList = linkApplicationService.getLinksByCategory(category);
@@ -159,6 +169,7 @@ public class LinkController {
     /**
      * 分页查询指定分类的链接
      */
+    @Operation(summary = "分页查询分类链接", description = "分页获取指定分类下的链接列表")
     @GetMapping("/category/paged")
     public ApiResult<PageResponse<LinkResponse>> getLinksByCategoryPaged(
             @RequestParam String category,

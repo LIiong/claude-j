@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import javax.validation.Valid;
@@ -42,6 +43,7 @@ public class CartController {
     /**
      * 添加商品到购物车
      */
+    @Operation(summary = "添加商品到购物车", description = "将商品添加到用户购物车")
     @PostMapping("/items")
     public ApiResult<CartResponse> addItem(@Valid @RequestBody AddCartItemRequest request) {
         AddCartItemCommand command = new AddCartItemCommand();
@@ -60,6 +62,7 @@ public class CartController {
     /**
      * 更新商品数量
      */
+    @Operation(summary = "更新商品数量", description = "修改购物车中商品的数量")
     @PutMapping("/items/quantity")
     public ApiResult<CartResponse> updateItemQuantity(@Valid @RequestBody UpdateCartItemQuantityRequest request) {
         UpdateCartItemQuantityCommand command = new UpdateCartItemQuantityCommand();
@@ -76,6 +79,7 @@ public class CartController {
     /**
      * 删除购物车商品
      */
+    @Operation(summary = "删除购物车商品", description = "从购物车中移除指定商品")
     @DeleteMapping("/items/{productId}")
     public ApiResult<CartResponse> removeItem(
             @RequestParam String userId,
@@ -89,6 +93,7 @@ public class CartController {
     /**
      * 清空购物车
      */
+    @Operation(summary = "清空购物车", description = "清空用户购物车中的所有商品")
     @DeleteMapping
     public ApiResult<Void> clearCart(@RequestParam String userId) {
         cartApplicationService.clearCart(userId);
@@ -98,6 +103,7 @@ public class CartController {
     /**
      * 查询购物车
      */
+    @Operation(summary = "查询购物车", description = "获取用户购物车详情")
     @GetMapping
     public ApiResult<CartResponse> getCart(@RequestParam String userId) {
         CartDTO dto = cartApplicationService.getCart(userId);

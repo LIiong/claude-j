@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import javax.validation.Valid;
@@ -44,6 +45,7 @@ public class OrderController {
     /**
      * 创建订单
      */
+    @Operation(summary = "创建订单", description = "创建一个新的订单")
     @PostMapping
     public ApiResult<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest request) {
         CreateOrderCommand command = new CreateOrderCommand();
@@ -70,6 +72,7 @@ public class OrderController {
     /**
      * 根据订单号查询订单
      */
+    @Operation(summary = "查询订单详情", description = "根据订单ID查询订单详情")
     @GetMapping("/{orderId}")
     public ApiResult<OrderResponse> getOrderById(@PathVariable String orderId) {
         OrderDTO dto = orderApplicationService.getOrderById(orderId);
@@ -80,6 +83,7 @@ public class OrderController {
     /**
      * 根据客户ID查询订单列表
      */
+    @Operation(summary = "查询客户订单列表", description = "根据客户ID查询其所有订单")
     @GetMapping
     public ApiResult<List<OrderResponse>> getOrdersByCustomerId(@RequestParam String customerId) {
         List<OrderDTO> dtoList = orderApplicationService.getOrdersByCustomerId(customerId);
@@ -92,6 +96,7 @@ public class OrderController {
     /**
      * 分页查询客户订单列表
      */
+    @Operation(summary = "分页查询客户订单", description = "分页查询客户的订单列表")
     @GetMapping("/paged")
     public ApiResult<PageResponse<OrderResponse>> getOrdersByCustomerIdPaged(
             @RequestParam String customerId,
@@ -108,6 +113,7 @@ public class OrderController {
     /**
      * 支付订单
      */
+    @Operation(summary = "支付订单", description = "对订单进行支付操作")
     @PostMapping("/{orderId}/pay")
     public ApiResult<OrderResponse> payOrder(@PathVariable String orderId) {
         OrderDTO dto = orderApplicationService.payOrder(orderId);
@@ -118,6 +124,7 @@ public class OrderController {
     /**
      * 取消订单
      */
+    @Operation(summary = "取消订单", description = "取消未支付的订单")
     @PostMapping("/{orderId}/cancel")
     public ApiResult<OrderResponse> cancelOrder(@PathVariable String orderId) {
         OrderDTO dto = orderApplicationService.cancelOrder(orderId);
@@ -128,6 +135,7 @@ public class OrderController {
     /**
      * 从购物车创建订单
      */
+    @Operation(summary = "从购物车创建订单", description = "将购物车商品转换为订单")
     @PostMapping("/from-cart")
     public ApiResult<OrderResponse> createOrderFromCart(@Valid @RequestBody CreateOrderFromCartRequest request) {
         CreateOrderFromCartCommand command = new CreateOrderFromCartCommand();
@@ -143,6 +151,7 @@ public class OrderController {
     /**
      * 发货
      */
+    @Operation(summary = "发货", description = "订单发货操作")
     @PostMapping("/{orderId}/ship")
     public ApiResult<OrderResponse> shipOrder(@PathVariable String orderId) {
         OrderDTO dto = orderApplicationService.shipOrder(orderId);
@@ -153,6 +162,7 @@ public class OrderController {
     /**
      * 确认送达
      */
+    @Operation(summary = "确认送达", description = "确认订单已送达")
     @PostMapping("/{orderId}/deliver")
     public ApiResult<OrderResponse> deliverOrder(@PathVariable String orderId) {
         OrderDTO dto = orderApplicationService.deliverOrder(orderId);
@@ -163,6 +173,7 @@ public class OrderController {
     /**
      * 退款
      */
+    @Operation(summary = "退款", description = "订单退款操作")
     @PostMapping("/{orderId}/refund")
     public ApiResult<OrderResponse> refundOrder(@PathVariable String orderId) {
         OrderDTO dto = orderApplicationService.refundOrder(orderId);

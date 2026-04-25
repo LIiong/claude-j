@@ -71,6 +71,7 @@ public class AuthController {
     /**
      * 用户登录（密码）
      */
+    @Operation(summary = "用户登录", description = "使用账号密码登录")
     @PostMapping("/login")
     public ApiResult<TokenResponse> login(@Valid @RequestBody LoginRequest request,
                                            HttpServletRequest httpRequest) {
@@ -88,6 +89,7 @@ public class AuthController {
     /**
      * 用户登录（短信验证码）
      */
+    @Operation(summary = "短信验证码登录", description = "使用手机号和短信验证码登录")
     @PostMapping("/login/sms")
     public ApiResult<TokenResponse> loginBySms(@Valid @RequestBody SmsLoginRequest request,
                                                 HttpServletRequest httpRequest) {
@@ -105,6 +107,7 @@ public class AuthController {
     /**
      * 用户登出
      */
+    @Operation(summary = "用户登出", description = "退出当前登录会话")
     @PostMapping("/logout")
     public ApiResult<String> logout(@Valid @RequestBody LogoutRequest request) {
         LogoutCommand command = new LogoutCommand();
@@ -118,6 +121,7 @@ public class AuthController {
     /**
      * 刷新Token
      */
+    @Operation(summary = "刷新Token", description = "使用refreshToken获取新的accessToken")
     @PostMapping("/refresh")
     public ApiResult<TokenResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         RefreshTokenCommand command = new RefreshTokenCommand();
@@ -130,6 +134,7 @@ public class AuthController {
     /**
      * 修改密码
      */
+    @Operation(summary = "修改密码", description = "修改用户密码")
     @PostMapping("/password/change")
     public ApiResult<String> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         ChangePasswordCommand command = new ChangePasswordCommand();
@@ -144,6 +149,7 @@ public class AuthController {
     /**
      * 重置密码
      */
+    @Operation(summary = "重置密码", description = "通过邮箱验证码重置密码")
     @PostMapping("/password/reset")
     public ApiResult<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         ResetPasswordCommand command = new ResetPasswordCommand();
@@ -158,6 +164,7 @@ public class AuthController {
     /**
      * 获取认证用户信息
      */
+    @Operation(summary = "获取认证用户信息", description = "根据用户ID获取认证相关信息")
     @GetMapping("/users/{userId}")
     public ApiResult<AuthUserResponse> getAuthUser(@PathVariable String userId) {
         AuthUserDTO dto = authApplicationService.getAuthUser(userId);

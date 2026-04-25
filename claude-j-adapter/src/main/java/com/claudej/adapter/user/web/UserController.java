@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import javax.validation.Valid;
@@ -42,6 +43,7 @@ public class UserController {
     /**
      * 创建用户
      */
+    @Operation(summary = "创建用户", description = "创建新用户账号")
     @PostMapping
     public ApiResult<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
         CreateUserCommand command = new CreateUserCommand();
@@ -59,6 +61,7 @@ public class UserController {
     /**
      * 根据用户ID查询用户
      */
+    @Operation(summary = "根据ID查询用户", description = "根据用户ID获取用户信息")
     @GetMapping("/{userId}")
     public ApiResult<UserResponse> getUserById(@PathVariable String userId) {
         UserDTO dto = userApplicationService.getUserById(userId);
@@ -69,6 +72,7 @@ public class UserController {
     /**
      * 根据用户名查询用户
      */
+    @Operation(summary = "根据用户名查询", description = "根据用户名获取用户信息")
     @GetMapping("/by-username/{username}")
     public ApiResult<UserResponse> getUserByUsername(@PathVariable String username) {
         UserDTO dto = userApplicationService.getUserByUsername(username);
@@ -79,6 +83,7 @@ public class UserController {
     /**
      * 冻结用户
      */
+    @Operation(summary = "冻结用户", description = "冻结指定用户账号")
     @PostMapping("/{userId}/freeze")
     public ApiResult<UserResponse> freezeUser(@PathVariable String userId) {
         UserDTO dto = userApplicationService.freezeUser(userId);
@@ -89,6 +94,7 @@ public class UserController {
     /**
      * 解冻用户
      */
+    @Operation(summary = "解冻用户", description = "解冻被冻结的用户账号")
     @PostMapping("/{userId}/unfreeze")
     public ApiResult<UserResponse> unfreezeUser(@PathVariable String userId) {
         UserDTO dto = userApplicationService.unfreezeUser(userId);
@@ -99,6 +105,7 @@ public class UserController {
     /**
      * 查询被邀请的用户列表
      */
+    @Operation(summary = "查询被邀请用户", description = "查询用户邀请的所有用户")
     @GetMapping("/{userId}/invited-users")
     public ApiResult<List<UserResponse>> getInvitedUsers(@PathVariable String userId) {
         List<UserDTO> dtoList = userApplicationService.getInvitedUsers(userId);
@@ -111,6 +118,7 @@ public class UserController {
     /**
      * 分页查询被邀请的用户列表
      */
+    @Operation(summary = "分页查询被邀请用户", description = "分页查询用户邀请的用户列表")
     @GetMapping("/{userId}/invited-users/paged")
     public ApiResult<PageResponse<UserResponse>> getInvitedUsersPaged(
             @PathVariable String userId,
@@ -127,6 +135,7 @@ public class UserController {
     /**
      * 验证邀请码
      */
+    @Operation(summary = "验证邀请码", description = "验证邀请码是否有效")
     @PostMapping("/validate-invite-code")
     public ApiResult<UserResponse> validateInviteCode(@Valid @RequestBody ValidateInviteCodeRequest request) {
         UserDTO dto = userApplicationService.getUserByInviteCode(request.getInviteCode());
