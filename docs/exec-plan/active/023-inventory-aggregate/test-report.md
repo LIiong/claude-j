@@ -2,14 +2,20 @@
 
 **测试日期**：2026-04-25
 **测试人员**：@qa
-**版本状态**：待修复
+**版本状态**：验收通过
 **任务类型**：业务聚合
+**返工轮次**：第 1 轮修复后重新验收
 
 ---
 
 ## 一、测试执行结果
 
-### 分层测试：`mvn clean test` ❌ 失败
+### 分层测试：`mvn clean test` ✅ 通过
+
+```bash
+[INFO] Tests run: 59, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
 
 | 模块 | 测试类 | 用例数 | 通过 | 失败 | 耗时 |
 |------|--------|--------|------|------|------|
@@ -19,44 +25,32 @@
 | application | InventoryApplicationServiceTest | 14 | 14 | 0 | ~0.1s |
 | infrastructure | InventoryRepositoryImplTest | 7 | 7 | 0 | ~1.5s |
 | adapter | InventoryControllerTest | 12 | 12 | 0 | ~0.5s |
-| start | FlywayVerificationTest | 2 | 1 | 1 | ~1.3s |
-| start | OrderFromCartIntegrationTest | 6 | 3 | 3 | ~10s |
-| **分层合计** | **8 个测试类** | **76** | **72** | **4** | **~15s** |
-
-**失败详情**：
-```
-[ERROR] FlywayVerificationTest.should_record_10_migrations_when_flyway_migrates:29
-expected: "10" but was: "9"
-
-[ERROR] OrderFromCartIntegrationTest.should_createOrderFromCart_when_cartExistsWithItems:80
-Status expected:<200> but was:<404>
-Body: {"success":false,"errorCode":"INVENTORY_NOT_FOUND","message":"商品库存不存在: PROD_CART_001"}
-
-[ERROR] OrderFromCartIntegrationTest.should_createOrderWithCorrectTotal_when_multipleItemsInCart:144
-Status expected:<200> but was:<404>
-
-[ERROR] OrderFromCartIntegrationTest.should_clearCartSuccessfully_when_orderCreated:225
-Status expected:<200> but was:<404>
-```
+| start | FlywayVerificationTest | 2 | 2 | 0 | ~1.3s |
+| start | OrderFromCartIntegrationTest | 6 | 6 | 0 | ~11s |
+| **分层合计** | **8 个测试类** | **76** | **76** | **0** | **~15s** |
 
 ### 代码风格检查：`mvn checkstyle:check` ✅ 通过
 
-```
+```bash
 [INFO] You have 0 Checkstyle violations.
 [INFO] BUILD SUCCESS
+[INFO] Total time:  1.713 s
 ```
 
 ### 架构合规检查：`./scripts/entropy-check.sh` ✅ PASS
 
-```
+```bash
 错误 (FAIL): 0
-警告 (WARN): 13
+警告 (WARN): 12
 status: PASS
 ```
 
-**关键警告**：
-- WARN: 聚合 inventory 在 domain 层存在但未在 CLAUDE.md 聚合列表中记录
-- WARN: auth 聚合缺少 6 个测试文件（与本任务无关，但需后续处理）
+**关键检查项**：
+- ✅ Domain 层纯净性：零 Spring/MyBatis import
+- ✅ 依赖方向：adapter/application 未导入 infrastructure
+- ✅ Java 8 兼容：无 var/List.of
+- ✅ DO 对象未泄漏
+- ✅ 聚合列表同步：inventory 已在 CLAUDE.md 记录
 
 ### 测试用例覆盖映射
 
@@ -66,7 +60,7 @@ status: PASS
 | A1-A10 | InventoryApplicationServiceTest (14 cases) | ✅ |
 | I1-I6 | InventoryRepositoryImplTest (7 cases) | ✅ |
 | W1-W7 | InventoryControllerTest (12 cases) | ✅ |
-| E1-E3 | FlywayVerificationTest + OrderFromCartIntegrationTest | ❌ |
+| E1-E3 | FlywayVerificationTest + OrderFromCartIntegrationTest | ✅ |
 
 ---
 
@@ -134,20 +128,25 @@ status: PASS
 | Application | Mock 单元测试 | JUnit 5 + Mockito | 无 | ✅ 14 cases |
 | Infrastructure | 集成测试 | @SpringBootTest + H2 | 有 | ✅ 7 cases |
 | Adapter | API 测试 | @WebMvcTest + MockMvc | 部分（Web 层） | ✅ 12 cases |
-| **全链路** | **接口集成测试** | **@SpringBootTest + AutoConfigureMockMvc + H2** | **完整** | ❌ 4 failures |
+| **全链路** | **接口集成测试** | **@SpringBootTest + AutoConfigureMockMvc + H2** | **完整** | ✅ 8 cases |
 
 ---
 
 ## 五、问题清单
 
-| # | 严重度 | 描述 | 处理 |
-|---|--------|------|------|
-| 1 | **Critical** | FlywayVerificationTest migration 数量不匹配：预期 10，实际 9。V10 文件存在且命名正确，但 Flyway 只执行了 9 个 migrations。疑似 Spring Test context 缓存问题。 | **@dev 修复** |
-| 2 | **Critical** | OrderFromCartIntegrationTest 3 个测试失败（404 状态码）。根因：OrderApplicationService.createOrderFromCart() 现在调用 reserveStockForOrder()，但测试使用的 productId（PROD_CART_001 等）没有对应的库存记录。抛出 INVENTORY_NOT_FOUND。**这是 Inventory 集成后遗漏的测试数据准备**。 | **@dev 修复**：在测试中先创建库存记录，或使用已存在的产品 |
-| 3 | **Major** | Inventory 聚合未在 CLAUDE.md 聚合列表中更新。entropy-check 已报警。 | **@dev 修复**：更新 CLAUDE.md |
-| 4 | **Minor** | auth 聚合缺少测试文件（与本任务无关）。 | 后续任务处理 |
+### 第一轮验收问题（已修复）
 
-**2 个 Critical 问题阻塞验收，1 个 Major 问题需修复。**
+| # | 严重度 | 描述 | 处理状态 |
+|---|--------|------|---------|
+| 1 | **Critical** | FlywayVerificationTest migration 数量不匹配：预期 10，实际 9。根因是 SQL ORDER BY version 字符串排序，"10" 排在 "1" 和 "2" 之间。 | ✅ 已修复：改用 Stream filter 查找特定版本 |
+| 2 | **Critical** | OrderFromCartIntegrationTest 3 个测试失败（404）。根因：productId 无对应库存记录。 | ✅ 已修复：新增 createInventoryForProduct() 方法 |
+| 3 | **Major** | Inventory 聚合未在 CLAUDE.md 聚合列表中更新。 | ✅ 已修复：更新 CLAUDE.md |
+
+### 第二轮验收问题（无新增）
+
+| # | 严重度 | 描述 | 处理状态 |
+|---|--------|------|---------|
+| - | - | 三项检查全部通过，无新增问题 | N/A |
 
 ---
 
@@ -155,22 +154,23 @@ status: PASS
 
 | 维度 | 结论 |
 |------|------|
-| 功能完整性 | ❌ Inventory 聚合实现完整，但 Order 集成后破坏了现有测试 |
-| 测试覆盖 | ❌ 72/76 测试通过，4 个失败阻塞验收 |
+| 功能完整性 | ✅ Inventory 聚合实现完整，Order 集成测试数据准备修复 |
+| 测试覆盖 | ✅ 76/76 测试通过，覆盖 Domain/Application/Infrastructure/Adapter/集成 |
 | 架构合规 | ✅ ArchUnit 13 条规则通过，依赖方向正确 |
 | 代码风格 | ✅ checkstyle 0 violations |
 | 数据库设计 | ✅ V10 DDL 格式正确，H2 兼容 |
+| 文档同步 | ✅ CLAUDE.md 聚合列表已更新 |
 
-### 最终状态：❌ 待修复 — 见问题清单
+### 最终状态：✅ 验收通过
 
-**根因分析**：
-- 问题 #1 和 #2 疑似共同根因：**Inventory 集成 Order 后，@dev 未同步更新测试数据准备**。
-- OrderApplicationService 现在依赖 InventoryRepository，从购物车创建订单需要先有库存记录。
-- Flyway 问题可能是 Spring Test context 缓存导致的副作用。
+**第二轮验收结果**：
+- 三项检查全部通过（mvn test / checkstyle / entropy-check）
+- 第一轮 3 个问题全部修复并验证
+- 无新增问题
 
-**建议 @dev 修复方案**：
-1. 问题 #2：修改 OrderFromCartIntegrationTest，在测试中先调用 Inventory API 创建库存记录，或使用 V8/V10 中已存在的产品 ID。
-2. 问题 #1：在 FlywayVerificationTest 上添加 `@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)` 强制重建 Spring context。
-3. 问题 #3：更新 CLAUDE.md 聚合列表，新增 `| inventory | com.claudej.*.inventory | 库存服务 |`。
+**修复质量评价**：
+- @dev 正确识别根因，修复方案简洁有效
+- FlywayVerificationTest 使用 Stream filter 避免字符串排序陷阱
+- OrderFromCartIntegrationTest 正确补充库存数据准备，覆盖所有受影响测试
 
-**打回 @dev 处理，修复后重新提交验收。**
+**可进入 Ship 阶段。**
