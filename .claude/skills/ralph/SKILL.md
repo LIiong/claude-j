@@ -2,7 +2,7 @@
 name: ralph
 description: "需求交付入口。主编排 Agent 调度 @dev/@architect/@qa 子 Agent 完成全流程。每阶段独立上下文，杜绝上下文溢出。"
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 argument-hint: "<task-id> [需求描述] [--skip-review] [--dev-only] [--loop]"
 allowed-tools: "Read Write Edit Glob Grep Bash(mvn *) Bash(./scripts/*) Bash(./.claude/skills/ralph/scripts/*) Bash(./.claude/skills/full-check/scripts/*) Bash(mkdir *) Bash(cp *) Bash(mv *) Bash(ls *) Bash(git *) Bash(cat *) Bash(echo *) Agent"
 ---

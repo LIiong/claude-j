@@ -16,8 +16,8 @@
 | 10 | Start: V8__product_init.sql Flyway 迁移 | dev | 单测通过 | H2兼容迁移已配置 |
 | 11 | ErrorCode 扩展（Product 相关错误码） | dev | 单测通过 | commit: 800792a |
 | 12 | 全量 mvn test + checkstyle + entropy-check | dev | 验证通过 | Tests: 133, 0 errors, checkstyle pass, entropy 0 errors |
-| 13 | QA: 测试用例设计 | qa | 待办 | |
-| 14 | QA: 验收测试 + 代码审查 | qa | 待办 | |
+| 13 | QA: 测试用例设计 | qa | 完成 | test-case-design.md 已存在 |
+| 14 | QA: 验收测试 + 代码审查 | qa | 完成 | test-report.md 已提交 |
 
 ## 执行顺序
 
@@ -186,8 +186,8 @@ domain → application → infrastructure → adapter → start → 全量测试
 ## QA 验收记录
 
 <!-- qa 验收后填写 -->
-- 全量测试（含集成测试）：待填写
-- 代码审查结果：待填写
-- 代码风格检查：待填写
-- 问题清单：详见 test-report.md
-- **最终状态**：待填写
+- 全量测试（含集成测试）：Tests run: 133+74+59 = 全量通过，BUILD SUCCESS (2026-04-25 09:01)
+- 代码审查结果：依赖方向正确、Domain 纯净、聚合根封装不变量、值对象不可变、状态机规则正确、DO 未泄漏
+- 代码风格检查：checkstyle 0 violations, entropy-check 0 errors
+- 问题清单：详见 test-report.md（无阻塞性问题）
+- **最终状态**：验收通过
