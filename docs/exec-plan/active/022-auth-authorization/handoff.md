@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-`dev` → `qa` 待验收
+`qa` → `dev` 待修复
 
 ## 状态
 
@@ -10,8 +10,9 @@
 - [x] architect: 评审通过
 - [x] dev: 开发完成
 - [x] dev: 三项预飞通过
-- [ ] qa: 测试验收完成
-- [ ] qa: 代码审查完成
+- [x] qa: 测试验收完成
+- [x] qa: 代码审查完成
+- [ ] **qa: 问题修复完成**（待 @dev 处理）
 
 ## 设计摘要
 
@@ -19,58 +20,83 @@
 
 ## 交接人
 
-- 从: dev (Claude Code)
-- 至: qa (Claude Code QA)
+- 从: qa (Claude Code QA)
+- 至: dev (Claude Code)
 - 日期: 2026-04-25
 
-## 已完成
+## QA 验收结果
 
-- [x] 需求设计文档 requirement-design.md
-- [x] 任务计划 task-plan.md
-- [x] 测试用例设计 test-case-design.md（合并在 requirement-design.md AC 中）
-- [x] 架构决策更新（角色存储选型：逗号分隔字符串）
-- [x] Domain 层：Role 枚举、User.roles 字段、reconstruct 签名改造
-- [x] Infrastructure 层：V9 迁移、UserDO/UserConverter/JwtTokenServiceImpl 改造
-- [x] Application 层：UserDTO/UserAssembler/TokenService 改造
-- [x] Adapter 层：SecurityConfig、JwtAuthenticationFilter、401/403 Handler、Controller @PreAuthorize
-- [x] 测试配置：业务测试 @ActiveProfiles("test") 禁用 Security，Actuator/JwtSecret 保持 dev
+### 三项预飞独立验证（PASS）
 
-## 等待 qa 处理
+| 检查项 | 命令 | 结果 | 证据 |
+|--------|------|------|------|
+| mvn test | `mvn test 2>&1 | tail -50` | PASS | Tests run: 59, Failures: 0, Errors: 0, BUILD SUCCESS |
+| checkstyle:check | `mvn checkstyle:check 2>&1` | PASS | 0 Checkstyle violations, BUILD SUCCESS |
+| entropy-check | `./scripts/entropy-check.sh 2>&1` | PASS | 0 FAIL, 12 WARN, status: PASS |
 
-1. 独立重跑三项预飞验证
-2. 验收测试设计执行
-3. 代码审查
-4. 更新 test-report.md
+### 代码审查结果（PASS）
 
-## 三项预飞证据
+- Domain 纯净性 ✅
+- 依赖方向正确 ✅
+- DO 不泄漏 ✅
+- Controller @PreAuthorize 标注完整 ✅
+- SecurityConfig/JwtAuthenticationFilter/401/403 Handler 实现正确 ✅
 
-| 检查项 | 状态 | 证据 |
-|--------|------|------|
-| mvn test | pass | Tests run: 59, Failures: 0, Errors: 0 (claude-j-start) |
-| checkstyle:check | pass | Exit 0, 0 errors |
-| entropy-check | pass | 0 FAIL, 12 WARN, status: PASS |
+### 问题清单（3 高 + 3 中/低）
 
-## 风险提示（已解决）
+| # | 严重度 | 描述 |
+|---|--------|------|
+| 1 | **高** | AC5 要求的 `JwtAuthenticationFilterTest` 缺失 — 无法验证 token 角色提取和 GrantedAuthority 构建 |
+| 2 | **高** | AC5 要求的 `UserControllerSecurityTest` 缺失 — 无法验证普通用户访问 ADMIN 端点返回 403 |
+| 3 | **高** | AC2 要求的 `JwtTokenServiceImpl.extractRolesFromToken` 测试缺失 — 无法验证角色解析逻辑 |
+| 4 | **中** | WebMvcTest 使用 `addFilters = false` 绕过安全测试 — 现有 Controller 测试无法验证授权 |
+| 5 | **中** | AC7 要求的 `docs/ops/authorization.md` 缺失 — 无端点权限映射文档 |
+| 6 | **低** | entropy-check 12 WARN：缺少 auth 聚合测试文件 |
+| 7 | **低** | ADR 缺少状态节（001-005） |
+| 8 | **低** | TestSecurityConfig 使用已废弃的 WebSecurityConfigurerAdapter |
 
-- ~~改造 JwtAuthenticationFilter 时必须保持现有 token 解析兼容性~~ ✅ 已保持，新 token 含 roles，旧 token 解析默认 USER 角色
-- ~~H2 集成测试可能需要 @TestConfiguration 放行某些端点~~ ✅ 已通过 @ActiveProfiles("test") 禁用 SecurityConfig
-- ~~全量测试时注意检查现有认证测试是否仍通过~~ ✅ 59 tests passed
+## 等待 dev 处理
 
-## 关键文件变更
+### 必须修复（阻塞验收）
 
-| 层 | 文件 | 变更 |
-|---|------|------|
-| domain | Role.java | 新增枚举 USER/ADMIN |
-| domain | User.java | 添加 roles 字段、reconstruct 签名改造 |
-| infrastructure | V9__add_user_roles.sql | 新增迁移 |
-| infrastructure | UserDO.java | 添加 roles 字段 |
-| infrastructure | UserConverter.java | 添加 roles 解析/转换 |
-| infrastructure | JwtTokenServiceImpl.java | JWT claims 添加 roles |
-| application | TokenService.java | 新增方法 generateTokenPair(UserId, Set<Role>), extractRolesFromToken |
-| adapter | SecurityConfig.java | 新增 Spring Security 配置 |
-| adapter | JwtAuthenticationFilter.java | 新增 JWT 过滤器 |
-| adapter | JwtAuthenticationEntryPoint.java | 新增 401 处理 |
-| adapter | JwtAccessDeniedHandler.java | 新增 403 处理 |
-| adapter | *Controller.java | 添加 @PreAuthorize 注解 |
-| start | *IntegrationTest.java | 调整 @ActiveProfiles |
-| start | V8__product_init.sql | idx_status → idx_product_status（H2 兼容） |
+1. **补充 JwtAuthenticationFilterTest**（adapter 层）
+   - 测试 should_buildGrantedAuthorities_when_tokenContainsRoles
+   - 测试 should_defaultToUserRole_when_tokenHasNoRoles
+   - 测试 should_clearSecurityContext_when_tokenInvalid
+
+2. **补充 UserControllerSecurityTest**（adapter 层）
+   - 使用 `@WebMvcTest` + **启用安全过滤器**
+   - 测试 should_return403_when_userAccessAdminEndpoint
+   - 测试 should_return401_when_noTokenProvided
+
+3. **补充 JwtTokenServiceImpl.extractRolesFromToken 测试**（infrastructure 层）
+   - 测试 should_extractRolesFromValidToken
+   - 测试 should_returnDefaultUserRole_when_tokenHasNoRoles
+
+### 建议修复（不阻塞）
+
+4. 创建专门的安全测试配置（不使用 addFilters = false）
+5. 补充 docs/ops/authorization.md（端点权限映射表）
+6. 后续补充 auth 聚合其他测试文件
+
+## 验收结论
+
+❌ **待修复** — AC5 要求的安全测试缺失，无法证明授权功能在生产场景下有效工作。
+
+修复完成后请重新提交验收。
+
+---
+
+## 关键文件变更（供 dev 参考）
+
+需要新增的测试文件：
+- `claude-j-adapter/src/test/java/com/claudej/adapter/auth/security/JwtAuthenticationFilterTest.java`
+- `claude-j-adapter/src/test/java/com/claudej/adapter/user/web/UserControllerSecurityTest.java`
+- `claude-j-infrastructure/src/test/java/com/claudej/infrastructure/auth/token/JwtTokenServiceImplTest.java`
+
+可能需要修改的配置：
+- `claude-j-adapter/src/test/java/com/claudej/adapter/test/TestSecurityConfig.java`（升级到 SecurityFilterChain Bean）
+
+## 详细报告
+
+见 `test-report.md`

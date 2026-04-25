@@ -14,8 +14,8 @@
 | 8 | Adapter: 现有 Controller 权限标注（@PreAuthorize） | dev | ✅ 完成 | 所有 Controller 已添加注解 |
 | 9 | Start: 全量 mvn test + checkstyle + entropy-check | dev | ✅ 完成 | 三项预飞全部通过 |
 | 10 | Docs: 授权体系文档 + 端点权限映射表 | dev | ⏸ 暂缓 | 非核心需求，可在 QA 验收后补充 |
-| 11 | QA: 测试用例设计 + 验收测试 | qa | 待验收 | |
-| 12 | QA: 代码审查 + 手动渗透测试 | qa | 待验收 | |
+| 11 | QA: 测试用例设计 + 验收测试 | qa | ⚠️ 验收打回 | 3 高严重度问题缺失测试 |
+| 12 | QA: 代码审查 + 手动渗透测试 | qa | ✅ 完成 | 代码审查通过，三项预飞通过 |
 
 ## 执行顺序
 
