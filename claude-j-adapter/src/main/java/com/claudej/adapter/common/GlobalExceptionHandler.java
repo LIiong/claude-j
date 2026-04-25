@@ -49,6 +49,7 @@ public class GlobalExceptionHandler {
             case CART_NOT_FOUND:
             case AUTH_USER_NOT_FOUND:
             case SESSION_NOT_FOUND:
+            case PRODUCT_NOT_FOUND:
                 return HttpStatus.NOT_FOUND;
             case INVALID_SHORT_CODE:
             case INVALID_ORIGINAL_URL:
@@ -86,6 +87,15 @@ public class GlobalExceptionHandler {
             case PAGE_NUMBER_NEGATIVE:
             case PAGE_SIZE_INVALID:
             case INVALID_SORT_FIELD:
+            case PRODUCT_ID_EMPTY:
+            case PRODUCT_NAME_EMPTY:
+            case PRODUCT_NAME_LENGTH_INVALID:
+            case PRODUCT_SKU_CODE_EMPTY:
+            case PRODUCT_SKU_CODE_LENGTH_INVALID:
+            case PRODUCT_STOCK_NEGATIVE:
+            case PRODUCT_PRICE_NEGATIVE:
+            case PRODUCT_PRICE_ZERO:
+            case INVALID_PRODUCT_STATUS_TRANSITION:
                 return HttpStatus.BAD_REQUEST;
             case ORDER_ALREADY_PAID:
             case ORDER_NOT_PAID:
