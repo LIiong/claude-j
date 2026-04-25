@@ -203,8 +203,8 @@ start → adapter（按 Controller 逐个） → 全量测试 → QA 验收
 
 ## QA 验收记录
 <!-- qa 验收后填写 -->
-- 全量测试（含集成测试）：待填写
-- 代码审查结果：待填写
-- 代码风格检查：待填写
-- 问题清单：详见 test-report.md
-- **最终状态**：待填写
+- 全量测试（含集成测试）：mvn test 59 通过，集成测试阻塞（应用无法启动）
+- 代码审查结果：Controller注解完整性通过，springdoc依赖配置正确
+- 代码风格检查：checkstyle 0 violations通过
+- 问题清单：详见 test-report.md（1个高严重度阻塞问题）
+- **最终状态**：待修复 - application.yml配置错误
