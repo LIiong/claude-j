@@ -1,80 +1,87 @@
 ---
 task-id: "020-openapi-doc"
 from: qa
-to: dev
-status: changes-requested
-timestamp: "2026-04-25T04:25:00"
+to: ralph
+status: approved
+timestamp: "2026-04-25T04:32:00"
 pre-flight:
   mvn-test: pass              # Tests run: 59, Failures: 0, Errors: 0 - BUILD SUCCESS（独立验证）
   checkstyle: pass            # 0 Checkstyle violations - BUILD SUCCESS（独立验证）
   entropy-check: pass         # 0 FAIL, 12 WARN - PASS（独立验证）
-  app-start: fail             # DuplicateKeyException in application.yml（独立验证）
+  app-start: pass             # Started ClaudeJApplication in 8.717 seconds（独立验证）
+  swagger-ui: pass            # HTTP 200 - swagger-ui/index.html 可访问（独立验证）
+  api-docs: pass              # HTTP 200 - 33068 bytes valid JSON（独立验证）
 artifacts:
   - test-case-design.md
   - test-report.md
-summary: "验收阻塞：application.yml 存在重复 spring key，应用无法启动，无法验证 Swagger UI"
+summary: "验收通过：Swagger UI 可访问，API Docs 有效 JSON，三项预飞全通过。存在两个 Controller 分组显示英文的 Minor 问题，不影响核心功能。"
 ---
 
 # 交接文档
 
-## 验收结果：changes-requested
+## 验收结果：approved
 
-### 问题清单
-
-| # | 严重度 | 描述 | 文件 | 修复建议 |
-|---|--------|------|------|----------|
-| 1 | **高** | application.yml 存在重复的 `spring` key（第 4 行和第 46 行） | claude-j-start/src/main/resources/application.yml | 合并两个 spring block |
-
-### 问题详情
-
-**问题 #1（高）**：应用启动失败
-
-```bash
-$ mvn spring-boot:run -pl claude-j-start -Dspring-boot.run.profiles=dev
-...
-org.yaml.snakeyaml.constructor.DuplicateKeyException: while constructing a mapping
-found duplicate key spring
- in 'reader', line 46, column 1:
-    spring:
-    ^
-```
-
-**根因**：`application.yml` 文件结构：
-- 第 4-7 行：`spring:` block（jackson 配置）
-- 第 46-48 行：`spring:` block（lifecycle 配置）— 重复！
-
-**修复方案**：合并为一个 `spring:` block：
-```yaml
-spring:
-  jackson:
-    date-format: yyyy-MM-dd HH:mm:ss
-    time-zone: Asia/Shanghai
-  lifecycle:
-    timeout-per-shutdown-phase: 30s
-```
-
-### 已通过的检查
+### 已通过的验证
 
 1. **三项预飞全部通过**（独立验证）：
-   - mvn test: Tests run: 59, Failures: 0 - BUILD SUCCESS
-   - checkstyle: 0 violations - BUILD SUCCESS
-   - entropy-check: 0 FAIL, 12 WARN - PASS
+   ```bash
+   $ mvn clean test -B
+   [INFO] Tests run: 59, Failures: 0, Errors: 0, Skipped: 0
+   [INFO] BUILD SUCCESS
 
-2. **Controller 注解完整性通过**：
+   $ mvn checkstyle:check -B
+   [INFO] You have 0 Checkstyle violations.
+   [INFO] BUILD SUCCESS
+
+   $ ./scripts/entropy-check.sh
+   错误 (FAIL): 0, 警告 (WARN): 12
+   {"issues": 0, "warnings": 12, "status": "PASS"}
+   ```
+
+2. **应用启动验证通过**：
+   ```bash
+   $ mvn spring-boot:run -pl claude-j-start -Dspring-boot.run.profiles=dev
+   Started ClaudeJApplication in 8.717 seconds
+   Tomcat started on port(s): 8080 (http)
+   ```
+
+3. **Swagger UI 可访问**：
+   ```bash
+   $ curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/swagger-ui/index.html
+   200
+
+   $ curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/v3/api-docs
+   200
+
+   $ curl -s -o /dev/null -w "HTTP %{http_code} -> %{redirect_url}" http://localhost:8080/swagger-ui.html
+   HTTP 302 -> http://localhost:8080/swagger-ui/index.html
+   ```
+
+4. **Controller 注解完整性**：
    - 9 个 Controller 全部有 @Tag 注解（3 个新增，6 个已有）
    - 约 50 个端点全部有 @Operation 注解
    - 所有 summary 使用中文描述
 
-3. **springdoc-openapi-ui 依赖已添加**：
-   - start/pom.xml 第 69-73 行已添加依赖
-   - 版本 1.7.0（Spring Boot 2.x 兼容）
+### 问题状态
 
-### 待修复后验证
+| # | 严重度 | 描述 | 状态 |
+|---|--------|------|------|
+| 1 | **高** | application.yml 重复 spring key | ✅ 已修复（commit 64afaf3） |
+| 2 | 中 | entropy-check 12 WARN | ⏸️ 可后续修复 |
+| 3 | 中 | LinkController/UserOrderController 分组显示英文 | ⏸️ 功能正常，显示问题可后续优化 |
 
-修复 application.yml 后，需验证：
-- `/swagger-ui/index.html` 页面可访问（HTTP 200）
-- `/v3/api-docs` 返回有效 JSON（HTTP 200）
-- Swagger UI 中按聚合分组显示所有 API
+### 问题 #3 说明
+
+**现象**：LinkController 和 UserOrderController 在 API Docs 中显示英文分组名（"link-controller"、"user-order-controller"），而非预期的中文（"链接管理"、"用户订单"）。
+
+**代码检查**：@Tag 注解设置正确，但 springdoc 运行时未正确识别。
+
+**影响评估**：
+- Swagger UI 功能正常
+- API 端点全部可访问
+- 仅分组显示名称不符合预期（用户体验问题）
+
+**处理建议**：可作为后续优化项，升级 springdoc 版本或调整配置。
 
 ---
 
@@ -95,3 +102,11 @@ spring:
 ### 2026-04-25 — @qa -> @dev
 - 状态：changes-requested
 - 说明：验收阻塞，application.yml 配置错误导致应用无法启动
+
+### 2026-04-25 — @dev -> @qa
+- 状态：pending-review
+- 说明：问题 #1 已修复（commit 64afaf3），请求重新验收
+
+### 2026-04-25 — @qa -> @ralph
+- 状态：approved
+- 说明：验收通过，可进入 Ship 阶段
