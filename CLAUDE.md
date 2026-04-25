@@ -44,8 +44,9 @@ adapter → application → domain ← infrastructure ← start(assembles all)
 | order | `com.claudej.*.order` | 电商订单 |
 | user | `com.claudej.*.user` | 用户管理 |
 | coupon | `com.claudej.*.coupon` | 优惠券服务 |
-| cart | `com.claudej.*.cart` | 购物车服务 |
+| cart | `com.claudej.*.cart` | 质物车服务 |
 | auth | `com.claudej.*.auth` | 认证服务 |
+| product | `com.claudej.*.product` | 商品服务 |
 
 ## 关键约定
 - 包根 `com.claudej`，Java 8 语法（禁止 var/records/text blocks/List.of）

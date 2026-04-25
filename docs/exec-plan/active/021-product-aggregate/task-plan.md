@@ -4,18 +4,18 @@
 
 | # | 任务 | 负责人 | 状态 | 备注 |
 |---|------|--------|------|------|
-| 1 | Domain: ProductId + ProductName + SKU 值对象 + 测试 | dev | 待办 | |
-| 2 | Domain: ProductStatus 枚举 + 状态转换测试 | dev | 待办 | |
-| 3 | Domain: Product 聚合根 + 测试 | dev | 待办 | |
-| 4 | Domain: ProductRepository 端口 | dev | 待办 | |
-| 5 | Application: Command + DTO + Assembler | dev | 待办 | |
-| 6 | Application: ProductApplicationService + 测试 | dev | 待办 | |
-| 7 | Infrastructure: ProductDO + ProductMapper + ProductConverter | dev | 待办 | |
-| 8 | Infrastructure: ProductRepositoryImpl + 测试 | dev | 待办 | |
-| 9 | Adapter: ProductController + Request/Response + 测试 | dev | 待办 | |
-| 10 | Start: V8__product_init.sql Flyway 迁移 | dev | 待办 | |
-| 11 | ErrorCode 扩展（Product 相关错误码） | dev | 待办 | |
-| 12 | 全量 mvn test + checkstyle + entropy-check | dev | 待办 | |
+| 1 | Domain: ProductId + ProductName + SKU 值对象 + 测试 | dev | 单测通过 | commit: 800792a |
+| 2 | Domain: ProductStatus 枚举 + 状态转换测试 | dev | 单测通过 | commit: 8a8edcf |
+| 3 | Domain: Product 聚合根 + 测试 | dev | 单测通过 | commit: c71c461 |
+| 4 | Domain: ProductRepository 端口 | dev | 单测通过 | commit: 2269aec |
+| 5 | Application: Command + DTO + Assembler | dev | 单测通过 | commit: 04f7ec1 |
+| 6 | Application: ProductApplicationService + 测试 | dev | 单测通过 | commit: 04f7ec1 |
+| 7 | Infrastructure: ProductDO + ProductMapper + ProductConverter | dev | 单测通过 | commit: 92fb798 |
+| 8 | Infrastructure: ProductRepositoryImpl + 测试 | dev | 单测通过 | commit: 92fb798 |
+| 9 | Adapter: ProductController + Request/Response + 测试 | dev | 单测通过 | commit: 6e09ab2 |
+| 10 | Start: V8__product_init.sql Flyway 迁移 | dev | 单测通过 | H2兼容迁移已配置 |
+| 11 | ErrorCode 扩展（Product 相关错误码） | dev | 单测通过 | commit: 800792a |
+| 12 | 全量 mvn test + checkstyle + entropy-check | dev | 验证通过 | Tests: 133, 0 errors, checkstyle pass, entropy 0 errors |
 | 13 | QA: 测试用例设计 | qa | 待办 | |
 | 14 | QA: 验收测试 + 代码审查 | qa | 待办 | |
 
@@ -179,9 +179,9 @@ domain → application → infrastructure → adapter → start → 全量测试
 ## 开发完成记录
 
 <!-- dev 完成后填写 -->
-- 全量 `mvn clean test`：待填写
-- 架构合规检查：待填写
-- 通知 @qa 时间：待填写
+- 全量 `mvn clean test`：Tests run: 133, Failures: 0, Errors: 0, Skipped: 0 (2026-04-25 08:46:35)
+- 架构合规检查：checkstyle pass, entropy-check 0 errors 13 warnings (2026-04-25 08:47:01)
+- 通知 @qa 时间：待 QA 开始验收
 
 ## QA 验收记录
 
