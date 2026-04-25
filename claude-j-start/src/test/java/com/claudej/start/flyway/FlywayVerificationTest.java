@@ -19,16 +19,25 @@ public class FlywayVerificationTest {
     @Test
     void should_record_10_migrations_when_flyway_migrates() {
         List<Map<String, Object>> results = jdbcTemplate.queryForList(
-            "SELECT \"version\", \"description\", \"success\" FROM \"flyway_schema_history\" WHERE \"version\" IS NOT NULL ORDER BY \"version\""
+            "SELECT \"version\", \"description\", \"success\" FROM \"flyway_schema_history\" WHERE \"version\" IS NOT NULL"
         );
 
         assertThat(results).hasSize(10);
-        assertThat(results.get(0).get("version")).isEqualTo("1");
-        assertThat(results.get(0).get("description")).isEqualTo("user init");
-        assertThat(results.get(0).get("success")).isEqualTo(true);
-        assertThat(results.get(9).get("version")).isEqualTo("10");
-        assertThat(results.get(9).get("description")).isEqualTo("add inventory");
-        assertThat(results.get(9).get("success")).isEqualTo(true);
+
+        // Find specific versions by filtering (since string sorting puts "10" between "1" and "2")
+        Map<String, Object> v1 = results.stream()
+            .filter(r -> "1".equals(r.get("version")))
+            .findFirst()
+            .orElseThrow();
+        assertThat(v1.get("description")).isEqualTo("user init");
+        assertThat(v1.get("success")).isEqualTo(true);
+
+        Map<String, Object> v10 = results.stream()
+            .filter(r -> "10".equals(r.get("version")))
+            .findFirst()
+            .orElseThrow();
+        assertThat(v10.get("description")).isEqualTo("add inventory");
+        assertThat(v10.get("success")).isEqualTo(true);
     }
 
     @Test
