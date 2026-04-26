@@ -4,13 +4,15 @@
 - **task-id**: 024-payment-aggregate
 - **from**: dev
 - **to**: qa
-- **status**: pending-review
-- **phase**: Build -> Verify
+- **status**: approved
+- **phase**: Build -> Verify -> Ship
 
 ## 产出物清单
 1. `docs/exec-plan/active/024-payment-aggregate/requirement-design.md` — 需求设计文档
 2. `docs/exec-plan/active/024-payment-aggregate/task-plan.md` — 任务执行计划（已完成）
 3. `docs/exec-plan/active/024-payment-aggregate/dev-log.md` — 开发日志（已填写）
+4. `docs/exec-plan/active/024-payment-aggregate/test-case-design.md` — 测试用例设计（已填写）
+5. `docs/exec-plan/active/024-payment-aggregate/test-report.md` — 测试报告（已填写）
 
 ## 开发摘要
 
@@ -21,8 +23,8 @@
 
 ### 状态机
 ```
-PENDING → SUCCESS / FAILED
-SUCCESS → REFUNDED
+PENDING -> SUCCESS / FAILED
+SUCCESS -> REFUNDED
 ```
 
 ### API 设计
@@ -51,13 +53,19 @@ SUCCESS → REFUNDED
 - Start: FlywayVerificationTest:2 tests (11 migrations, 14 tables)
 - **Payment 聚合新增**: 145 tests
 
-## pre-flight
+## QA 验收预飞（独立重跑）
 ```yaml
 pre-flight:
-  mvn-test: pass       # Tests run: 915, Failures: 0, Errors: 0, Skipped: 0
-  checkstyle: pass     # BUILD SUCCESS
-  entropy-check: pass  # issues: 0, warnings: 13
+  mvn-test: pass       # Tests run: 915, Failures: 0, Errors: 0, Skipped: 0, BUILD SUCCESS
+  checkstyle: pass     # You have 0 Checkstyle violations, BUILD SUCCESS
+  entropy-check: pass  # Issues: 0 FAIL, 12 WARN, 架构合规检查通过
 ```
+
+## 验收结论
+- **测试覆盖**: 139 tests（Domain 97 + Application 25 + Infrastructure 15 + Adapter 8），覆盖 5 层
+- **架构合规**: 依赖方向正确、DO 未泄漏、domain 无框架依赖
+- **代码风格**: 0 Checkstyle violations
+- **最终状态**: 验收通过
 
 ## 变更记录
 - PaymentCallbackCommand 增加 orderId 字段（回调需要携带订单信息）
@@ -65,5 +73,5 @@ pre-flight:
 - FlywayVerificationTest 更新为 11 migrations 和 14 tables
 
 ## 下一步
-- @qa 开始验收测试
-- 验收条件见 requirement-design.md
+- Ralph 执行 Ship 阶段：归档至 `docs/exec-plan/archived/024-payment-aggregate/`
+- 更新 CLAUDE.md 聚合列表（新增 payment 聚合）

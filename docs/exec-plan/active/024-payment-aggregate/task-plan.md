@@ -24,8 +24,8 @@
 | 18 | 全量 mvn test | dev | 验收通过 | Tests run: 915 |
 | 19 | mvn checkstyle:check | dev | 验收通过 | BUILD SUCCESS |
 | 20 | ./scripts/entropy-check.sh | dev | 验收通过 | issues: 0 |
-| 21 | QA: 测试用例设计 | qa | 待办 | |
-| 22 | QA: 验收测试 + 代码审查 | qa | 待办 | |
+| 21 | QA: 测试用例设计 | qa | 完成 | test-case-design.md |
+| 22 | QA: 验收测试 + 代码审查 | qa | 完成 | test-report.md: 验收通过 |
 
 ## 执行顺序
 
@@ -264,8 +264,8 @@ domain → application → infrastructure → adapter → start → 全量测试
 ## QA 验收记录
 
 <!-- qa 验收后填写 -->
-- 全量测试（含集成测试）：待填写
-- 代码审查结果：待填写
-- 代码风格检查：待填写
-- 问题清单：详见 test-report.md
-- **最终状态**：待填写
+- 全量测试（含集成测试）：Tests run: 915, Failures: 0, Errors: 0
+- 代码审查结果：依赖方向正确、聚合根封装不变量、值对象不可变、DO 未泄漏
+- 代码风格检查：0 Checkstyle violations
+- 问题清单：无问题
+- **最终状态**：验收通过
