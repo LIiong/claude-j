@@ -2,10 +2,10 @@
 
 ## 基本信息
 - **task-id**: 024-payment-aggregate
-- **from**: dev
-- **to**: architect
-- **status**: pending-review
-- **phase**: Spec
+- **from**: architect
+- **to**: dev
+- **status**: approved
+- **phase**: Review -> Build
 
 ## 产出物清单
 1. `docs/exec-plan/active/024-payment-aggregate/requirement-design.md` — 需求设计文档
@@ -60,6 +60,16 @@ SUCCESS → REFUNDED
 ## architect 评审意见
 
 <!-- @architect 填写 -->
-- **评审结果**:
-- **修改建议**:
-- **评审时间**:
+- **评审结果**: ✅ approved
+- **修改建议**: 无重大修改，含设计澄清（详见 requirement-design.md 架构评审章节）
+- **评审时间**: 2026-04-25
+
+### 评审摘要
+- 架构合规检查：PASS（0 FAIL，12 WARN）
+- 待确认项已决策：PSP 类型暂统一、退款直接处理、超时取消暂不实现
+- Payment 与 Order 协作：PaymentApplicationService 调用 OrderRepository + Order.markAsPaid()
+- 退款库存回滚：仅 PAID 状态订单退款时回滚库存
+
+### 下一步
+- 状态流转至 Build 阶段
+- @dev 可开始 TDD 开发
