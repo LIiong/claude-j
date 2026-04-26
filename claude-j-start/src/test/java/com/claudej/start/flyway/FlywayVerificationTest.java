@@ -17,12 +17,12 @@ public class FlywayVerificationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void should_record_10_migrations_when_flyway_migrates() {
+    void should_record_11_migrations_when_flyway_migrates() {
         List<Map<String, Object>> results = jdbcTemplate.queryForList(
             "SELECT \"version\", \"description\", \"success\" FROM \"flyway_schema_history\" WHERE \"version\" IS NOT NULL"
         );
 
-        assertThat(results).hasSize(10);
+        assertThat(results).hasSize(11);
 
         // Find specific versions by filtering (since string sorting puts "10" between "1" and "2")
         Map<String, Object> v1 = results.stream()
@@ -38,10 +38,17 @@ public class FlywayVerificationTest {
             .orElseThrow();
         assertThat(v10.get("description")).isEqualTo("add inventory");
         assertThat(v10.get("success")).isEqualTo(true);
+
+        Map<String, Object> v11 = results.stream()
+            .filter(r -> "11".equals(r.get("version")))
+            .findFirst()
+            .orElseThrow();
+        assertThat(v11.get("description")).isEqualTo("add payment");
+        assertThat(v11.get("success")).isEqualTo(true);
     }
 
     @Test
-    void should_create_13_tables_when_migrations_complete() {
+    void should_create_14_tables_when_migrations_complete() {
         List<String> tables = jdbcTemplate.queryForList(
             "SELECT table_name FROM information_schema.tables WHERE table_schema = 'PUBLIC' AND table_name LIKE 'T_%'",
             String.class
@@ -60,7 +67,8 @@ public class FlywayVerificationTest {
             "T_USER_SESSION",
             "T_LOGIN_LOG",
             "T_PRODUCT",
-            "T_INVENTORY"
+            "T_INVENTORY",
+            "T_PAYMENT"
         );
     }
 }
