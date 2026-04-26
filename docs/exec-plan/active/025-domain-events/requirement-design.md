@@ -30,13 +30,6 @@
 - items (List<OrderItemInfo>) — 订单项信息（productId、quantity）
 - 触发时机：订单创建成功后
 
-**OrderPaidEvent**
-- 继承 DomainEvent
-- orderId (String) — 订单 ID
-- customerId (String) — 客户 ID
-- items (List<OrderItemInfo>) — 订单项信息
-- 触发时机：订单支付成功后
-
 **OrderCancelledEvent**
 - 继承 DomainEvent
 - orderId (String) — 订单 ID
@@ -144,7 +137,6 @@
 - `com.claudej.domain.common.event.DomainEvent` — 事件基类（抽象类）
 - `com.claudej.domain.common.event.DomainEventPublisher` — 事件发布端口接口
 - `com.claudej.domain.order.event.OrderCreatedEvent` — 订单创建事件
-- `com.claudej.domain.order.event.OrderPaidEvent` — 订单支付事件
 - `com.claudej.domain.order.event.OrderCancelledEvent` — 订单取消事件
 - `com.claudej.domain.order.event.OrderItemInfo` — 订单项信息值对象
 - `com.claudej.domain.payment.event.PaymentSuccessEvent` — 支付成功事件
@@ -160,15 +152,11 @@
 - `com.claudej.application.order.service.OrderApplicationService` — 移除直接库存调用，改为发布事件
 - `com.claudej.application.payment.service.PaymentApplicationService` — 移除直接库存调用，改为发布事件
 
-**domain 层**：
-- `com.claudej.domain.order.model.aggregate.Order` — 新增 registerEvents() 方法收集待发布事件
-
 ### 测试类（新增）
 
 **domain 层**：
 - `DomainEventTest` — 事件基类测试
 - `OrderCreatedEventTest` — 订单创建事件测试
-- `OrderPaidEventTest` — 订单支付事件测试
 - `OrderCancelledEventTest` — 订单取消事件测试
 - `PaymentSuccessEventTest` — 支付成功事件测试
 - `PaymentRefundedEventTest` — 支付退款事件测试
