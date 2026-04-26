@@ -4,26 +4,26 @@
 
 | # | 任务 | 负责人 | 状态 | 备注 |
 |---|------|--------|------|------|
-| 1 | Domain: PaymentId + PaymentMethod + PaymentStatus 值对象 + 测试 | dev | 待办 | |
-| 2 | Domain: PaymentResult 值对象 + 测试 | dev | 待办 | |
-| 3 | Domain: Payment 聚合根 + 测试 | dev | 待办 | 状态机封装 |
-| 4 | Domain: PaymentRepository 端口接口 | dev | 待办 | |
-| 5 | Domain: PaymentGateway PSP 端口接口 | dev | 待办 | |
-| 6 | Domain: ErrorCode 新增 Payment 相关错误码 | dev | 待办 | |
-| 7 | Application: CreatePaymentCommand + RefundPaymentCommand | dev | 待办 | |
-| 8 | Application: PaymentDTO + PaymentAssembler | dev | 待办 | MapStruct |
-| 9 | Application: PaymentApplicationService + 测试 | dev | 待办 | 与 Order 集成 |
-| 10 | Infrastructure: PaymentDO + PaymentMapper | dev | 待办 | |
-| 11 | Infrastructure: PaymentConverter | dev | 待办 | |
-| 12 | Infrastructure: PaymentRepositoryImpl + 测试 | dev | 待办 | H2 集成测试 |
-| 13 | Infrastructure: MockPaymentGateway + 测试 | dev | 待办 | |
-| 14 | Adapter: CreatePaymentRequest + PaymentCallbackRequest + RefundPaymentRequest | dev | 待办 | |
-| 15 | Adapter: PaymentResponse | dev | 待办 | |
-| 16 | Adapter: PaymentController + 测试 | dev | 待办 | MockMvc |
-| 17 | Start: schema.sql 新增 t_payment 表 | dev | 待办 | |
-| 18 | 全量 mvn test | dev | 待办 | |
-| 19 | mvn checkstyle:check | dev | 待办 | |
-| 20 | ./scripts/entropy-check.sh | dev | 待办 | |
+| 1 | Domain: PaymentId + PaymentMethod + PaymentStatus 值对象 + 测试 | dev | 验收通过 | PaymentIdTest: 8 tests |
+| 2 | Domain: PaymentResult 值对象 + 测试 | dev | 验收通过 | PaymentResultTest: 13 tests |
+| 3 | Domain: Payment 聚合根 + 测试 | dev | 验收通过 | PaymentTest: 37 tests |
+| 4 | Domain: PaymentRepository 端口接口 | dev | 验收通过 | |
+| 5 | Domain: PaymentGateway PSP 端口接口 | dev | 验收通过 | |
+| 6 | Domain: ErrorCode 新增 Payment 相关错误码 | dev | 验收通过 | |
+| 7 | Application: CreatePaymentCommand + RefundPaymentCommand | dev | 验收通过 | |
+| 8 | Application: PaymentDTO + PaymentAssembler | dev | 验收通过 | MapStruct |
+| 9 | Application: PaymentApplicationService + 测试 | dev | 验收通过 | PaymentApplicationServiceTest: 25 tests |
+| 10 | Infrastructure: PaymentDO + PaymentMapper | dev | 验收通过 | |
+| 11 | Infrastructure: PaymentConverter | dev | 验收通过 | |
+| 12 | Infrastructure: PaymentRepositoryImpl + 测试 | dev | 验收通过 | PaymentRepositoryImplTest: 8 tests |
+| 13 | Infrastructure: MockPaymentGateway + 测试 | dev | 验收通过 | MockPaymentGatewayTest: 7 tests |
+| 14 | Adapter: CreatePaymentRequest + PaymentCallbackRequest + RefundPaymentRequest | dev | 验收通过 | |
+| 15 | Adapter: PaymentResponse | dev | 验收通过 | |
+| 16 | Adapter: PaymentController + 测试 | dev | 验收通过 | PaymentControllerTest: 8 tests |
+| 17 | Start: V11 DDL + FlywayVerificationTest 更新 | dev | 验收通过 | t_payment 表 |
+| 18 | 全量 mvn test | dev | 验收通过 | Tests run: 915 |
+| 19 | mvn checkstyle:check | dev | 验收通过 | BUILD SUCCESS |
+| 20 | ./scripts/entropy-check.sh | dev | 验收通过 | issues: 0 |
 | 21 | QA: 测试用例设计 | qa | 待办 | |
 | 22 | QA: 验收测试 + 代码审查 | qa | 待办 | |
 
@@ -47,8 +47,8 @@ domain → application → infrastructure → adapter → start → 全量测试
   void should_equal_when_values_match() { ... }
   ```
 - **验证命令**：`mvn test -pl claude-j-domain -Dtest=PaymentIdTest`
-- **预期输出**：`Tests run: 3, Failures: 0, Errors: 0`
-- **commit**：`feat(domain): payment 值对象 PaymentId`
+- **预期输出**：`Tests run: 8, Failures: 0, Errors: 0`
+- **commit**：`feat(domain): payment 值对象 PaymentId` (done)
 
 ### 1.2 Domain 值对象 PaymentMethod
 - **文件**：`claude-j-domain/src/main/java/com/claudej/domain/payment/model/valobj/PaymentMethod.java`
@@ -59,8 +59,8 @@ domain → application → infrastructure → adapter → start → 全量测试
   ALIPAY("支付宝"), WECHAT("微信支付"), BANK_CARD("银行卡");
   ```
 - **验证命令**：`mvn test -pl claude-j-domain -Dtest=PaymentMethodTest`
-- **预期输出**：枚举值正确，description 可获取
-- **commit**：`feat(domain): payment 值对象 PaymentMethod`
+- **预期输出**：`Tests run: 6, Failures: 0, Errors: 0`
+- **commit**：`feat(domain): payment 值对象 PaymentMethod` (done)
 
 ### 1.3 Domain 值对象 PaymentStatus
 - **文件**：`claude-j-domain/src/main/java/com/claudej/domain/payment/model/valobj/PaymentStatus.java`
@@ -77,8 +77,8 @@ domain → application → infrastructure → adapter → start → 全量测试
   PaymentStatus toRefunded() { ... }
   ```
 - **验证命令**：`mvn test -pl claude-j-domain -Dtest=PaymentStatusTest`
-- **预期输出**：状态转换规则正确，非法转换抛异常
-- **commit**：`feat(domain): payment 值对象 PaymentStatus`
+- **预期输出**：`Tests run: 33, Failures: 0, Errors: 0`
+- **commit**：`feat(domain): payment 值对象 PaymentStatus` (done)
 
 ### 2.1 Domain 值对象 PaymentResult
 - **文件**：`claude-j-domain/src/main/java/com/claudej/domain/payment/model/valobj/PaymentResult.java`
@@ -93,8 +93,8 @@ domain → application → infrastructure → adapter → start → 全量测试
   static PaymentResult failed(String message);
   ```
 - **验证命令**：`mvn test -pl claude-j-domain -Dtest=PaymentResultTest`
-- **预期输出**：工厂方法正确创建成功/失败结果
-- **commit**：`feat(domain): payment 值对象 PaymentResult`
+- **预期输出**：`Tests run: 13, Failures: 0, Errors: 0`
+- **commit**：`feat(domain): payment 值对象 PaymentResult` (done)
 
 ### 3.1 Domain 聚合根 Payment
 - **文件**：`claude-j-domain/src/main/java/com/claudej/domain/payment/model/aggregate/Payment.java`
@@ -109,8 +109,8 @@ domain → application → infrastructure → adapter → start → 全量测试
   void refund();
   ```
 - **验证命令**：`mvn test -pl claude-j-domain -Dtest=PaymentTest`
-- **预期输出**：创建/状态转换/不变量全覆盖
-- **commit**：`feat(domain): payment 聚合根与状态机`
+- **预期输出**：`Tests run: 37, Failures: 0, Errors: 0`
+- **commit**：`feat(domain): payment 聚合根与状态机` (done)
 
 ### 4.1 Domain Repository 端口
 - **文件**：`claude-j-domain/src/main/java/com/claudej/domain/payment/repository/PaymentRepository.java`
@@ -124,7 +124,7 @@ domain → application → infrastructure → adapter → start → 全量测试
   ```
 - **验证命令**：`mvn compile -pl claude-j-domain`
 - **预期输出**：编译通过
-- **commit**：`feat(domain): payment Repository 端口`
+- **commit**：`feat(domain): payment Repository 端口` (done)
 
 ### 5.1 Domain PaymentGateway 端口
 - **文件**：`claude-j-domain/src/main/java/com/claudej/domain/payment/service/PaymentGateway.java`
@@ -136,7 +136,7 @@ domain → application → infrastructure → adapter → start → 全量测试
   ```
 - **验证命令**：`mvn compile -pl claude-j-domain`
 - **预期输出**：编译通过
-- **commit**：`feat(domain): payment PaymentGateway 端口`
+- **commit**：`feat(domain): payment PaymentGateway 端口` (done)
 
 ### 6.1 Domain ErrorCode
 - **文件**：`claude-j-domain/src/main/java/com/claudej/domain/common/exception/ErrorCode.java`
@@ -149,7 +149,7 @@ domain → application → infrastructure → adapter → start → 全量测试
   ```
 - **验证命令**：`mvn compile -pl claude-j-domain`
 - **预期输出**：编译通过
-- **commit**：`feat(domain): payment ErrorCode`
+- **commit**：`feat(domain): payment ErrorCode` (done)
 
 ### 7.1 Application Command
 - **文件**：
@@ -157,7 +157,7 @@ domain → application → infrastructure → adapter → start → 全量测试
   - `claude-j-application/src/main/java/com/claudej/application/payment/command/RefundPaymentCommand.java`
 - **验证命令**：`mvn compile -pl claude-j-application`
 - **预期输出**：编译通过
-- **commit**：`feat(application): payment 命令`
+- **commit**：`feat(application): payment 命令` (done)
 
 ### 8.1 Application DTO + Assembler
 - **文件**：
@@ -166,7 +166,7 @@ domain → application → infrastructure → adapter → start → 全量测试
 - **骨架**：MapStruct `@Mapper(componentModel = "spring")`
 - **验证命令**：`mvn compile -pl claude-j-application`
 - **预期输出**：编译通过，生成 Impl 类
-- **commit**：`feat(application): payment DTO 与 Assembler`
+- **commit**：`feat(application): payment DTO 与 Assembler` (done)
 
 ### 9.1 Application Service + 测试
 - **文件**：`claude-j-application/src/main/java/com/claudej/application/payment/service/PaymentApplicationService.java`
@@ -181,8 +181,8 @@ domain → application → infrastructure → adapter → start → 全量测试
   PaymentDTO refundPayment(String paymentId, RefundPaymentCommand command);
   ```
 - **验证命令**：`mvn test -pl claude-j-application -Dtest=PaymentApplicationServiceTest`
-- **预期输出**：Mockito verify 通过，编排顺序正确
-- **commit**：`feat(application): payment 应用服务`
+- **预期输出**：`Tests run: 25, Failures: 0, Errors: 0`
+- **commit**：`feat(application): payment 应用服务` (done)
 
 ### 10.1 Infrastructure DO + Mapper
 - **文件**：
@@ -191,30 +191,30 @@ domain → application → infrastructure → adapter → start → 全量测试
 - **骨架**：`@TableName("t_payment")` + `BaseMapper<PaymentDO>`
 - **验证命令**：`mvn compile -pl claude-j-infrastructure`
 - **预期输出**：编译通过
-- **commit**：`feat(infrastructure): payment DO 与 Mapper`
+- **commit**：`feat(infrastructure): payment DO 与 Mapper` (done)
 
 ### 11.1 Infrastructure Converter
 - **文件**：`claude-j-infrastructure/src/main/java/com/claudej/infrastructure/payment/persistence/converter/PaymentConverter.java`
 - **骨架**：`toDomain(PaymentDO)` + `toDO(Payment)`
 - **验证命令**：`mvn compile -pl claude-j-infrastructure`
 - **预期输出**：编译通过
-- **commit**：`feat(infrastructure): payment Converter`
+- **commit**：`feat(infrastructure): payment Converter` (done)
 
 ### 12.1 Infrastructure Repository 实现 + 测试
 - **文件**：`claude-j-infrastructure/src/main/java/com/claudej/infrastructure/payment/persistence/repository/PaymentRepositoryImpl.java`
 - **测试**：`claude-j-infrastructure/src/test/java/com/claudej/infrastructure/payment/persistence/repository/PaymentRepositoryImplTest.java`
 - **骨架**：`@Repository` + H2 集成测试
 - **验证命令**：`mvn test -pl claude-j-infrastructure -Dtest=PaymentRepositoryImplTest`
-- **预期输出**：DO↔Domain 映射准确，H2 写入回读一致
-- **commit**：`feat(infrastructure): payment Repository 实现`
+- **预期输出**：`Tests run: 8, Failures: 0, Errors: 0`
+- **commit**：`feat(infrastructure): payment Repository 实现` (done)
 
 ### 13.1 Infrastructure MockPaymentGateway
 - **文件**：`claude-j-infrastructure/src/main/java/com/claudej/infrastructure/payment/gateway/MockPaymentGateway.java`
 - **测试**：`claude-j-infrastructure/src/test/java/com/claudej/infrastructure/payment/gateway/MockPaymentGatewayTest.java`
 - **骨架**：可配置 success/failed 返回
 - **验证命令**：`mvn test -pl claude-j-infrastructure -Dtest=MockPaymentGatewayTest`
-- **预期输出**：模拟成功/失败场景正确
-- **commit**：`feat(infrastructure): payment MockPaymentGateway`
+- **预期输出**：`Tests run: 7, Failures: 0, Errors: 0`
+- **commit**：`feat(infrastructure): payment MockPaymentGateway` (done)
 
 ### 14.1 Adapter Request
 - **文件**：
@@ -223,13 +223,13 @@ domain → application → infrastructure → adapter → start → 全量测试
   - `claude-j-adapter/src/main/java/com/claudej/adapter/payment/web/request/RefundPaymentRequest.java`
 - **验证命令**：`mvn compile -pl claude-j-adapter`
 - **预期输出**：编译通过
-- **commit**：`feat(adapter): payment Request`
+- **commit**：`feat(adapter): payment Request` (done)
 
 ### 15.1 Adapter Response
 - **文件**：`claude-j-adapter/src/main/java/com/claudej/adapter/payment/web/response/PaymentResponse.java`
 - **验证命令**：`mvn compile -pl claude-j-adapter`
 - **预期输出**：编译通过
-- **commit**：`feat(adapter): payment Response`
+- **commit**：`feat(adapter): payment Response` (done)
 
 ### 16.1 Adapter Controller + 测试
 - **文件**：`claude-j-adapter/src/main/java/com/claudej/adapter/payment/web/PaymentController.java`
@@ -244,22 +244,22 @@ domain → application → infrastructure → adapter → start → 全量测试
   POST /{paymentId}/refund — 退款（ADMIN）
   ```
 - **验证命令**：`mvn test -pl claude-j-adapter -Dtest=PaymentControllerTest`
-- **预期输出**：HTTP 状态码 200/400/404 断言全过
-- **commit**：`feat(adapter): payment REST 端点`
+- **预期输出**：`Tests run: 8, Failures: 0, Errors: 0`
+- **commit**：`feat(adapter): payment REST 端点` (done)
 
 ### 17.1 Start DDL
-- **文件**：`claude-j-start/src/main/resources/db/schema.sql`
+- **文件**：`claude-j-start/src/main/resources/db/migration/V11__add_payment.sql`
 - **骨架**：新增 t_payment 表
-- **验证命令**：Infrastructure 层 H2 测试覆盖
+- **验证命令**：FlywayVerificationTest
 - **预期输出**：表名 `t_payment`，列名 snake_case
-- **commit**：`feat(start): payment DDL`
+- **commit**：`feat(start): payment DDL` (done)
 
 ## 开发完成记录
 
 <!-- dev 完成后填写 -->
-- 全量 `mvn clean test`：待填写
-- 架构合规检查：待填写
-- 通知 @qa 时间：待填写
+- 全量 `mvn clean test`：Tests run: 915, Failures: 0, Errors: 0, Skipped: 0
+- 架构合规检查：entropy-check issues: 0, warnings: 13
+- 通知 @qa 时间：2026-04-25
 
 ## QA 验收记录
 
