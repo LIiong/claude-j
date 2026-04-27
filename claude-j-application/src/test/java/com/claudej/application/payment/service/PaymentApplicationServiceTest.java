@@ -5,10 +5,9 @@ import com.claudej.application.payment.command.CreatePaymentCommand;
 import com.claudej.application.payment.command.PaymentCallbackCommand;
 import com.claudej.application.payment.command.RefundPaymentCommand;
 import com.claudej.application.payment.dto.PaymentDTO;
+import com.claudej.domain.common.event.DomainEventPublisher;
 import com.claudej.domain.common.exception.BusinessException;
 import com.claudej.domain.common.exception.ErrorCode;
-import com.claudej.domain.inventory.model.aggregate.Inventory;
-import com.claudej.domain.inventory.repository.InventoryRepository;
 import com.claudej.domain.order.model.aggregate.Order;
 import com.claudej.domain.order.model.entity.OrderItem;
 import com.claudej.domain.order.model.valobj.CustomerId;
@@ -49,7 +48,7 @@ class PaymentApplicationServiceTest {
     private OrderRepository orderRepository;
 
     @Mock
-    private InventoryRepository inventoryRepository;
+    private DomainEventPublisher domainEventPublisher;
 
     @Mock
     private PaymentGateway paymentGateway;
@@ -62,7 +61,7 @@ class PaymentApplicationServiceTest {
     @BeforeEach
     void setUp() {
         paymentApplicationService = new PaymentApplicationService(
-                paymentRepository, orderRepository, inventoryRepository, paymentGateway, paymentAssembler);
+                paymentRepository, orderRepository, domainEventPublisher, paymentGateway, paymentAssembler);
     }
 
     // --- createPayment tests ---
@@ -300,11 +299,6 @@ class PaymentApplicationServiceTest {
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
 
-        // Inventory 应该有预留库存（订单创建时已预占）
-        Inventory mockInventory = createMockInventoryWithReserved(1);
-        when(inventoryRepository.findByProductId(any())).thenReturn(Optional.of(mockInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
-
         PaymentDTO expectedDTO = createMockPaymentDTO();
         when(paymentAssembler.toDTO(any(Payment.class))).thenReturn(expectedDTO);
 
@@ -315,7 +309,7 @@ class PaymentApplicationServiceTest {
         assertThat(result).isNotNull();
         verify(paymentRepository).save(any(Payment.class));
         verify(orderRepository).save(any(Order.class));
-        verify(inventoryRepository).save(any(Inventory.class));
+        verify(domainEventPublisher).publish(any());
     }
 
     @Test
@@ -422,11 +416,6 @@ class PaymentApplicationServiceTest {
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
 
-        // 库存已经扣减，使用 adjustStock 恢复库存
-        Inventory mockInventory = createMockInventory();
-        when(inventoryRepository.findByProductId(any())).thenReturn(Optional.of(mockInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
-
         PaymentDTO expectedDTO = createMockPaymentDTO();
         expectedDTO.setStatus("REFUNDED");
         when(paymentAssembler.toDTO(any(Payment.class))).thenReturn(expectedDTO);
@@ -440,7 +429,7 @@ class PaymentApplicationServiceTest {
         verify(paymentGateway).refundPayment(anyString(), any(Money.class));
         verify(paymentRepository).save(any(Payment.class));
         verify(orderRepository).save(any(Order.class));
-        verify(inventoryRepository).save(any(Inventory.class));
+        verify(domainEventPublisher).publish(any());
     }
 
     @Test
@@ -578,26 +567,4 @@ class PaymentApplicationServiceTest {
         );
     }
 
-    private Inventory createMockInventory() {
-        return com.claudej.domain.inventory.model.aggregate.Inventory.reconstruct(
-                1L,
-                new com.claudej.domain.inventory.model.valobj.InventoryId("INV123456"),
-                "PROD001",
-                new com.claudej.domain.inventory.model.valobj.SkuCode("SKU001"),
-                100,
-                0
-        );
-    }
-
-    private Inventory createMockInventoryWithReserved(int reservedStock) {
-        int availableStock = 100 - reservedStock;
-        return com.claudej.domain.inventory.model.aggregate.Inventory.reconstruct(
-                1L,
-                new com.claudej.domain.inventory.model.valobj.InventoryId("INV123456"),
-                "PROD001",
-                new com.claudej.domain.inventory.model.valobj.SkuCode("SKU001"),
-                availableStock,
-                reservedStock
-        );
-    }
 }

@@ -5,17 +5,17 @@ import com.claudej.application.payment.command.CreatePaymentCommand;
 import com.claudej.application.payment.command.PaymentCallbackCommand;
 import com.claudej.application.payment.command.RefundPaymentCommand;
 import com.claudej.application.payment.dto.PaymentDTO;
+import com.claudej.domain.common.event.DomainEventPublisher;
 import com.claudej.domain.common.exception.BusinessException;
 import com.claudej.domain.common.exception.ErrorCode;
-import com.claudej.domain.inventory.model.aggregate.Inventory;
-import com.claudej.domain.inventory.repository.InventoryRepository;
 import com.claudej.domain.order.model.aggregate.Order;
 import com.claudej.domain.order.model.entity.OrderItem;
 import com.claudej.domain.order.model.valobj.CustomerId;
 import com.claudej.domain.order.model.valobj.Money;
 import com.claudej.domain.order.model.valobj.OrderId;
-import com.claudej.domain.order.model.valobj.OrderStatus;
 import com.claudej.domain.order.repository.OrderRepository;
+import com.claudej.domain.payment.event.PaymentRefundedEvent;
+import com.claudej.domain.payment.event.PaymentSuccessEvent;
 import com.claudej.domain.payment.model.aggregate.Payment;
 import com.claudej.domain.payment.model.valobj.PaymentId;
 import com.claudej.domain.payment.model.valobj.PaymentMethod;
@@ -23,10 +23,13 @@ import com.claudej.domain.payment.model.valobj.PaymentResult;
 import com.claudej.domain.payment.model.valobj.PaymentStatus;
 import com.claudej.domain.payment.repository.PaymentRepository;
 import com.claudej.domain.payment.service.PaymentGateway;
+import com.claudej.domain.order.event.OrderItemInfo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -37,18 +40,18 @@ public class PaymentApplicationService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
-    private final InventoryRepository inventoryRepository;
+    private final DomainEventPublisher domainEventPublisher;
     private final PaymentGateway paymentGateway;
     private final PaymentAssembler paymentAssembler;
 
     public PaymentApplicationService(PaymentRepository paymentRepository,
                                       OrderRepository orderRepository,
-                                      InventoryRepository inventoryRepository,
+                                      DomainEventPublisher domainEventPublisher,
                                       PaymentGateway paymentGateway,
                                       PaymentAssembler paymentAssembler) {
         this.paymentRepository = paymentRepository;
         this.orderRepository = orderRepository;
-        this.inventoryRepository = inventoryRepository;
+        this.domainEventPublisher = domainEventPublisher;
         this.paymentGateway = paymentGateway;
         this.paymentAssembler = paymentAssembler;
     }
@@ -166,8 +169,16 @@ public class PaymentApplicationService {
             order.pay();
             orderRepository.save(order);
 
-            // 扣减库存（预占转为实际扣减）
-            deductStockForOrder(order);
+            // 发布支付成功事件（触发库存扣减）
+            List<OrderItemInfo> itemInfos = convertToOrderItemInfos(order.getItems());
+            PaymentSuccessEvent event = PaymentSuccessEvent.create(
+                    payment.getPaymentIdValue(),
+                    order.getOrderIdValue(),
+                    order.getCustomerIdValue(),
+                    payment.getTransactionNo(),
+                    itemInfos
+            );
+            domainEventPublisher.publish(event);
         } else {
             // 支付失败
             payment.markAsFailed(command.getMessage());
@@ -202,42 +213,35 @@ public class PaymentApplicationService {
         Order order = orderRepository.findByOrderId(payment.getOrderId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
 
-        // 回滚库存（仅 PAID 状态订单，退款前检查）
-        if (order.getStatus() == OrderStatus.PAID) {
-            releaseStockForOrder(order);
-        }
-
         order.refund();
         orderRepository.save(order);
+
+        // 发布支付退款事件（触发库存恢复）
+        List<OrderItemInfo> itemInfos = convertToOrderItemInfos(order.getItems());
+        PaymentRefundedEvent event = PaymentRefundedEvent.create(
+                payment.getPaymentIdValue(),
+                order.getOrderIdValue(),
+                order.getCustomerIdValue(),
+                payment.getTransactionNo(),
+                itemInfos
+        );
+        domainEventPublisher.publish(event);
 
         return paymentAssembler.toDTO(payment);
     }
 
     /**
-     * 扣减订单库存（支付成功时）
+     * 转换 OrderItem 列表为 OrderItemInfo 列表
      */
-    private void deductStockForOrder(Order order) {
-        for (OrderItem item : order.getItems()) {
-            Inventory inventory = inventoryRepository.findByProductId(item.getProductId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND,
-                            "商品库存不存在: " + item.getProductId()));
-            inventory.deduct(item.getQuantity());
-            inventoryRepository.save(inventory);
+    private List<OrderItemInfo> convertToOrderItemInfos(List<OrderItem> items) {
+        List<OrderItemInfo> itemInfos = new ArrayList<>();
+        for (OrderItem item : items) {
+            itemInfos.add(new OrderItemInfo(
+                    item.getProductId(),
+                    item.getProductName(),
+                    item.getQuantity()
+            ));
         }
-    }
-
-    /**
-     * 回滚订单库存（退款时）
-     * 使用 adjustStock 恢复库存（因为库存已经扣减，reservedStock=0）
-     */
-    private void releaseStockForOrder(Order order) {
-        for (OrderItem item : order.getItems()) {
-            Inventory inventory = inventoryRepository.findByProductId(item.getProductId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND,
-                            "商品库存不存在: " + item.getProductId()));
-            // 退款时恢复库存，使用 adjustStock 增加 availableStock
-            inventory.adjustStock(item.getQuantity());
-            inventoryRepository.save(inventory);
-        }
+        return itemInfos;
     }
 }

@@ -133,4 +133,21 @@ public class InventoryApplicationService {
         inventory.release(quantity);
         inventoryRepository.save(inventory);
     }
+
+    /**
+     * 调整库存（退款恢复库存时调用）
+     */
+    @Transactional
+    public void adjustStock(String productId, int quantity) {
+        if (productId == null || productId.trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.PRODUCT_ID_EMPTY, "商品ID不能为空");
+        }
+        if (quantity <= 0) {
+            throw new BusinessException(ErrorCode.STOCK_NEGATIVE, "调整数量必须为正数");
+        }
+        Inventory inventory = inventoryRepository.findByProductId(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+        inventory.adjustStock(quantity);
+        inventoryRepository.save(inventory);
+    }
 }

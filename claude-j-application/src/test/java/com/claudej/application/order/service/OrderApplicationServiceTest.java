@@ -10,16 +10,15 @@ import com.claudej.domain.cart.model.entity.CartItem;
 import com.claudej.domain.cart.model.valobj.Money;
 import com.claudej.domain.cart.model.valobj.Quantity;
 import com.claudej.domain.cart.repository.CartRepository;
+import com.claudej.domain.common.event.DomainEventPublisher;
 import com.claudej.domain.common.exception.BusinessException;
 import com.claudej.domain.common.exception.ErrorCode;
 import com.claudej.domain.coupon.model.aggregate.Coupon;
 import com.claudej.domain.coupon.model.valobj.CouponId;
-import com.claudej.domain.coupon.model.valobj.CouponStatus;
 import com.claudej.domain.coupon.model.valobj.DiscountType;
 import com.claudej.domain.coupon.repository.CouponRepository;
-import com.claudej.domain.inventory.model.aggregate.Inventory;
-import com.claudej.domain.inventory.model.valobj.SkuCode;
-import com.claudej.domain.inventory.repository.InventoryRepository;
+import com.claudej.domain.order.event.OrderCancelledEvent;
+import com.claudej.domain.order.event.OrderCreatedEvent;
 import com.claudej.domain.order.model.aggregate.Order;
 import com.claudej.domain.order.model.valobj.CustomerId;
 import com.claudej.domain.order.model.valobj.OrderId;
@@ -27,6 +26,7 @@ import com.claudej.domain.order.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -57,7 +57,7 @@ class OrderApplicationServiceTest {
     private CouponRepository couponRepository;
 
     @Mock
-    private InventoryRepository inventoryRepository;
+    private DomainEventPublisher domainEventPublisher;
 
     @Mock
     private OrderAssembler orderAssembler;
@@ -74,7 +74,6 @@ class OrderApplicationServiceTest {
     private OrderDTO mockOrderDTO;
     private Cart mockCart;
     private Coupon mockCoupon;
-    private Inventory mockInventory;
 
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 4, 19, 12, 0, 0);
     private static final LocalDateTime VALID_FROM = LocalDateTime.of(2026, 4, 1, 0, 0, 0);
@@ -115,16 +114,11 @@ class OrderApplicationServiceTest {
         mockCoupon = Coupon.create("满100减20", DiscountType.FIXED_AMOUNT,
                 new BigDecimal("20"), new BigDecimal("100"), "CUST001",
                 VALID_FROM, VALID_UNTIL);
-
-        // 创建库存
-        mockInventory = Inventory.create("PROD001", new SkuCode("SKU001"), 100);
     }
 
     @Test
     void should_createOrder_when_validCommandProvided() {
         // Given
-        when(inventoryRepository.findByProductId("PROD001")).thenReturn(Optional.of(mockInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
@@ -134,9 +128,17 @@ class OrderApplicationServiceTest {
         // Then
         assertThat(result).isNotNull();
         assertThat(result.getOrderId()).isEqualTo("ORD123456");
-        verify(inventoryRepository).findByProductId("PROD001");
-        verify(inventoryRepository).save(any(Inventory.class));
         verify(orderRepository).save(any(Order.class));
+
+        // Verify event published
+        ArgumentCaptor<OrderCreatedEvent> eventCaptor = ArgumentCaptor.forClass(OrderCreatedEvent.class);
+        verify(domainEventPublisher).publish(eventCaptor.capture());
+        OrderCreatedEvent publishedEvent = eventCaptor.getValue();
+        assertThat(publishedEvent.getOrderId()).isEqualTo(mockOrder.getOrderIdValue());
+        assertThat(publishedEvent.getCustomerId()).isEqualTo("CUST001");
+        assertThat(publishedEvent.getItems()).hasSize(1);
+        assertThat(publishedEvent.getItems().get(0).getProductId()).isEqualTo("PROD001");
+        assertThat(publishedEvent.getItems().get(0).getQuantity()).isEqualTo(2);
     }
 
     @Test
@@ -185,11 +187,8 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_payOrder_when_orderExistsAndCreated() {
-        // Given - pre-reserve inventory (simulate order creation)
-        mockInventory.reserve(2);
+        // Given
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
-        when(inventoryRepository.findByProductId("PROD001")).thenReturn(Optional.of(mockInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
@@ -198,18 +197,14 @@ class OrderApplicationServiceTest {
 
         // Then
         assertThat(result).isNotNull();
-        verify(inventoryRepository).findByProductId("PROD001");
-        verify(inventoryRepository).save(any(Inventory.class));
         verify(orderRepository).save(any(Order.class));
+        // Note: Inventory deduction is triggered by PaymentSuccessEvent in PaymentApplicationService
     }
 
     @Test
     void should_cancelOrder_when_orderExistsAndCancellable() {
-        // Given - pre-reserve inventory (simulate order creation)
-        mockInventory.reserve(2);
+        // Given
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
-        when(inventoryRepository.findByProductId("PROD001")).thenReturn(Optional.of(mockInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
@@ -218,17 +213,21 @@ class OrderApplicationServiceTest {
 
         // Then
         assertThat(result).isNotNull();
-        verify(inventoryRepository).findByProductId("PROD001");
-        verify(inventoryRepository).save(any(Inventory.class));
         verify(orderRepository).save(any(Order.class));
+
+        // Verify event published
+        ArgumentCaptor<OrderCancelledEvent> eventCaptor = ArgumentCaptor.forClass(OrderCancelledEvent.class);
+        verify(domainEventPublisher).publish(eventCaptor.capture());
+        OrderCancelledEvent publishedEvent = eventCaptor.getValue();
+        assertThat(publishedEvent.getOrderId()).isEqualTo(mockOrder.getOrderIdValue());
+        assertThat(publishedEvent.getCustomerId()).isEqualTo("CUST001");
+        assertThat(publishedEvent.getItems()).hasSize(1);
     }
 
     @Test
     void should_createOrderFromCart_when_cartExistsWithItems() {
         // Given
         when(cartRepository.findByUserId("CUST001")).thenReturn(Optional.of(mockCart));
-        when(inventoryRepository.findByProductId("PROD001")).thenReturn(Optional.of(mockInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(cartRepository.save(any(Cart.class))).thenReturn(mockCart);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
@@ -240,10 +239,15 @@ class OrderApplicationServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getOrderId()).isEqualTo("ORD123456");
         verify(cartRepository).findByUserId("CUST001");
-        verify(inventoryRepository).findByProductId("PROD001");
-        verify(inventoryRepository).save(any(Inventory.class));
         verify(orderRepository).save(any(Order.class));
         verify(cartRepository).save(any(Cart.class));
+
+        // Verify event published
+        ArgumentCaptor<OrderCreatedEvent> eventCaptor = ArgumentCaptor.forClass(OrderCreatedEvent.class);
+        verify(domainEventPublisher).publish(eventCaptor.capture());
+        OrderCreatedEvent publishedEvent = eventCaptor.getValue();
+        assertThat(publishedEvent.getOrderId()).isEqualTo(mockOrder.getOrderIdValue());
+        assertThat(publishedEvent.getItems()).hasSize(1);
     }
 
     @Test
@@ -285,8 +289,6 @@ class OrderApplicationServiceTest {
     void should_clearCartAfterOrderCreation() {
         // Given
         when(cartRepository.findByUserId("CUST001")).thenReturn(Optional.of(mockCart));
-        when(inventoryRepository.findByProductId("PROD001")).thenReturn(Optional.of(mockInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(cartRepository.save(any(Cart.class))).thenReturn(mockCart);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
@@ -306,8 +308,6 @@ class OrderApplicationServiceTest {
         // Given
         createCommand.setCouponId(mockCoupon.getCouponIdValue());
 
-        when(inventoryRepository.findByProductId("PROD001")).thenReturn(Optional.of(mockInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
         when(couponRepository.findByCouponId(any(CouponId.class))).thenReturn(Optional.of(mockCoupon));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
@@ -319,6 +319,9 @@ class OrderApplicationServiceTest {
         assertThat(result).isNotNull();
         verify(couponRepository).findByCouponId(any(CouponId.class));
         verify(orderRepository).save(any(Order.class));
+
+        // Verify event published
+        verify(domainEventPublisher).publish(any(OrderCreatedEvent.class));
     }
 
     @Test
@@ -326,8 +329,6 @@ class OrderApplicationServiceTest {
         // Given
         createCommand.setCouponId("INVALID_COUPON");
 
-        when(inventoryRepository.findByProductId("PROD001")).thenReturn(Optional.of(mockInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
         when(couponRepository.findByCouponId(any(CouponId.class))).thenReturn(Optional.empty());
 
         // When & Then
@@ -346,8 +347,6 @@ class OrderApplicationServiceTest {
                 new BigDecimal("20"), new BigDecimal("100"), "OTHER_USER",
                 VALID_FROM, VALID_UNTIL);
 
-        when(inventoryRepository.findByProductId("PROD001")).thenReturn(Optional.of(mockInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
         when(couponRepository.findByCouponId(any(CouponId.class))).thenReturn(Optional.of(otherUserCoupon));
 
         // When & Then
@@ -371,12 +370,7 @@ class OrderApplicationServiceTest {
                 new BigDecimal("20"), new BigDecimal("100"), "CUST001",
                 VALID_FROM, VALID_UNTIL);
 
-        // Pre-reserve inventory
-        mockInventory.reserve(2);
-
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(orderWithCoupon));
-        when(inventoryRepository.findByProductId("PROD001")).thenReturn(Optional.of(mockInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
         when(couponRepository.findByCouponId(any(CouponId.class))).thenReturn(Optional.of(availableCoupon));
         when(orderRepository.save(any(Order.class))).thenReturn(orderWithCoupon);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
@@ -392,11 +386,8 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_notQueryCoupon_when_payOrderWithoutCoupon() {
-        // Given - pre-reserve inventory
-        mockInventory.reserve(2);
+        // Given
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
-        when(inventoryRepository.findByProductId("PROD001")).thenReturn(Optional.of(mockInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
@@ -414,8 +405,6 @@ class OrderApplicationServiceTest {
         createFromCartCommand.setCouponId(mockCoupon.getCouponIdValue());
 
         when(cartRepository.findByUserId("CUST001")).thenReturn(Optional.of(mockCart));
-        when(inventoryRepository.findByProductId("PROD001")).thenReturn(Optional.of(mockInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
         when(couponRepository.findByCouponId(any(CouponId.class))).thenReturn(Optional.of(mockCoupon));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(cartRepository.save(any(Cart.class))).thenReturn(mockCart);
@@ -428,6 +417,7 @@ class OrderApplicationServiceTest {
         assertThat(result).isNotNull();
         verify(couponRepository).findByCouponId(any(CouponId.class));
         verify(orderRepository).save(any(Order.class));
+        verify(domainEventPublisher).publish(any(OrderCreatedEvent.class));
     }
 
     // --- Ship/Deliver/Refund tests ---
@@ -628,32 +618,5 @@ class OrderApplicationServiceTest {
         assertThatThrownBy(() -> orderApplicationService.refundOrder("ORD123456"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("优惠券不存在");
-    }
-
-    // --- Inventory integration tests ---
-
-    @Test
-    void should_throwException_when_createOrder_inventoryNotFound() {
-        // Given
-        when(inventoryRepository.findByProductId("PROD001")).thenReturn(Optional.empty());
-
-        // When & Then
-        assertThatThrownBy(() -> orderApplicationService.createOrder(createCommand))
-                .isInstanceOf(BusinessException.class)
-                .extracting("errorCode")
-                .isEqualTo(ErrorCode.INVENTORY_NOT_FOUND);
-    }
-
-    @Test
-    void should_throwException_when_createOrder_inventoryInsufficient() {
-        // Given - inventory with only 1 item
-        Inventory lowInventory = Inventory.create("PROD001", new SkuCode("SKU001"), 1);
-        when(inventoryRepository.findByProductId("PROD001")).thenReturn(Optional.of(lowInventory));
-
-        // When & Then - order requires 2 items
-        assertThatThrownBy(() -> orderApplicationService.createOrder(createCommand))
-                .isInstanceOf(BusinessException.class)
-                .extracting("errorCode")
-                .isEqualTo(ErrorCode.INVENTORY_INSUFFICIENT);
     }
 }
