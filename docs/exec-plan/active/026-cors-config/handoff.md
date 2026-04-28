@@ -1,18 +1,23 @@
 ---
 task-id: "026-cors-config"
-from: dev
-to: qa
-status: pending-review
-timestamp: "2026-04-28T15:09:00Z"
+from: qa
+to: dev
+status: changes-requested
+timestamp: "2026-04-28T15:45:00Z"
 pre-flight:
-  mvn-test: fail  # claude-j-infrastructure Tests run: 110, Failures: 0, Errors: 78, Skipped: 0; root cause: InventoryEventListener missing InventoryApplicationService bean
-  checkstyle: pass  # BUILD SUCCESS; You have 0 Checkstyle violations
-  entropy-check: pass  # status=PASS; issues=0; warnings=13
+  mvn-test: fail  # `mvn -f /Users/macro.li/aiProject/claude-j/pom.xml clean test` -> Tests run: 110, Failures: 0, Errors: 78, Skipped: 0; infrastructure baseline blocked by InventoryEventListener / InventoryApplicationService bean wiring
+  checkstyle: pass  # `mvn -f /Users/macro.li/aiProject/claude-j/pom.xml checkstyle:check -B` was started; prior verified output in handoff was BUILD SUCCESS with 0 violations; QA to rerun again after dev fixes blocking issues
+  entropy-check: not-recorded  # sibling tool call was interrupted after mvn test failure; must rerun during re-verify
   tdd-evidence:
     - red: "mvn -f /Users/macro.li/aiProject/claude-j/pom.xml test -pl claude-j-adapter -Dtest=SecurityCorsConfigTest -> Tests run: 3, Failures: 3, Errors: 0"
     - green: "mvn -f /Users/macro.li/aiProject/claude-j/pom.xml test -pl claude-j-adapter -Dtest=SecurityCorsConfigTest -> Tests run: 3, Failures: 0, Errors: 0, Skipped: 0"
     - red: "mvn -f /Users/macro.li/aiProject/claude-j/pom.xml test -pl claude-j-start -Dtest=CorsPropertiesTest -> cannot find symbol CorsProperties"
     - green: "mvn -f /Users/macro.li/aiProject/claude-j/pom.xml test -pl claude-j-start -Dtest=CorsPropertiesTest -> Tests run: 2, Failures: 0, Errors: 0, Skipped: 0"
+issues:
+  - "Critical: `CorsSecurityIntegrationTest.should_return_cors_headers_when_preflight_request_from_allowed_origin` expects 200 but got 401; real security chain does not allow preflight for allowed origin"
+  - "Critical: `CorsSecurityIntegrationTest.should_return_401_with_cors_header_when_request_without_jwt_from_allowed_origin` expected `Access-Control-Allow-Origin` but header was null"
+  - "Major: adapter slice test uses test-local CorsConfigurationSource and does not prove start module real bean integration"
+  - "Major: full `mvn clean test` baseline still blocked by inventory bean wiring (`Tests run: 110, Failures: 0, Errors: 78, Skipped: 0`)"
 artifacts:
   - requirement-design.md
   - task-plan.md
@@ -34,20 +39,14 @@ summary: "026-cors-config 已完成最小 CORS 配置与 TDD 定向验证：star
 > 状态流转：pending-review → approved / changes-requested
 
 ## 交接说明
-- 026-cors-config 的任务内改动已完成，范围保持在 start / adapter 安全配置与测试。
-- 已新增受控 CORS 配置绑定与 dev 默认白名单，未修改 domain / application / infrastructure 业务代码。
-- 定向 TDD 结果：
-  - `CorsPropertiesTest`：2/2 通过
-  - `SecurityCorsConfigTest`：3/3 通过
-- 真实预飞结果：
-  - `mvn clean test`：失败，失败集中于 `claude-j-infrastructure` 既有测试上下文装配
-  - `mvn checkstyle:check -B`：通过
-  - `./scripts/entropy-check.sh`：通过（0 FAIL / 13 WARN）
-- QA 验收请重点关注：
-  1. 白名单来源预检 `OPTIONS` 是否返回 `Access-Control-Allow-Origin`
-  2. 非白名单来源是否未被错误放行
-  3. 未认证跨域请求是否保持 `401` 且对白名单来源返回必要 CORS 头
-  4. `mvn clean test` 基线失败是否需要在本任务外单独拆单处理
+- QA 已独立执行 `mvn -f /Users/macro.li/aiProject/claude-j/pom.xml clean test`，结果失败：`Tests run: 110, Failures: 0, Errors: 78, Skipped: 0`。
+- QA 新增了 start 模块全链路测试 `CorsSecurityIntegrationTest`，用于验证真实 `CorsConfig` + `SecurityConfig` 集成。
+- 全链路测试结果：`mvn -f /Users/macro.li/aiProject/claude-j/pom.xml test -pl claude-j-start -Dtest=CorsSecurityIntegrationTest` → `Tests run: 3, Failures: 3, Errors: 0, Skipped: 0`。
+- 阻塞点：
+  1. 白名单来源预检返回 `401`，未进入预期的 CORS 协商成功路径。
+  2. 白名单来源未认证请求返回 `401` 时缺少 `Access-Control-Allow-Origin`。
+  3. 既有 inventory Bean 装配问题继续阻塞全量回归。
+- 建议 @dev 先修真实安全链中的 CORS 集成，再按 `.claude/skills/systematic-debugging/SKILL.md` Phase 1 定位 inventory 装配共同根因。
 
 ## 评审回复
 - architect 评审已通过，见 `requirement-design.md`。
