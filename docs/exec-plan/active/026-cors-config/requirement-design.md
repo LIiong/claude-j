@@ -156,3 +156,49 @@ app:
   - 更新 `claude-j-start/src/main/resources/application-dev.yml`（若已存在则增量修改）
   - 视 Build 实施结果补充运维说明文档。
   - 路线图 `docs/roadmap/industry-gap-analysis.md` 在验收通过后可将 C3 标记完成。
+
+## 架构评审
+
+**评审人**：@architect
+**日期**：2026-04-28
+**结论**：✅ 通过
+
+### 评审检查项（15 维四类）
+
+**架构合规（7 项）**
+- [x] 聚合根边界合理（遵循事务一致性原则）
+- [x] 值对象识别充分（金额、标识符等应为 VO）
+- [x] Repository 端口粒度合适（方法不多不少）
+- [x] 与已有聚合无循环依赖
+- [x] DDL 设计与领域模型一致（字段映射、索引合理）
+- [x] API 设计符合 RESTful 规范
+- [x] 对象转换链正确（DO ↔ Domain ↔ DTO ↔ Request/Response）
+
+**需求质量（3 项）**
+- [x] 需求无歧义：核心名词、流程、异常分支均有明确定义
+- [x] 验收条件可验证：每条 AC 可转化为 `should_xxx_when_yyy` 测试用例
+- [x] 业务规则完备：状态机/不变量/边界值在需求中已列明
+
+**计划可执行性（2 项）**
+- [x] task-plan 粒度合格：按层任务已分解到原子级（10–15 分钟/步），每步含文件路径 + 验证命令 + 预期输出（详见 `docs/exec-plan/templates/task-plan.template.md` 原子任务章节）
+- [x] 依赖顺序正确：domain → application → infrastructure → adapter → start 自下而上，层间依赖无倒置
+
+**可测性保障（3 项 — 010 复盘后新增）**
+- [x] **AC 自动化全覆盖**：`test-case-design.md` 的「AC 自动化覆盖矩阵」每条 AC 都有对应自动化测试方法；任一标「手动」但无替代自动化测试 → **打回**
+- [x] **可测的注入方式**：若引入新 Spring Bean，使用构造函数注入而非字段注入（避免测试反射）；详见 `java-dev.md` 依赖注入规则
+- [x] **配置校验方式合规**：若涉及敏感/跨环境配置校验，使用 `@ConfigurationProperties + @Validated`，不得用 `ApplicationRunner`/`@PostConstruct`；详见 ADR-005
+
+**心智原则（Karpathy — 动手前自检）**
+- [x] **简洁性**：需求未要求的抽象/配置/工厂已移除；任何单一实现的 `XxxStrategy`/`XxxFactory` 需说明存在理由
+- [x] **外科性**：设计仅改动任务直接相关的文件；若涉及跨聚合大改，在评审意见说明理由
+- [x] **假设显性**：需求里含糊的字段/边界/异常，requirement-design 已在「假设与待确认」列出
+
+### 评审意见
+- 方案选择正确：CORS 放在 `start` 提供配置和 `CorsConfigurationSource`，由 `adapter` 的 `SecurityFilterChain` 显式接入；这符合六边形边界，避免把 HTTP 协商逻辑下沉到 `domain/application/infrastructure`。
+- 预检 `OPTIONS` 的风险已被约束为“只做协商，不放宽鉴权”；设计明确要求保留受保护接口的 `401` 语义，且只对白名单来源返回 CORS 头，未出现把受保护接口整体 `permitAll` 的问题。
+- 配置键命名 `app.security.cors.*` 与现有 `@ConfigurationProperties + @Validated` 约定一致，环境策略采用 `dev` 默认放开本地前端、非 dev 最小暴露，也符合项目“配置优先、默认收敛”的原则。
+- `task-plan.md` 已拆到可执行原子步，且验证命令覆盖了绑定测试、安全切片测试与三项预飞，粒度可落地。
+- 唯一建议是：后续 Build 阶段在实现 `CorsConfigurationSource` 时保持“仅配置层拥有白名单默认值，adapter 只消费 bean”，避免把环境策略复制进安全配置类。
+
+### 需要新增的 ADR
+- 无需新增 ADR。当前方案已被 ADR-005 的配置校验策略覆盖；本任务属于该决策的具体落地，不构成新的架构决策边界。
