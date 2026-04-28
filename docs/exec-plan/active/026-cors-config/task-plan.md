@@ -6,17 +6,17 @@
 
 | # | 任务 | 负责人 | 状态 | 备注 |
 |---|------|--------|------|------|
-| 1 | Domain: 本任务无领域对象/端口变更，确认零影响 | dev | 待办 | 仅记录边界，不编写 domain 代码 |
-| 2 | Application: 本任务无应用服务/DTO 变更，确认零影响 | dev | 待办 | CORS 不进入 application |
-| 3 | Infrastructure: 本任务无 DO/Mapper/Repository 变更，确认零影响 | dev | 待办 | CORS 不进入 infrastructure |
-| 4 | Start: CORS 配置属性绑定测试（Red→Green） | dev | 待办 | `@ConfigurationProperties + @Validated` |
-| 5 | Start: CORS 配置类与环境配置实现 | dev | 待办 | `CorsConfigurationSource` + yml |
-| 6 | Adapter: Security CORS 行为测试（Red→Green） | dev | 待办 | 预检 / 白名单 / 未授权跨域 |
-| 7 | Adapter: SecurityConfig 接入 CORS 配置 | dev | 待办 | 不改变 JWT 认证语义 |
-| 8 | Start/Docs: 运维说明与路线图更新 | dev | 待办 | 配置键说明；C3 完成标记待验收后更新 |
-| 9 | 全量 mvn test | dev | 待办 | 记录真实输出到 handoff |
-| 10 | 全量 mvn checkstyle:check | dev | 待办 | 记录真实输出到 handoff |
-| 11 | 全量 ./scripts/entropy-check.sh | dev | 待办 | 记录真实输出到 handoff |
+| 1 | Domain: 本任务无领域对象/端口变更，确认零影响 | dev | 单测通过 | `git diff -- claude-j-domain` 为空 |
+| 2 | Application: 本任务无应用服务/DTO 变更，确认零影响 | dev | 单测通过 | `git diff -- claude-j-application` 为空 |
+| 3 | Infrastructure: 本任务无 DO/Mapper/Repository 变更，确认零影响 | dev | 单测通过 | `git diff -- claude-j-infrastructure/src/main` 为空 |
+| 4 | Start: CORS 配置属性绑定测试（Red→Green） | dev | 单测通过 | `CorsPropertiesTest` 2/2 通过 |
+| 5 | Start: CORS 配置类与环境配置实现 | dev | 单测通过 | `CorsConfig` + yml 已落地 |
+| 6 | Adapter: Security CORS 行为测试（Red→Green） | dev | 单测通过 | `SecurityCorsConfigTest` 3/3 通过 |
+| 7 | Adapter: SecurityConfig 接入 CORS 配置 | dev | 单测通过 | 预检/401 语义验证通过 |
+| 8 | Start/Docs: 运维说明与路线图更新 | dev | 单测通过 | 本轮仅更新 application.yml / application-dev.yml；未改 roadmap |
+| 9 | 全量 mvn test | dev | 待修复 | `claude-j-infrastructure` 既有 `InventoryEventListener` 装配失败，见 handoff |
+| 10 | 全量 mvn checkstyle:check | dev | 待办 | 待执行 |
+| 11 | 全量 ./scripts/entropy-check.sh | dev | 待办 | 待执行 |
 | 12 | QA: 测试用例设计 | qa | 待办 | |
 | 13 | QA: 验收测试 + 代码审查 | qa | 待办 | |
 
@@ -127,7 +127,7 @@ domain（零影响确认） → application（零影响确认） → infrastruct
 
 ## 开发完成记录
 <!-- dev 完成后填写 -->
-- 全量 `mvn clean test`：待填写
+- 全量 `mvn clean test`：失败；`claude-j-infrastructure` 共 `Tests run: 110, Failures: 0, Errors: 78, Skipped: 0`，根因是 `InventoryEventListener` 缺少 `InventoryApplicationService` Bean
 - 架构合规检查：待填写
 - 通知 @qa 时间：待填写
 
