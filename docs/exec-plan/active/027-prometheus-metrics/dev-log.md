@@ -20,8 +20,15 @@
 - **Fix**：在 `ActuatorPrometheusIntegrationTest` 显式添加 `@AutoConfigureMetrics`，使测试上下文启用 metrics export。
 - **Verification**：`mvn -s /private/tmp/maven-settings-no-proxy.xml test -pl claude-j-start -Dtest=ActuatorPrometheusIntegrationTest` -> `Tests run: 2, Failures: 0, Errors: 0, Skipped: 0`，同时 `Exposing 5 endpoint(s) beneath base path '/actuator'`。
 
+### 4. 最终 Build blocker：infrastructure 端 metrics 端口编译可见性失效
+- **Issue**：最后自动 Build 修复轮次无法让 `OrderRepositoryImplTest` 真实执行到测试方法。
+- **Root Cause**：`claude-j-infrastructure` 在 `compile` 阶段先失败，`OrderMetricsConfiguration.java`、`MicrometerOrderMetricsRecorder.java`、`NoOpOrderMetricsPort.java` 无法解析 `com.claudej.application.order.port.OrderMetricsPort`，说明模块依赖/编译可见性仍存在阻塞。
+- **Fix**：本轮仅记录终止，不再继续扩大修改面；待人工介入确认 metrics 端口落点与 infrastructure 模块依赖可见性，或调整模块依赖/测试装配策略。
+- **Verification**：`mvn -s /private/tmp/maven-settings-no-proxy.xml clean test -pl claude-j-infrastructure -DfailIfNoTests=false -Dtest=OrderRepositoryImplTest` -> `compile` 阶段 9 errors，未出现 `Running com.claudej.infrastructure.order.persistence.repository.OrderRepositoryImplTest`，也没有 `Tests run: 9`。
+
 ## 变更记录
 
 - 为 Prometheus 集成测试显式添加 `@AutoConfigureMetrics`，避免测试上下文默认禁用 metrics export。
 - `src/test/resources/application-dev.yml` 保留 `prometheus` 暴露配置，确保 dev profile 下端点可见。
 - 未引入额外需求外指标，仍仅使用 `source` / `reason_type` / `outcome` 低基数标签。
+- 终止说明：最后一轮 Build blocker 卡在 infrastructure compile 阶段的 `OrderMetricsPort` 可见性问题，停止自动推进，等待人工介入。

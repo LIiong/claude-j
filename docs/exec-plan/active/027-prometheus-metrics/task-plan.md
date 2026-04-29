@@ -13,9 +13,9 @@
 | 5 | Adapter: 回归订单接口切片测试 | dev | 单测通过 | 确认观测接入不影响 HTTP 契约 |
 | 6 | Start: Prometheus registry 依赖与 Actuator 配置 | dev | 单测通过 | 暴露 `/actuator/prometheus` |
 | 7 | Start: Prometheus 集成测试 | dev | 单测通过 | 验证端点 200 与指标名可见 |
-| 8 | 全量 `mvn test` | dev | 进行中 | 含 ArchUnit |
-| 9 | 全量 `mvn checkstyle:check` | dev | 待办 | 风格守护 |
-| 10 | 全量 `./scripts/entropy-check.sh` | dev | 待办 | 架构漂移守护 |
+| 8 | 全量 `mvn test` | dev | 阻塞 | infrastructure compile 期间 metrics 端口不可见 |
+| 9 | 全量 `mvn checkstyle:check` | dev | 未完成 | Build blocker 未解除 |
+| 10 | 全量 `./scripts/entropy-check.sh` | dev | 未完成 | Build blocker 未解除 |
 | 11 | QA: 测试用例设计 | qa | 待办 | |
 | 12 | QA: 验收测试 + 代码审查 | qa | 待办 | |
 
