@@ -18,7 +18,7 @@
 | 10 | 全量 mvn checkstyle:check | dev | 单测通过 | `You have 0 Checkstyle violations.` |
 | 11 | 全量 ./scripts/entropy-check.sh | dev | 单测通过 | `issues: 0, warnings: 13, status: PASS` |
 | 12 | QA: 测试用例设计 | qa | 单测通过 | 已新增 `CorsSecurityIntegrationTest` 作为真实链路验证 |
-| 13 | QA: 验收测试 + 代码审查 | qa | 待验收 | Build 返工完成，待 QA 复验 |
+| 13 | QA: 验收测试 + 代码审查 | qa | 完成 | QA 独立重跑三项检查通过；`CorsSecurityIntegrationTest` 4/4 通过 |
 
 ## 执行顺序
 domain（零影响确认） → application（零影响确认） → infrastructure（零影响确认） → start（配置绑定测试与实现） → adapter（安全测试与接入） → docs → 全量测试 → QA 验收
@@ -133,8 +133,8 @@ domain（零影响确认） → application（零影响确认） → infrastruct
 
 ## QA 验收记录
 <!-- qa 验收后填写 -->
-- 全量测试（含集成测试）：待填写
-- 代码审查结果：待填写
-- 代码风格检查：待填写
-- 问题清单：详见 test-report.md
-- **最终状态**：待填写
+- 全量测试（含集成测试）：`mvn -f /Users/macro.li/aiProject/claude-j/pom.xml clean test` 通过；domain 673、application 130、adapter 111、infrastructure 110、start 66，`BUILD SUCCESS`。
+- 代码审查结果：通过；CORS 逻辑落在 start/adapter 边界，未放宽授权，见 `test-report.md`。
+- 代码风格检查：`mvn -f /Users/macro.li/aiProject/claude-j/pom.xml checkstyle:check -B` 通过（0 violations）；`/Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh` 通过（issues: 0, warnings: 13, status: PASS）。
+- 问题清单：详见 `test-report.md`
+- **最终状态**：验收通过
