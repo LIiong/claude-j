@@ -4,7 +4,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 import javax.validation.constraints.AssertTrue;
-import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PositiveOrZero;
 import java.util.ArrayList;
@@ -24,10 +23,8 @@ public class CorsProperties {
 
     private List<String> allowedOrigins = new ArrayList<String>();
 
-    @NotEmpty
     private List<String> allowedMethods = new ArrayList<String>();
 
-    @NotEmpty
     private List<String> allowedHeaders = new ArrayList<String>();
 
     public boolean isEnabled() {
@@ -81,5 +78,15 @@ public class CorsProperties {
     @AssertTrue(message = "allowedOrigins must not be empty when cors is enabled")
     public boolean isAllowedOriginsValid() {
         return !enabled || (allowedOrigins != null && !allowedOrigins.isEmpty());
+    }
+
+    @AssertTrue(message = "allowedMethods must not be empty when cors is enabled")
+    public boolean isAllowedMethodsValid() {
+        return !enabled || (allowedMethods != null && !allowedMethods.isEmpty());
+    }
+
+    @AssertTrue(message = "allowedHeaders must not be empty when cors is enabled")
+    public boolean isAllowedHeadersValid() {
+        return !enabled || (allowedHeaders != null && !allowedHeaders.isEmpty());
     }
 }

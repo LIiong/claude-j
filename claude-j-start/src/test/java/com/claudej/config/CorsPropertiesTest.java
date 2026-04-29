@@ -56,6 +56,22 @@ class CorsPropertiesTest {
     }
 
     @Test
+    void should_allow_empty_lists_when_cors_disabled() {
+        contextRunner
+                .withPropertyValues(
+                        "app.security.cors.enabled=false",
+                        "app.security.cors.allow-credentials=true",
+                        "app.security.cors.max-age=1800"
+                )
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    CorsProperties properties = context.getBean(CorsProperties.class);
+                    assertThat(properties.isEnabled()).isFalse();
+                    assertThat(properties.getAllowedOrigins()).isEmpty();
+                });
+    }
+
+    @Test
     void should_fail_when_allowed_origins_missing_in_enabled_mode() {
         contextRunner
                 .withPropertyValues(

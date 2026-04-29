@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 class LinkRepositoryImplTest {
 
-    @SpringBootApplication(scanBasePackages = "com.claudej.infrastructure")
+    @SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure", "com.claudej.application"})
     @MapperScan("com.claudej.infrastructure.**.mapper")
     static class TestConfig {
     }

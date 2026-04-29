@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional
 class CartRepositoryImplTest {
 
-    @SpringBootApplication(scanBasePackages = "com.claudej.infrastructure")
+    @SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure", "com.claudej.application"})
     @MapperScan("com.claudej.infrastructure.**.mapper")
     static class TestConfig {
     }

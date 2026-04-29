@@ -14,11 +14,11 @@
 | 6 | Adapter: Security CORS 行为测试（Red→Green） | dev | 单测通过 | `SecurityCorsConfigTest` 3/3 通过 |
 | 7 | Adapter: SecurityConfig 接入 CORS 配置 | dev | 单测通过 | 预检/401 语义验证通过 |
 | 8 | Start/Docs: 运维说明与路线图更新 | dev | 单测通过 | 本轮仅更新 application.yml / application-dev.yml；未改 roadmap |
-| 9 | 全量 mvn test | dev | 待修复 | `claude-j-infrastructure` 既有 `InventoryEventListener` 装配失败，见 handoff |
-| 10 | 全量 mvn checkstyle:check | dev | 待办 | 待执行 |
-| 11 | 全量 ./scripts/entropy-check.sh | dev | 待办 | 待执行 |
-| 12 | QA: 测试用例设计 | qa | 待办 | |
-| 13 | QA: 验收测试 + 代码审查 | qa | 待办 | |
+| 9 | 全量 mvn test | dev | 单测通过 | `mvn clean test` 全量通过；domain 673 + application 130 + adapter 111 + infrastructure 110 + start 66 |
+| 10 | 全量 mvn checkstyle:check | dev | 单测通过 | `You have 0 Checkstyle violations.` |
+| 11 | 全量 ./scripts/entropy-check.sh | dev | 单测通过 | `issues: 0, warnings: 13, status: PASS` |
+| 12 | QA: 测试用例设计 | qa | 单测通过 | 已新增 `CorsSecurityIntegrationTest` 作为真实链路验证 |
+| 13 | QA: 验收测试 + 代码审查 | qa | 待验收 | Build 返工完成，待 QA 复验 |
 
 ## 执行顺序
 domain（零影响确认） → application（零影响确认） → infrastructure（零影响确认） → start（配置绑定测试与实现） → adapter（安全测试与接入） → docs → 全量测试 → QA 验收
@@ -127,8 +127,8 @@ domain（零影响确认） → application（零影响确认） → infrastruct
 
 ## 开发完成记录
 <!-- dev 完成后填写 -->
-- 全量 `mvn clean test`：失败；`claude-j-infrastructure` 共 `Tests run: 110, Failures: 0, Errors: 78, Skipped: 0`，根因是 `InventoryEventListener` 缺少 `InventoryApplicationService` Bean
-- 架构合规检查：待填写
+- 全量 `mvn clean test`：通过；domain `Tests run: 673, Failures: 0, Errors: 0, Skipped: 0`，application `Tests run: 130, Failures: 0, Errors: 0, Skipped: 0`，adapter `Tests run: 111, Failures: 0, Errors: 0, Skipped: 0`，infrastructure `Tests run: 110, Failures: 0, Errors: 0, Skipped: 0`，start `Tests run: 66, Failures: 0, Errors: 0, Skipped: 0`
+- 架构合规检查：`mvn checkstyle:check -B` 通过（0 violations）；`./scripts/entropy-check.sh` 通过（issues: 0, warnings: 13, status: PASS）
 - 通知 @qa 时间：待填写
 
 ## QA 验收记录

@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 class ShortLinkRepositoryImplTest {
 
-    @SpringBootApplication(scanBasePackages = "com.claudej.infrastructure")
+    @SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure", "com.claudej.application"})
     @org.mybatis.spring.annotation.MapperScan("com.claudej.infrastructure.**.mapper")
     static class TestConfig {
     }

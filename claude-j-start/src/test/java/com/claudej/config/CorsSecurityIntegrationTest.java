@@ -1,12 +1,15 @@
 package com.claudej.config;
 
 import com.claudej.ClaudeJApplication;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
@@ -26,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "app.security.cors.allowed-headers[3]=Origin"
 })
 @AutoConfigureMockMvc
+@Import(CorsConfig.class)
 @ActiveProfiles("dev")
 class CorsSecurityIntegrationTest {
 
@@ -34,6 +38,14 @@ class CorsSecurityIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private CorsConfigurationSource corsConfigurationSource;
+
+    @Test
+    void should_load_real_cors_configuration_source_when_start_module_bootstraps() {
+        Assertions.assertThat(corsConfigurationSource).isNotNull();
+    }
 
     @Test
     void should_return_cors_headers_when_preflight_request_from_allowed_origin() throws Exception {

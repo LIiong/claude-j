@@ -1,23 +1,19 @@
 ---
 task-id: "026-cors-config"
-from: qa
-to: dev
-status: changes-requested
-timestamp: "2026-04-28T15:45:00Z"
+from: dev
+to: qa
+status: pending-review
+timestamp: "2026-04-28T20:30:00Z"
 pre-flight:
-  mvn-test: fail  # `mvn -f /Users/macro.li/aiProject/claude-j/pom.xml clean test` -> Tests run: 110, Failures: 0, Errors: 78, Skipped: 0; infrastructure baseline blocked by InventoryEventListener / InventoryApplicationService bean wiring
-  checkstyle: pass  # `mvn -f /Users/macro.li/aiProject/claude-j/pom.xml checkstyle:check -B` was started; prior verified output in handoff was BUILD SUCCESS with 0 violations; QA to rerun again after dev fixes blocking issues
-  entropy-check: not-recorded  # sibling tool call was interrupted after mvn test failure; must rerun during re-verify
+  mvn-test: pass  # `mvn -f /Users/macro.li/aiProject/claude-j/pom.xml clean test` -> domain 673, application 130, adapter 111, infrastructure 110, start 66; all failures=0 errors=0
+  checkstyle: pass  # `mvn -f /Users/macro.li/aiProject/claude-j/pom.xml checkstyle:check -B` -> BUILD SUCCESS; You have 0 Checkstyle violations.
+  entropy-check: pass  # `/Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh` -> issues: 0, warnings: 13, status: PASS
   tdd-evidence:
     - red: "mvn -f /Users/macro.li/aiProject/claude-j/pom.xml test -pl claude-j-adapter -Dtest=SecurityCorsConfigTest -> Tests run: 3, Failures: 3, Errors: 0"
     - green: "mvn -f /Users/macro.li/aiProject/claude-j/pom.xml test -pl claude-j-adapter -Dtest=SecurityCorsConfigTest -> Tests run: 3, Failures: 0, Errors: 0, Skipped: 0"
-    - red: "mvn -f /Users/macro.li/aiProject/claude-j/pom.xml test -pl claude-j-start -Dtest=CorsPropertiesTest -> cannot find symbol CorsProperties"
-    - green: "mvn -f /Users/macro.li/aiProject/claude-j/pom.xml test -pl claude-j-start -Dtest=CorsPropertiesTest -> Tests run: 2, Failures: 0, Errors: 0, Skipped: 0"
-issues:
-  - "Critical: `CorsSecurityIntegrationTest.should_return_cors_headers_when_preflight_request_from_allowed_origin` expects 200 but got 401; real security chain does not allow preflight for allowed origin"
-  - "Critical: `CorsSecurityIntegrationTest.should_return_401_with_cors_header_when_request_without_jwt_from_allowed_origin` expected `Access-Control-Allow-Origin` but header was null"
-  - "Major: adapter slice test uses test-local CorsConfigurationSource and does not prove start module real bean integration"
-  - "Major: full `mvn clean test` baseline still blocked by inventory bean wiring (`Tests run: 110, Failures: 0, Errors: 78, Skipped: 0`)"
+    - red: "mvn -f /Users/macro.li/aiProject/claude-j/pom.xml test -pl claude-j-start -Dtest=CorsPropertiesTest -> BUILD FAILURE after adding should_allow_empty_lists_when_cors_disabled"
+    - green: "mvn -f /Users/macro.li/aiProject/claude-j/pom.xml test -pl claude-j-start -Dtest=CorsPropertiesTest -> Tests run: 3, Failures: 0, Errors: 0, Skipped: 0"
+    - green: "mvn -f /Users/macro.li/aiProject/claude-j/pom.xml test -pl claude-j-start -Dtest=CorsSecurityIntegrationTest -> Tests run: 4, Failures: 0, Errors: 0, Skipped: 0"
 artifacts:
   - requirement-design.md
   - task-plan.md
@@ -28,9 +24,19 @@ artifacts:
   - /Users/macro.li/aiProject/claude-j/claude-j-start/src/main/resources/application.yml
   - /Users/macro.li/aiProject/claude-j/claude-j-start/src/main/resources/application-dev.yml
   - /Users/macro.li/aiProject/claude-j/claude-j-start/src/test/java/com/claudej/config/CorsPropertiesTest.java
+  - /Users/macro.li/aiProject/claude-j/claude-j-start/src/test/java/com/claudej/config/CorsSecurityIntegrationTest.java
   - /Users/macro.li/aiProject/claude-j/claude-j-adapter/src/main/java/com/claudej/adapter/auth/security/SecurityConfig.java
   - /Users/macro.li/aiProject/claude-j/claude-j-adapter/src/test/java/com/claudej/adapter/auth/security/SecurityCorsConfigTest.java
-summary: "026-cors-config 已完成最小 CORS 配置与 TDD 定向验证：start 层新增受控白名单配置，adapter 安全链接入 CorsConfigurationSource，预检与未认证跨域语义按设计工作。checkstyle 与 entropy-check 通过；但全量 mvn clean test 被既有 infrastructure 的 InventoryEventListener Bean 装配问题阻塞，需后续单独修复基线。"
+  - /Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/test/java/com/claudej/infrastructure/cart/persistence/repository/CartRepositoryImplTest.java
+  - /Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/test/java/com/claudej/infrastructure/coupon/persistence/repository/CouponRepositoryImplTest.java
+  - /Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/test/java/com/claudej/infrastructure/inventory/persistence/repository/InventoryRepositoryImplTest.java
+  - /Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/test/java/com/claudej/infrastructure/link/persistence/repository/LinkRepositoryImplTest.java
+  - /Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/test/java/com/claudej/infrastructure/order/persistence/repository/OrderRepositoryImplTest.java
+  - /Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/test/java/com/claudej/infrastructure/payment/persistence/repository/PaymentRepositoryImplTest.java
+  - /Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/test/java/com/claudej/infrastructure/product/persistence/repository/ProductRepositoryImplTest.java
+  - /Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/test/java/com/claudej/infrastructure/shortlink/persistence/repository/ShortLinkRepositoryImplTest.java
+  - /Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/test/java/com/claudej/infrastructure/user/persistence/repository/UserRepositoryImplTest.java
+summary: "026-cors-config 返工完成：真实安全链下的 CORS 预检/401 协商已通过集成测试，inventory 测试装配阻塞已通过最小扫描范围修复，且禁用态 CORS 配置绑定问题已消除。三项预飞全部通过，可交由 QA 复验。"
 ---
 
 # 交接文档

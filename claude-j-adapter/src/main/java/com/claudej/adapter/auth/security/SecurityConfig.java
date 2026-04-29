@@ -10,6 +10,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 /**
  * Spring Security 配置
@@ -39,14 +40,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            // 启用 CORS 协商，确保预检在认证前处理
+            .cors().configurationSource(corsConfigurationSource)
+            .and()
+
             // 禁用 CSRF（使用 JWT 无状态认证）
             .csrf().disable()
 
-            // 在安全链内启用统一 CORS 协商
-            .cors().configurationSource(corsConfigurationSource)
-
             // 无状态会话
-            .and()
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
 
             // URL 级授权配置
@@ -69,8 +70,9 @@ public class SecurityConfig {
                 .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                 .accessDeniedHandler(jwtAccessDeniedHandler)
 
-            // JWT 过滤器
+            // 先执行 CORS 协商，再执行 JWT 认证
             .and()
+            .addFilterBefore(new CorsFilter(corsConfigurationSource), UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
