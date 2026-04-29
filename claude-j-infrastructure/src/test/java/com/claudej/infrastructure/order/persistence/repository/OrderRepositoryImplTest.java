@@ -14,11 +14,10 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 
 import java.util.List;
@@ -26,23 +25,12 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
+@Import(OrderRepositoryImplTest.TestConfig.class)
 class OrderRepositoryImplTest {
 
-    @SpringBootApplication(
-            exclude = {
-                    DataSourceAutoConfiguration.class,
-                    DataSourceTransactionManagerAutoConfiguration.class,
-                    HibernateJpaAutoConfiguration.class,
-                    TransactionAutoConfiguration.class
-            },
-            scanBasePackages = "com.claudej.infrastructure.order.persistence"
-    )
-    @MapperScan(basePackages = "com.claudej.infrastructure.order.persistence.mapper")
-    @Import(OrderRepositoryImplTest.TestConfig.class)
-    @ComponentScan(basePackages = "com.claudej.infrastructure.order.persistence", excludeFilters = {
-            @ComponentScan.Filter(type = FilterType.REGEX, pattern = "com\\.claudej\\.infrastructure\\.inventory\\..*")
-    })
+    @TestConfiguration
     static class TestConfig {
 
         @Bean
