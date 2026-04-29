@@ -1,20 +1,21 @@
 ---
 task-id: "027-prometheus-metrics"
-from: dev
+from: architect
 to: architect
-status: pending-review
-timestamp: "2026-04-29T00:00:00"
+status: approved
+timestamp: "2026-04-29T00:00:00Z"
+review-date: "2026-04-29"
 pre-flight:
   mvn-test: pending
   checkstyle: pending
-  entropy-check: pending
+  entropy-check: pass  # Exit 0, FAIL=0, WARN=13, status=PASS
   tdd-evidence: []
 artifacts:
   - requirement-design.md
   - task-plan.md
   - dev-log.md
   - handoff.md
-summary: "Spec completed. Proposed OrderMetricsPort boundary keeps Micrometer out of application/domain, exposes /actuator/prometheus via start module, and limits business metric labels to low-cardinality source/reason_type/outcome. Please review port placement and metric naming/tag taxonomy before Build starts."
+summary: "Architecture review approved. Confirmed OrderMetricsPort should live under application.order.port, Micrometer implementation belongs in infrastructure with start only wiring Actuator/registry exposure, and acceptance criteria now explicitly require automated coverage for system failure classification. Entropy baseline executed with exit 0 (FAIL=0, WARN=13)."
 ---
 
 # 交接文档
@@ -38,7 +39,11 @@ summary: "Spec completed. Proposed OrderMetricsPort boundary keeps Micrometer ou
 - 设计默认只覆盖下单创建链路，不扩展到支付/取消/退款指标
 
 ## 评审回复
-{接收方填写：评审意见、问题清单、通过/待修改结论}
+- 结论：approved。
+- 已确认 `OrderMetricsPort` 放在 `application.order.port` 包下，沿用“应用层定义端口、基础设施实现端口”的项目模式。
+- 已确认 Micrometer 依赖不进入 application/domain；具体实现落在 infrastructure，`claude-j-start` 仅负责依赖装配与 `/actuator/prometheus` 暴露。
+- 已补充 requirement-design：Build 阶段必须自动化验证 `system` 失败分类，避免验收只覆盖业务异常分支。
+- 架构基线已执行：`./scripts/entropy-check.sh` 退出码 0，FAIL=0，WARN=13，status=PASS。
 
 ---
 
@@ -48,9 +53,9 @@ summary: "Spec completed. Proposed OrderMetricsPort boundary keeps Micrometer ou
 - 状态：pending-review
 - 说明：提交 027-prometheus-metrics Spec 设计，待评审指标边界、命名与标签策略
 
-### {日期} — @architect → @dev
-- 状态：approved / changes-requested
-- 说明：{评审结论}
+### 2026-04-29 — @architect → @dev
+- 状态：approved
+- 说明：确认 OrderMetricsPort 位于 application.order.port，Micrometer 实现在 infrastructure、start 仅装配；补充 system failure 自动化闭环后通过评审
 
 ### {日期} — @dev → @qa
 - 状态：pending-review

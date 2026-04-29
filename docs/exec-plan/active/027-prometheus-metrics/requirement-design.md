@@ -27,11 +27,11 @@
 
 ### 端口接口
 - **OrderRepository**: 现有 `save(Order)`、`findByOrderId(OrderId)`、`findByCustomerId(CustomerId)` 等接口维持不变；指标需求不改 Repository 端口。
-- **OrderMetricsPort**（application 侧观测端口，拟新增）:
+- **OrderMetricsPort**（application 侧观测端口，拟新增，建议放在 `application.order.port` 包下）:
   - `recordCreateOrderSuccess(String source)`
   - `recordCreateOrderFailure(String source, String reasonType)`
   - `recordCreateOrderDuration(String source, String outcome, long nanos)`
-- **PrometheusMeterRegistry** 不直接进入 application/domain；由 infrastructure/start 提供 Micrometer Bean 与端口实现。
+- **PrometheusMeterRegistry** 不直接进入 application/domain；由 infrastructure 提供 Micrometer 适配实现，`start` 仅负责 Bean 装配与端点暴露。
 
 ## 关键算法/技术方案
 
@@ -89,7 +89,7 @@
 - 假设本期“下单量、下单失败率”仅要求覆盖订单创建，不要求支付、取消、退款等其他订单生命周期指标。
 - 假设 `/actuator/prometheus` 端点在 `dev` 环境与测试环境需要可访问，以便集成测试验证。
 - 假设现有 Actuator 开放策略允许新增 `prometheus` 暴露项，不需要额外鉴权控制。
-- 待 architect 确认：`OrderMetricsPort` 放在 `application.order.port` 还是 `application.order.metrics` 包下更符合当前项目风格；本设计先按端口语义描述，Build 阶段再按评审结论落位。
+- 评审结论：`OrderMetricsPort` 放在 `application.order.port` 包下，延续本项目“应用层定义端口、基础设施实现端口”的既有模式。
 
 ## API 设计
 
@@ -114,9 +114,9 @@
 - **domain**:
   - 无领域模型变更；仅复用 `Order` 聚合及既有值对象语义
 - **application**:
-  - 新增订单指标采集端口（建议 `OrderMetricsPort`）
+  - 新增订单指标采集端口（`application.order.port.OrderMetricsPort`）
   - 修改 `OrderApplicationService`，在 `createOrder` 与 `createOrderFromCart` 增加成功/失败/耗时记录编排
-  - 新增 Mockito 单测覆盖 success、business failure、validation failure 标签分类
+  - 新增 Mockito 单测覆盖 success、business failure、validation failure 标签分类，并显式断言 system failure 分类
 - **infrastructure**:
   - 新增 Micrometer 适配实现（如 `MicrometerOrderMetricsRecorder`）
   - 负责 Counter/Timer 注册与标签封装
@@ -136,5 +136,65 @@
   - `claudej_order_create_duration_seconds`
 - 直接下单成功后，`source="direct"` 的成功计数递增。
 - 从购物车下单失败时，`source="cart"` 与有限 `reason_type` 标签的失败计数递增。
+- 发生非 `BusinessException` 异常时，失败计数使用 `reason_type="system"`，耗时指标使用 `outcome="system_error"`。
 - 失败率通过 PromQL 计算，不在代码中维护冗余 rate/gauge。
+- Build 阶段需提供自动化闭环：
+  - `OrderApplicationServiceTest` 覆盖 `should_record_success_metric_when_create_order_succeeds`
+  - `OrderApplicationServiceTest` 覆盖 `should_record_failure_metric_when_create_order_from_cart_business_error`
+  - `OrderApplicationServiceTest` 覆盖 system failure 分类
+  - `ActuatorPrometheusIntegrationTest` 覆盖 `/actuator/prometheus` 200 与指标名可见
 - Build 阶段完成后，三项预飞 `mvn test`、`mvn checkstyle:check`、`./scripts/entropy-check.sh` 必须真实通过。
+
+## 架构评审
+
+**评审人**：@architect
+**日期**：2026-04-29
+**结论**：✅ 通过
+
+### 评审检查项（15 维四类）
+
+**架构合规（7 项）**
+- [x] 聚合根边界合理（遵循事务一致性原则）
+- [x] 值对象识别充分（金额、标识符等应为 VO）
+- [x] Repository 端口粒度合适（方法不多不少）
+- [x] 与已有聚合无循环依赖
+- [x] DDL 设计与领域模型一致（字段映射、索引合理）
+- [x] API 设计符合 RESTful 规范
+- [x] 对象转换链正确（DO ↔ Domain ↔ DTO ↔ Request/Response）
+
+**需求质量（3 项）**
+- [x] 需求无歧义：核心名词、流程、异常分支均有明确定义
+- [x] 验收条件可验证：每条 AC 可转化为 `should_xxx_when_yyy` 测试用例
+- [x] 业务规则完备：状态机/不变量/边界值在需求中已列明
+
+**计划可执行性（2 项）**
+- [x] task-plan 粒度合格：按层任务已分解到原子级（10–15 分钟/步），每步含文件路径 + 验证命令 + 预期输出（详见 `docs/exec-plan/templates/task-plan.template.md` 原子任务章节）
+- [x] 依赖顺序正确：domain → application → infrastructure → adapter → start 自下而上，层间依赖无倒置
+
+**可测性保障（3 项 — 010 复盘后新增）**
+- [x] **AC 自动化全覆盖**：`test-case-design.md` 的「AC 自动化覆盖矩阵」每条 AC 都有对应自动化测试方法；任一标「手动」但无替代自动化测试 → **打回**
+- [x] **可测的注入方式**：若引入新 Spring Bean，使用构造函数注入而非字段注入（避免测试反射）；详见 `java-dev.md` 依赖注入规则
+- [x] **配置校验方式合规**：若涉及敏感/跨环境配置校验，使用 `@ConfigurationProperties + @Validated`，不得用 `ApplicationRunner`/`@PostConstruct`；详见 ADR-005
+
+**心智原则（Karpathy — 动手前自检）**
+- [x] **简洁性**：需求未要求的抽象/配置/工厂已移除；任何单一实现的 `XxxStrategy`/`XxxFactory` 需说明存在理由
+- [x] **外科性**：设计仅改动任务直接相关的文件；若涉及跨聚合大改，在评审意见说明理由
+- [x] **假设显性**：需求里含糊的字段/边界/异常，requirement-design 已在「假设与待确认」列出
+
+> 完整原则与反模式：`.claude/rules/karpathy-guidelines.md`
+
+### 评审意见
+- `OrderMetricsPort` 作为 application 端口、由 infrastructure 提供 Micrometer 适配实现，符合 `application -> domain <- infrastructure` 的既有边界；`start` 仅负责依赖装配与 Actuator 暴露，避免把观测实现塞进启动层。
+- 指标命名 `claudej_order_create_*` 与标签 `source/reason_type/outcome` 保持低基数，未引入 `orderId`、`customerId`、异常消息等高基数标签，符合 Prometheus 建模约束。
+- 失败率留在 PromQL 查询层计算，不新增 Gauge，符合“派生指标不在应用内冗余存储”的简洁原则。
+- 设计已覆盖 validation/business/system 三类失败语义，但 Build 阶段必须把 `system` 分类写成自动化测试，避免只验证业务异常分支。
+- 参考现有 `OrderApplicationService` 与 `ActuatorHealthIntegrationTest` 模式，建议 Build 阶段沿用构造函数注入、`@SpringBootTest` 端点集成测试和 `SimpleMeterRegistry`/Mockito 分层验证，不引入额外抽象层。
+- 架构基线已真实执行：`./scripts/entropy-check.sh` 退出码 0，结果 `FAIL=0 / WARN=13 / status=PASS`；现有 WARN 为仓库基线噪音，不阻断本任务评审。
+
+### 自行修正记录（若有）
+- 已在设计文档中明确 `OrderMetricsPort` 放置于 `application.order.port` 包下。
+- 已将 Micrometer 实现归属表述收敛为“infrastructure 实现、start 装配”。
+- 已补充 system failure 自动化覆盖要求，闭合验收条件与测试计划。
+
+### 需要新增的 ADR
+- 无。本次采用的“application 定义观测端口、infrastructure 实现、start 装配”属于现有六边形边界的直接应用，不形成新的项目级架构决策。
