@@ -198,3 +198,41 @@
 
 ### 需要新增的 ADR
 - 无。本次采用的“application 定义观测端口、infrastructure 实现、start 装配”属于现有六边形边界的直接应用，不形成新的项目级架构决策。
+
+## 架构复评（Build 阻塞）
+
+**评审人**：@architect
+**日期**：2026-04-29
+**结论**：✅ 维持 approved（实现路线正确，当前阻塞属于测试装配与模块装配问题，不是需求设计方向错误）
+
+### 最小根因集合
+- **根因 1：模块测试 classpath 装配错误**。`claude-j-infrastructure` 模块单独执行测试时，测试上下文会扫描到 `OrderMetricsConfiguration`，但该配置直接引用 application 新增端口 `OrderMetricsPort`；若未先把上游模块重新安装到本地仓库，`OrderRepositoryImplTest` 会在上下文解析阶段因 `OrderMetricsPort` 缺类失败。这是模块级测试装配问题，不是六边形边界问题。证据：`/Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/main/java/com/claudej/infrastructure/order/persistence/metrics/OrderMetricsConfiguration.java:16`，以及单独执行 `mvn -q -pl claude-j-infrastructure -DfailIfNoTests=false -Dtest=OrderRepositoryImplTest test` 触发 `NoClassDefFoundError: com/claudej/application/order/port/OrderMetricsPort`。
+- **根因 2：基础设施测试扫描范围过宽**。`OrderRepositoryImplTest` 只想验证订单仓储，却用 `@SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure"})` 把整个 infrastructure 层都扫进来，连 `InventoryEventListener` 也被实例化，进而要求 application 层的 `InventoryApplicationService` Bean 存在。证据：`/Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/test/java/com/claudej/infrastructure/order/persistence/repository/OrderRepositoryImplTest.java:25` 与 surefire 报告 `/Users/macro.li/aiProject/claude-j/claude-j-infrastructure/target/surefire-reports/com.claudej.infrastructure.order.persistence.repository.OrderRepositoryImplTest.txt:7`。
+- **根因 3：Build 交接状态提前**。当前 `handoff.md` 已写成 `to: qa`，但全量 `mvn clean test` 真实结果仍在 infrastructure 模块失败，说明 Build 尚未闭环，交接目标与状态机不一致。证据：`mvn clean test` 结果 `claude-j-infrastructure FAILURE`、`Tests run: 110, Failures: 0, Errors: 9`，以及 `/Users/macro.li/aiProject/claude-j/docs/exec-plan/active/027-prometheus-metrics/handoff.md:4`。
+
+### 对 @dev 的修复指令
+- **应该改哪里**
+- 将 `OrderRepositoryImplTest` 收缩为订单仓储所需的最小测试上下文，只导入订单 repository / mapper / H2/Flyway 相关 Bean；不要再扫描整个 `com.claudej.infrastructure`。必要时在该测试中显式排除事件监听器，或改为只注册订单持久化所需配置。
+- 保持 `OrderMetricsPort` 继续定义在 application、Micrometer 实现继续放在 infrastructure、Prometheus 端点继续由 start 暴露；这个主路线不要推翻。
+- 在修复测试装配后，重新真实执行 `mvn clean test`，确认 infrastructure 与 start 都通过，再更新交接文档。
+- 若还需要支持 `-pl claude-j-infrastructure` 单模块测试，优先从 Maven/测试 classpath 可重现性角度补齐，而不是把 metrics 逻辑搬回 `start`。
+
+### 不该改哪里
+- 不要把 `MeterRegistry` 直接注入 `OrderApplicationService`；这会把第三方观测实现泄漏进 application，违背既定评审结论。
+- 不要把 `OrderMetricsPort` 挪回 domain；该端口服务的是应用用例观测，不是领域不变量。
+- 不要为了让 `OrderRepositoryImplTest` 过关而在 production 代码里给 `InventoryEventListener` 加需求外的兜底假 Bean、静态开关或弱化监听逻辑。
+- 不要修改订单、库存等业务 Java 逻辑来规避测试失败；当前失败点在测试上下文装配，不在业务行为。
+
+### 问题归类
+- **架构/测试装配问题**：`OrderRepositoryImplTest` 扫描范围过宽，导致无关 listener Bean 进入上下文；这是测试装配问题。
+- **模块依赖/装配问题**：`OrderMetricsConfiguration` 在模块单测 classpath 下解析 `OrderMetricsPort` 失败；这是模块测试装配问题。
+- **不是架构方向问题**：`ActuatorPrometheusIntegrationTest` 使用 `@AutoConfigureMetrics` 后 `/actuator/prometheus` 已可稳定暴露，说明 Prometheus 接入路线本身成立；`OrderMetricsPort` 的分层位置也仍然正确。
+
+### 本轮验证证据
+- `./scripts/entropy-check.sh` -> 退出码 0，`FAIL=0 / WARN=13 / status=PASS`
+- `mvn -q -pl claude-j-start -DfailIfNoTests=false -Dtest=ActuatorPrometheusIntegrationTest test` -> 通过，日志包含 `Exposing 5 endpoint(s) beneath base path '/actuator'`
+- `mvn clean test` -> 失败，`claude-j-infrastructure FAILURE`，`OrderRepositoryImplTest` 9 个错误
+
+### 复评意见
+- 当前 Build 阻塞的最小根因集合已经足以解释现象，不需要回滚设计或新增 ADR。
+- 该任务继续保持 approved，但必须先修复 infrastructure 测试装配并重跑全量测试，之后才能再次交给 QA。
