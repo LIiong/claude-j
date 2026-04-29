@@ -236,3 +236,48 @@
 ### 复评意见
 - 当前 Build 阻塞的最小根因集合已经足以解释现象，不需要回滚设计或新增 ADR。
 - 该任务继续保持 approved，但必须先修复 infrastructure 测试装配并重跑全量测试，之后才能再次交给 QA。
+
+## 架构复评（二）
+
+**评审人**：@architect
+**日期**：2026-04-29
+**结论**：通过；仍可修，但这是第 2 轮复评给出的最后自动推进方案。若 @dev 按本方案执行后仍无法取得 `OrderRepositoryImplTest` 真实执行且全量预飞通过，应终止自动推进并向用户报告。
+
+### 复盘结论
+- 三轮 @dev 修复仍围绕同一 Build blocker：`OrderRepositoryImplTest` 测试装配不稳定，以及由此导致的全量 `mvn clean test` 未闭环。
+- 第 1 轮 `63e1d2a` 已尝试收缩测试上下文，但最小复现仍失败，说明只减少扫描范围不足以闭环。
+- 第 2 轮 `194fcae` 改为 JPA slice，消除了扫描全 infrastructure 引入无关 listener 的风险，但本项目基础设施仓储实际使用 MyBatis-Plus，不是 Spring Data JPA；该方向引入了 `@DataJpaTest` 与当前 ORM 技术栈不匹配的问题。
+- 第 3 轮出现 `BUILD SUCCESS` 且 `Tests run: 0`，不能作为通过证据；这说明当前命令没有真正执行 `OrderRepositoryImplTest`，仍未验证仓储行为。
+- 当前无需推翻 metrics 架构路线：`OrderMetricsPort` 位于 application，Micrometer 适配位于 infrastructure，Prometheus endpoint 由 start 暴露，仍符合六边形边界。
+
+### 最小可执行方案
+- 将 `/Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/test/java/com/claudej/infrastructure/order/persistence/repository/OrderRepositoryImplTest.java` 从 `@DataJpaTest` 改回 MyBatis/JDBC 语义的 Spring 测试，不再使用 JPA slice。
+- 测试上下文只装配订单仓储所需 Bean：`OrderRepositoryImpl`、`OrderConverter`、`OrderMapper`、`OrderItemMapper`、H2 DataSource、事务管理、MyBatis-Plus 自动配置；禁止扫描整个 `com.claudej.infrastructure`，禁止扫描 `com.claudej.application`。
+- 推荐形态：`@SpringBootTest(classes = OrderRepositoryImplTest.TestConfig.class)` + `@Transactional`，内部 `TestConfig` 使用 `@SpringBootApplication(scanBasePackageClasses = {OrderRepositoryImpl.class, OrderConverter.class})`，并用 `@MapperScan(basePackageClasses = {OrderMapper.class, OrderItemMapper.class})` 精确注册订单 mapper。
+- 若 MyBatis-Plus 插件或 schema 初始化缺失，只在测试配置中补订单仓储必需的最小 Bean/配置；不要通过扩大 `scanBasePackages` 解决。
+- 保持 `SimpleMeterRegistry` 仅服务 metrics 实现测试；`OrderRepositoryImplTest` 不应依赖 metrics Bean，也不应通过 metrics 配置绕开 repository 装配问题。
+
+### 如何避免 `Tests run: 0`
+- `OrderRepositoryImplTest` 必须保留文件名与类名以 `Test` 结尾，测试方法必须继续使用 `org.junit.jupiter.api.Test`，不得通过 profile、tag、嵌套类或条件注解跳过。
+- @dev 必须用 clean 后的专用命令验证：`mvn clean test -pl claude-j-infrastructure -DfailIfNoTests=false -Dtest=OrderRepositoryImplTest`。
+- 有效通过证据必须包含 `Running com.claudej.infrastructure.order.persistence.repository.OrderRepositoryImplTest`，且结果为 `Tests run: 9, Failures: 0, Errors: 0, Skipped: 0`；任何 `Tests run: 0` 都视为失败。
+- 专用命令通过后，再执行全量 `mvn clean test`，最后执行 `mvn checkstyle:check` 与 `./scripts/entropy-check.sh`；三项均通过后才允许把 handoff 交给 QA。
+
+### @dev 下一步只允许修改的文件
+- 允许修改：`/Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/test/java/com/claudej/infrastructure/order/persistence/repository/OrderRepositoryImplTest.java`
+- 若专用命令显示缺少 MyBatis-Plus 测试依赖，允许最小修改：`/Users/macro.li/aiProject/claude-j/claude-j-infrastructure/pom.xml`
+- 若 schema 初始化仅缺订单仓储测试资源，允许最小修改该模块测试资源下的 SQL/YAML 文件，但必须在 `dev-log.md` 记录具体原因和命令证据。
+- 禁止修改任何 production Java 代码来规避此 blocker，包括 application metrics 端口、Micrometer 实现、订单/库存业务逻辑和事件监听器。
+- 禁止继续扩大 Spring 扫描范围，禁止把 `MeterRegistry` 直接注入 `OrderApplicationService`，禁止把 `OrderMetricsPort` 移入 domain 或 start。
+
+### 本轮验证证据
+- `./scripts/entropy-check.sh` -> 退出码 0，`FAIL=0 / WARN=13 / status=PASS`。
+- `mvn -pl claude-j-infrastructure -DfailIfNoTests=false -Dtest=OrderRepositoryImplTest test` -> 退出码 0 但 `Tests run: 0`，因此不能作为通过证据。
+- `mvn -pl claude-j-infrastructure test` -> 退出码 1，模块测试仍失败；输出中已能看到其他 infrastructure 测试真实执行，但当前 Build 未闭环。
+
+### 终止条件
+- 若 @dev 按上述文件边界和验证命令执行后，仍出现 `OrderRepositoryImplTest` 不执行、全量 `mvn clean test` 失败，或需要修改 production Java 代码才能绕过测试装配，则停止自动推进。
+- 停止时应由 @dev 在 `dev-log.md` 记录：已尝试方案、完整失败命令、关键异常、未决判断点，并由 Ralph 向用户报告需要人工介入。
+
+### 需要新增的 ADR
+- 无。本轮问题是测试装配与 Maven/JUnit 执行证据问题，不形成新的项目级架构决策。

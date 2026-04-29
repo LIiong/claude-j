@@ -3,16 +3,17 @@ task-id: "027-prometheus-metrics"
 from: architect
 to: dev
 status: approved
-timestamp: "2026-04-29T00:00:00Z"
+timestamp: "2026-04-29T11:40:00-04:00"
+review-date: "2026-04-29"
 pre-flight:
-  mvn-test: fail  # `mvn clean test` -> claude-j-infrastructure FAILURE; Tests run: 110, Failures: 0, Errors: 9; blocker narrowed to OrderRepositoryImplTest context loading
-  checkstyle: not-run  # 本轮复评聚焦 Build 阻塞根因，未重复执行
+  mvn-test: fail  # `mvn -pl claude-j-infrastructure test` -> Exit 1; infrastructure module still fails, Build not ready for QA
+  order-repository-test: fail  # `mvn -pl claude-j-infrastructure -DfailIfNoTests=false -Dtest=OrderRepositoryImplTest test` -> Exit 0 but Tests run: 0, invalid evidence
+  checkstyle: not-run  # 第 2 轮复评聚焦 Build blocker，未执行风格检查
   entropy-check: pass  # `./scripts/entropy-check.sh` -> Exit 0; FAIL=0, WARN=13, status=PASS
 artifacts:
   - /Users/macro.li/aiProject/claude-j/docs/exec-plan/active/027-prometheus-metrics/requirement-design.md
-  - /Users/macro.li/aiProject/claude-j/docs/exec-plan/active/027-prometheus-metrics/dev-log.md
   - /Users/macro.li/aiProject/claude-j/docs/exec-plan/active/027-prometheus-metrics/handoff.md
-summary: "Architect build re-review completed. `/actuator/prometheus` path is verified green via `mvn -q -pl claude-j-start -DfailIfNoTests=false -Dtest=ActuatorPrometheusIntegrationTest test`, but full `mvn clean test` still fails in infrastructure. Fresh evidence points to two non-design blockers: (1) `OrderRepositoryImplTest` scans the whole `com.claudej.infrastructure` package and accidentally instantiates `InventoryEventListener`, which then requires `InventoryApplicationService`; (2) infrastructure-only test execution also exposes a module test classpath issue around `OrderMetricsPort` / `OrderMetricsConfiguration`. Conclusion: metrics architecture remains approved, but Build is not ready for QA. Return to @dev to shrink repository test context and rerun full reactor tests before next handoff."
+summary: "Architect build blocker re-review round two completed. Metrics architecture remains approved, but Build remains blocked by OrderRepositoryImplTest execution/assembly. The last allowed automatic fix is to restore a MyBatis/JDBC Spring test with a minimal order-only context, make the dedicated test command execute 9 tests (not Tests run: 0), then rerun full mvn clean test, checkstyle, and entropy. If this does not close the blocker, stop automatic progress and report to the user."
 ---
 
 # 交接文档
@@ -22,22 +23,38 @@ summary: "Architect build re-review completed. `/actuator/prometheus` path is ve
 
 ## 交接说明
 
-已完成 027-prometheus-metrics 的 Build 阶段，交付材料如下：
-- `task-plan.md`：更新各原子任务为单测通过，并将全量验证任务置为进行中/待办
-- `dev-log.md`：记录 `@AutoConfigureMetrics` 触发 Prometheus endpoint 注册的根因与验证证据
-- `handoff.md`：更新为面向 QA 的 pending-review 交接
+第 2 轮 Build 阻塞复评已完成，结论如下：
+- 指标架构路线继续 approved：`OrderMetricsPort` 位于 application，Micrometer 适配位于 infrastructure，Prometheus endpoint 由 start 暴露。
+- 当前阻塞仍是同一类问题：`OrderRepositoryImplTest` 测试装配 + 全量预飞失败。
+- 第 3 轮出现的 `BUILD SUCCESS` / `Tests run: 0` 不是有效通过证据。
+- 这是最后一轮可自动推进的架构方案；若 @dev 按方案执行后仍无法让测试真实执行并通过，应停止自动推进并向用户报告。
 
-请重点复核：
-1. `ActuatorPrometheusIntegrationTest` 是否稳定暴露 `/actuator/prometheus`
-2. 指标命名 `claudej_order_create_*` 与标签集合 `source/reason_type/outcome` 是否仍符合约束
-3. 预飞证据是否足够支撑 QA 重新验收
+## 给 @dev 的最后方案
 
-已知限制：
-- `mvn -s /private/tmp/maven-settings-no-proxy.xml clean test` 的控制台输出在本会话中被截断，但 dedicated start 测试、`mvn checkstyle:check -B`、`./scripts/entropy-check.sh` 均有可见成功证据
-- 不修改 `.claude/agents/architect.md` 的现有变更
+只允许优先修改：
+- `/Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/test/java/com/claudej/infrastructure/order/persistence/repository/OrderRepositoryImplTest.java`
+
+条件允许的最小附带修改：
+- `/Users/macro.li/aiProject/claude-j/claude-j-infrastructure/pom.xml`，仅限补足 MyBatis/JDBC 测试依赖。
+- `/Users/macro.li/aiProject/claude-j/claude-j-infrastructure/src/test/resources/` 下订单仓储测试必需 SQL/YAML，必须在 `dev-log.md` 写明原因。
+
+必须执行并记录：
+1. `mvn clean test -pl claude-j-infrastructure -DfailIfNoTests=false -Dtest=OrderRepositoryImplTest`
+   - 预期输出必须包含 `Running com.claudej.infrastructure.order.persistence.repository.OrderRepositoryImplTest`
+   - 预期结果必须是 `Tests run: 9, Failures: 0, Errors: 0, Skipped: 0`
+   - 若仍为 `Tests run: 0`，视为失败
+2. `mvn clean test`
+3. `mvn checkstyle:check`
+4. `./scripts/entropy-check.sh`
+
+禁止事项：
+- 禁止修改 production Java 代码来规避此 blocker。
+- 禁止扩大扫描到整个 `com.claudej.infrastructure` 或 `com.claudej.application`。
+- 禁止把 `MeterRegistry` 直接注入 `OrderApplicationService`。
+- 禁止移动 `OrderMetricsPort` 所在层级。
 
 ## 评审回复
-- 结论：approved（维持架构路线），但 Build 阻塞已退回 @dev 修复测试装配后再交接 QA。
+- 结论：approved（第 2 轮复评最后方案）。退回 @dev 执行最小测试装配修复；未达到有效测试执行证据前不得交 QA。
 
 ## 交接历史
 
@@ -53,11 +70,6 @@ summary: "Architect build re-review completed. `/actuator/prometheus` path is ve
 - 状态：approved
 - 说明：Build 阻塞复评完成；Prometheus 端点路线成立，但 `OrderRepositoryImplTest` 扫描整个 infrastructure 导致 `InventoryEventListener` 装配失败，同时单模块测试暴露 `OrderMetricsPort` classpath 装配问题。要求先收缩 infrastructure 测试上下文并重跑 `mvn clean test`，通过后再交接 QA。
 
-### 2026-04-29 — @dev → @qa
-- 状态：pending-review
-- Pre-flight：mvn-test: pass | checkstyle: pass | entropy-check: pass
-- 说明：Build 已完成并进入 QA 验收
-
-### 2026-04-29 — @qa → (Ship)
+### 2026-04-29 — @architect → @dev
 - 状态：approved
-- 说明：{验收通过，归档}
+- 说明：第 2 轮 Build 阻塞复评完成；三轮修复仍未闭环，最后方案是将 `OrderRepositoryImplTest` 改为 MyBatis/JDBC 最小订单上下文并证明 9 个测试真实执行。若仍失败，停止自动推进并向用户报告。
