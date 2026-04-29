@@ -6,14 +6,14 @@
 
 | # | 任务 | 负责人 | 状态 | 备注 |
 |---|------|--------|------|------|
-| 1 | Domain: 复用订单聚合与指标语义边界确认 | dev | 待办 | 不新增领域对象，确认指标不污染 domain |
-| 2 | Application: 定义订单指标采集端口 | dev | 待办 | 新增 `OrderMetricsPort` 与有限标签分类 |
-| 3 | Application: 下单应用服务接入指标 + 单测 | dev | 待办 | 覆盖 direct/cart 成功、校验失败、业务失败 |
-| 4 | Infrastructure: Micrometer 指标实现 + 测试 | dev | 待办 | Counter/Timer 注册与低基数标签封装 |
-| 5 | Adapter: 回归订单接口切片测试 | dev | 待办 | 确认观测接入不影响 HTTP 契约 |
-| 6 | Start: Prometheus registry 依赖与 Actuator 配置 | dev | 待办 | 暴露 `/actuator/prometheus` |
-| 7 | Start: Prometheus 集成测试 | dev | 待办 | 验证端点 200 与指标名可见 |
-| 8 | 全量 `mvn test` | dev | 待办 | 含 ArchUnit |
+| 1 | Domain: 复用订单聚合与指标语义边界确认 | dev | 单测通过 | 不新增领域对象，确认指标不污染 domain |
+| 2 | Application: 定义订单指标采集端口 | dev | 单测通过 | 新增 `OrderMetricsPort` 与有限标签分类 |
+| 3 | Application: 下单应用服务接入指标 + 单测 | dev | 单测通过 | 覆盖 direct/cart 成功、校验失败、业务失败 |
+| 4 | Infrastructure: Micrometer 指标实现 + 测试 | dev | 单测通过 | Counter/Timer 注册与低基数标签封装 |
+| 5 | Adapter: 回归订单接口切片测试 | dev | 单测通过 | 确认观测接入不影响 HTTP 契约 |
+| 6 | Start: Prometheus registry 依赖与 Actuator 配置 | dev | 单测通过 | 暴露 `/actuator/prometheus` |
+| 7 | Start: Prometheus 集成测试 | dev | 单测通过 | 验证端点 200 与指标名可见 |
+| 8 | 全量 `mvn test` | dev | 进行中 | 含 ArchUnit |
 | 9 | 全量 `mvn checkstyle:check` | dev | 待办 | 风格守护 |
 | 10 | 全量 `./scripts/entropy-check.sh` | dev | 待办 | 架构漂移守护 |
 | 11 | QA: 测试用例设计 | qa | 待办 | |

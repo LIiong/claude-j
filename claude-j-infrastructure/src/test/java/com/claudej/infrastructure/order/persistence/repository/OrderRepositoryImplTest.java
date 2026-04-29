@@ -5,11 +5,21 @@ import com.claudej.domain.order.model.entity.OrderItem;
 import com.claudej.domain.order.model.valobj.CustomerId;
 import com.claudej.domain.order.model.valobj.Money;
 import com.claudej.domain.order.model.valobj.OrderId;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
+import org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.context.annotation.Import;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,9 +29,26 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 class OrderRepositoryImplTest {
 
-    @SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure", "com.claudej.application"})
-    @MapperScan("com.claudej.infrastructure.**.mapper")
+    @SpringBootApplication(
+            exclude = {
+                    DataSourceAutoConfiguration.class,
+                    DataSourceTransactionManagerAutoConfiguration.class,
+                    HibernateJpaAutoConfiguration.class,
+                    TransactionAutoConfiguration.class
+            },
+            scanBasePackages = "com.claudej.infrastructure.order.persistence"
+    )
+    @MapperScan(basePackages = "com.claudej.infrastructure.order.persistence.mapper")
+    @Import(OrderRepositoryImplTest.TestConfig.class)
+    @ComponentScan(basePackages = "com.claudej.infrastructure.order.persistence", excludeFilters = {
+            @ComponentScan.Filter(type = FilterType.REGEX, pattern = "com\\.claudej\\.infrastructure\\.inventory\\..*")
+    })
     static class TestConfig {
+
+        @Bean
+        public SimpleMeterRegistry meterRegistry() {
+            return new SimpleMeterRegistry();
+        }
     }
 
     @Autowired
