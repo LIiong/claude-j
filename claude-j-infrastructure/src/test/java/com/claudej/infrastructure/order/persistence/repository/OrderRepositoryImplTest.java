@@ -5,38 +5,33 @@ import com.claudej.domain.order.model.entity.OrderItem;
 import com.claudej.domain.order.model.valobj.CustomerId;
 import com.claudej.domain.order.model.valobj.Money;
 import com.claudej.domain.order.model.valobj.OrderId;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import com.claudej.infrastructure.order.persistence.converter.OrderConverter;
+import com.claudej.infrastructure.order.persistence.mapper.OrderItemMapper;
+import com.claudej.infrastructure.order.persistence.mapper.OrderMapper;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
-import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
-import org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
-@Import(OrderRepositoryImplTest.TestConfig.class)
+@SpringBootTest
+@Transactional
 class OrderRepositoryImplTest {
 
-    @TestConfiguration
+    @SpringBootApplication(scanBasePackageClasses = {
+            OrderRepositoryImpl.class,
+            OrderConverter.class,
+            OrderMapper.class,
+            OrderItemMapper.class
+    })
+    @MapperScan(basePackageClasses = {OrderMapper.class, OrderItemMapper.class})
     static class TestConfig {
-
-        @Bean
-        public SimpleMeterRegistry meterRegistry() {
-            return new SimpleMeterRegistry();
-        }
     }
 
     @Autowired

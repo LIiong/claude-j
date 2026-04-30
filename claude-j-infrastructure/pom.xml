@@ -17,11 +17,11 @@
     <dependencies>
         <dependency>
             <groupId>com.claudej</groupId>
-            <artifactId>claude-j-domain</artifactId>
+            <artifactId>claude-j-application</artifactId>
         </dependency>
         <dependency>
             <groupId>com.claudej</groupId>
-            <artifactId>claude-j-application</artifactId>
+            <artifactId>claude-j-domain</artifactId>
         </dependency>
 
         <!-- MyBatis-Plus -->
@@ -40,6 +40,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+
+        <!-- Micrometer -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
         </dependency>
 
         <!-- JJWT -->
