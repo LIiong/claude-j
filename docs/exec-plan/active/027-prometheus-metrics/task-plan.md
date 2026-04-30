@@ -13,9 +13,9 @@
 | 5 | Adapter: 回归订单接口切片测试 | dev | 单测通过 | 确认观测接入不影响 HTTP 契约 |
 | 6 | Start: Prometheus registry 依赖与 Actuator 配置 | dev | 单测通过 | 暴露 `/actuator/prometheus` |
 | 7 | Start: Prometheus 集成测试 | dev | 单测通过 | 验证端点 200 与指标名可见 |
-| 8 | 全量 `mvn test` | dev | 阻塞 | infrastructure compile 期间 metrics 端口不可见 |
-| 9 | 全量 `mvn checkstyle:check` | dev | 未完成 | Build blocker 未解除 |
-| 10 | 全量 `./scripts/entropy-check.sh` | dev | 未完成 | Build blocker 未解除 |
+| 8 | 全量 `mvn test` | dev | 单测通过 | `mvn -s /private/tmp/maven-settings-no-proxy.xml clean test` 通过，reactor BUILD SUCCESS |
+| 9 | 全量 `mvn checkstyle:check` | dev | 单测通过 | 0 Checkstyle violations |
+| 10 | 全量 `./scripts/entropy-check.sh` | dev | 单测通过 | FAIL=0，WARN=13，status=PASS |
 | 11 | QA: 测试用例设计 | qa | 待办 | |
 | 12 | QA: 验收测试 + 代码审查 | qa | 待办 | |
 
@@ -135,15 +135,13 @@ domain 边界确认 → application 端口 → application 服务 + 测试 → i
 - **commit**：`docs(handoff): record prometheus pre-flight evidence`
 
 ## 开发完成记录
-<!-- dev 完成后填写 -->
-- 全量 `mvn clean test`：待 Build 阶段填写
-- 架构合规检查：待 Build 阶段填写
-- 通知 @qa 时间：待 Build 阶段填写
+- QA 修复回归：`mvn -s /private/tmp/maven-settings-no-proxy.xml test -pl claude-j-application -am -DfailIfNoTests=false -Dtest=OrderApplicationServiceTest` -> `Tests run: 32, Failures: 0, Errors: 0, Skipped: 0`
+- QA 修复回归：`mvn -s /private/tmp/maven-settings-no-proxy.xml test -pl claude-j-start -am -DfailIfNoTests=false -Dtest=ActuatorPrometheusIntegrationTest` -> `Tests run: 2, Failures: 0, Errors: 0, Skipped: 0`，reactor `BUILD SUCCESS`
+- 全量 `mvn test`：`mvn -s /private/tmp/maven-settings-no-proxy.xml test` -> start 模块 `Tests run: 68, Failures: 0, Errors: 0, Skipped: 0`，reactor `BUILD SUCCESS`
+- 架构合规检查：`./scripts/entropy-check.sh` -> `issues: 0, warnings: 14, status: PASS`
+- 代码风格检查：`mvn -s /private/tmp/maven-settings-no-proxy.xml checkstyle:check -B` -> `You have 0 Checkstyle violations.`
+- 通知 @qa 时间：2026-04-30
 
 ## QA 验收记录
-<!-- qa 验收后填写 -->
-- 全量测试（含集成测试）：
-- 代码审查结果：
-- 代码风格检查：
-- 问题清单：详见 test-report.md
-- **最终状态**：
+- 2026-04-30 @dev 修复 QA 阻塞后重新交付：`ActuatorPrometheusIntegrationTest` 已断言 `OrderMetricsPort` 为 Micrometer 实现、`MeterRegistry` 为 Prometheus registry，且 `/actuator/prometheus` 响应正文包含 `claudej_order_create_total`、`claudej_order_create_failure_total`、`claudej_order_create_duration_seconds`。
+- 2026-04-30 @dev 修复 QA 阻塞后重新交付：`OrderApplicationServiceTest` 已覆盖失败路径 duration outcome，验证 business/system/validation 路径不再记录为 `success`。

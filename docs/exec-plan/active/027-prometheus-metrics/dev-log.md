@@ -20,15 +20,23 @@
 - **Fix**：在 `ActuatorPrometheusIntegrationTest` 显式添加 `@AutoConfigureMetrics`，使测试上下文启用 metrics export。
 - **Verification**：`mvn -s /private/tmp/maven-settings-no-proxy.xml test -pl claude-j-start -Dtest=ActuatorPrometheusIntegrationTest` -> `Tests run: 2, Failures: 0, Errors: 0, Skipped: 0`，同时 `Exposing 5 endpoint(s) beneath base path '/actuator'`。
 
-### 4. 最终 Build blocker：infrastructure 端 metrics 端口编译可见性失效
+### 4. Build blocker：infrastructure 端 metrics 端口编译可见性失效
 - **Issue**：最后自动 Build 修复轮次无法让 `OrderRepositoryImplTest` 真实执行到测试方法。
-- **Root Cause**：`claude-j-infrastructure` 在 `compile` 阶段先失败，`OrderMetricsConfiguration.java`、`MicrometerOrderMetricsRecorder.java`、`NoOpOrderMetricsPort.java` 无法解析 `com.claudej.application.order.port.OrderMetricsPort`，说明模块依赖/编译可见性仍存在阻塞。
-- **Fix**：本轮仅记录终止，不再继续扩大修改面；待人工介入确认 metrics 端口落点与 infrastructure 模块依赖可见性，或调整模块依赖/测试装配策略。
-- **Verification**：`mvn -s /private/tmp/maven-settings-no-proxy.xml clean test -pl claude-j-infrastructure -DfailIfNoTests=false -Dtest=OrderRepositoryImplTest` -> `compile` 阶段 9 errors，未出现 `Running com.claudej.infrastructure.order.persistence.repository.OrderRepositoryImplTest`，也没有 `Tests run: 9`。
+- **Root Cause**：`claude-j-infrastructure` 单模块命令未带 `-am` 时使用本地仓库旧版 `claude-j-application`，旧包中没有 `com.claudej.application.order.port.OrderMetricsPort`，导致 `OrderMetricsConfiguration.java`、`MicrometerOrderMetricsRecorder.java`、`NoOpOrderMetricsPort.java` 编译失败。
+- **Fix**：使用 `-am` 让 Maven reactor 同步构建上游模块，并将 `OrderRepositoryImplTest` 恢复为可被 Surefire 发现的 `@SpringBootTest`；测试上下文只扫描订单仓储、转换器和订单 mapper，避免重新拉起整个 infrastructure 包。
+- **Verification**：`mvn -s /private/tmp/maven-settings-no-proxy.xml clean test -pl claude-j-infrastructure -am -DfailIfNoTests=false -Dtest=OrderRepositoryImplTest` -> `Running com.claudej.infrastructure.order.persistence.repository.OrderRepositoryImplTest`，`Tests run: 9, Failures: 0, Errors: 0, Skipped: 0`。
+
+### 5. Prometheus 测试上下文装配了 NoOp 指标端口
+- **Issue**：`ActuatorPrometheusIntegrationTest` 在断言订单指标名时持续失败，`/actuator/prometheus` 只暴露通用 JVM/HTTP 指标，不含订单指标。
+- **Root Cause**：`OrderMetricsConfiguration` 依赖 `@ConditionalOnBean(MeterRegistry.class)` 与 `@ConditionalOnMissingBean(OrderMetricsPort.class)` 做双 bean 条件装配；在 start 测试上下文里，条件判断发生时 `MeterRegistry` 尚未满足，导致 fallback 的 `NoOpOrderMetricsPort` 先成为唯一 `OrderMetricsPort`，后续即使 Prometheus registry 已存在也不会再切回 Micrometer 实现。
+- **Fix**：将 `OrderMetricsConfiguration` 收敛为单一 `orderMetricsPort(ObjectProvider<MeterRegistry>)` bean，在 bean 创建时通过 `ObjectProvider` 延迟判断 registry 是否可用；有 registry 时返回 `MicrometerOrderMetricsRecorder`，否则返回 `NoOpOrderMetricsPort`，避免条件装配时序问题且不引入 Prometheus 具体类型依赖。
+- **Verification**：Red：`mvn -s /private/tmp/maven-settings-no-proxy.xml test -pl claude-j-start -am -DfailIfNoTests=false -Dtest=ActuatorPrometheusIntegrationTest` -> `Tests run: 2, Failures: 1, Errors: 0, Skipped: 0`，`Expecting actual: "com.claudej.infrastructure.order.persistence.metrics.NoOpOrderMetricsPort" to contain: "MicrometerOrderMetricsRecorder"`。Green：`mvn -s /private/tmp/maven-settings-no-proxy.xml test -pl claude-j-start -am -DfailIfNoTests=false -Dtest=ActuatorPrometheusIntegrationTest` -> `Tests run: 2, Failures: 0, Errors: 0, Skipped: 0`，reactor `BUILD SUCCESS`。
 
 ## 变更记录
 
 - 为 Prometheus 集成测试显式添加 `@AutoConfigureMetrics`，避免测试上下文默认禁用 metrics export。
 - `src/test/resources/application-dev.yml` 保留 `prometheus` 暴露配置，确保 dev profile 下端点可见。
 - 未引入额外需求外指标，仍仅使用 `source` / `reason_type` / `outcome` 低基数标签。
-- 终止说明：最后一轮 Build blocker 卡在 infrastructure compile 阶段的 `OrderMetricsPort` 可见性问题，停止自动推进，等待人工介入。
+- 修复 `OrderRepositoryImplTest` 测试装配：保留 `@SpringBootTest` 可发现性，仅扫描订单仓储所需 Bean 与 mapper。
+- `OrderMetricsConfiguration` 改为 `ObjectProvider<MeterRegistry>` 延迟选择实现，修复 start 测试上下文误装配 `NoOpOrderMetricsPort` 的问题。
+- 全量预飞已通过：`mvn -s /private/tmp/maven-settings-no-proxy.xml test`、`mvn -s /private/tmp/maven-settings-no-proxy.xml checkstyle:check -B`、`./scripts/entropy-check.sh`。

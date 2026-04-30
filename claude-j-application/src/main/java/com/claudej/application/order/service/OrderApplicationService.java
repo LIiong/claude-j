@@ -6,6 +6,7 @@ import com.claudej.application.order.assembler.OrderAssembler;
 import com.claudej.application.order.command.CreateOrderCommand;
 import com.claudej.application.order.command.CreateOrderFromCartCommand;
 import com.claudej.application.order.dto.OrderDTO;
+import com.claudej.application.order.port.OrderMetricsPort;
 import com.claudej.domain.cart.model.aggregate.Cart;
 import com.claudej.domain.cart.model.entity.CartItem;
 import com.claudej.domain.cart.repository.CartRepository;
@@ -45,16 +46,19 @@ public class OrderApplicationService {
     private final DomainEventPublisher domainEventPublisher;
     private final OrderAssembler orderAssembler;
     private final PageAssembler pageAssembler;
+    private final OrderMetricsPort orderMetricsPort;
 
     public OrderApplicationService(OrderRepository orderRepository, CartRepository cartRepository,
                                    CouponRepository couponRepository, DomainEventPublisher domainEventPublisher,
-                                   OrderAssembler orderAssembler, PageAssembler pageAssembler) {
+                                   OrderAssembler orderAssembler, PageAssembler pageAssembler,
+                                   OrderMetricsPort orderMetricsPort) {
         this.orderRepository = orderRepository;
         this.cartRepository = cartRepository;
         this.couponRepository = couponRepository;
         this.domainEventPublisher = domainEventPublisher;
         this.orderAssembler = orderAssembler;
         this.pageAssembler = pageAssembler;
+        this.orderMetricsPort = orderMetricsPort;
     }
 
     /**
@@ -62,44 +66,66 @@ public class OrderApplicationService {
      */
     @Transactional
     public OrderDTO createOrder(CreateOrderCommand command) {
-        if (command == null || command.getCustomerId() == null) {
-            throw new BusinessException(ErrorCode.ORDER_NOT_FOUND, "客户ID不能为空");
-        }
-        if (command.getItems() == null || command.getItems().isEmpty()) {
-            throw new BusinessException(ErrorCode.ORDER_NOT_FOUND, "订单项不能为空");
-        }
+        long startNanos = System.nanoTime();
+        String source = "direct";
+        String outcome = "success";
+        try {
+            if (command == null || command.getCustomerId() == null) {
+                outcome = "business_error";
+                orderMetricsPort.recordCreateOrderFailure(source, "validation");
+                throw new BusinessException(ErrorCode.ORDER_NOT_FOUND, "客户ID不能为空");
+            }
+            if (command.getItems() == null || command.getItems().isEmpty()) {
+                outcome = "business_error";
+                orderMetricsPort.recordCreateOrderFailure(source, "validation");
+                throw new BusinessException(ErrorCode.ORDER_NOT_FOUND, "订单项不能为空");
+            }
 
-        CustomerId customerId = new CustomerId(command.getCustomerId());
-        Order order = Order.create(customerId);
+            CustomerId customerId = new CustomerId(command.getCustomerId());
+            Order order = Order.create(customerId);
 
-        // 添加订单项
-        for (CreateOrderCommand.OrderItemCommand itemCmd : command.getItems()) {
-            OrderItem item = OrderItem.create(
-                    itemCmd.getProductId(),
-                    itemCmd.getProductName(),
-                    itemCmd.getQuantity(),
-                    new Money(itemCmd.getUnitPrice(), "CNY")
+            // 添加订单项
+            for (CreateOrderCommand.OrderItemCommand itemCmd : command.getItems()) {
+                OrderItem item = OrderItem.create(
+                        itemCmd.getProductId(),
+                        itemCmd.getProductName(),
+                        itemCmd.getQuantity(),
+                        new Money(itemCmd.getUnitPrice(), "CNY")
+                );
+                order.addItem(item);
+            }
+
+            // 处理优惠券
+            if (command.getCouponId() != null && !command.getCouponId().trim().isEmpty()) {
+                applyCouponToOrder(order, command.getCouponId(), command.getCustomerId());
+            }
+
+            order = orderRepository.save(order);
+
+            // 发布订单创建事件（触发库存预占）
+            List<OrderItemInfo> itemInfos = convertToOrderItemInfos(order.getItems());
+            OrderCreatedEvent event = OrderCreatedEvent.create(
+                    order.getOrderIdValue(),
+                    order.getCustomerIdValue(),
+                    itemInfos
             );
-            order.addItem(item);
+            domainEventPublisher.publish(event);
+            orderMetricsPort.recordCreateOrderSuccess(source);
+            return orderAssembler.toDTO(order);
+        } catch (BusinessException ex) {
+            outcome = "business_error";
+            if (command != null && command.getCustomerId() != null
+                    && command.getItems() != null && !command.getItems().isEmpty()) {
+                orderMetricsPort.recordCreateOrderFailure(source, "business");
+            }
+            throw ex;
+        } catch (RuntimeException ex) {
+            outcome = "system_error";
+            orderMetricsPort.recordCreateOrderFailure(source, "system");
+            throw ex;
+        } finally {
+            recordCreateOrderDuration(source, startNanos, outcome);
         }
-
-        // 处理优惠券
-        if (command.getCouponId() != null && !command.getCouponId().trim().isEmpty()) {
-            applyCouponToOrder(order, command.getCouponId(), command.getCustomerId());
-        }
-
-        order = orderRepository.save(order);
-
-        // 发布订单创建事件（触发库存预占）
-        List<OrderItemInfo> itemInfos = convertToOrderItemInfos(order.getItems());
-        OrderCreatedEvent event = OrderCreatedEvent.create(
-                order.getOrderIdValue(),
-                order.getCustomerIdValue(),
-                itemInfos
-        );
-        domainEventPublisher.publish(event);
-
-        return orderAssembler.toDTO(order);
     }
 
     /**
@@ -191,58 +217,79 @@ public class OrderApplicationService {
      */
     @Transactional
     public OrderDTO createOrderFromCart(CreateOrderFromCartCommand command) {
-        if (command == null || command.getCustomerId() == null || command.getCustomerId().trim().isEmpty()) {
-            throw new BusinessException(ErrorCode.ORDER_NOT_FOUND, "客户ID不能为空");
-        }
+        long startNanos = System.nanoTime();
+        String source = "cart";
+        String outcome = "success";
+        try {
+            if (command == null || command.getCustomerId() == null || command.getCustomerId().trim().isEmpty()) {
+                outcome = "business_error";
+                orderMetricsPort.recordCreateOrderFailure(source, "validation");
+                throw new BusinessException(ErrorCode.ORDER_NOT_FOUND, "客户ID不能为空");
+            }
 
-        // 1. 查询购物车
-        Cart cart = cartRepository.findByUserId(command.getCustomerId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.CART_NOT_FOUND));
+            // 1. 查询购物车
+            Cart cart = cartRepository.findByUserId(command.getCustomerId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.CART_NOT_FOUND));
 
-        // 2. 验证购物车非空
-        if (cart.isEmpty()) {
-            throw new BusinessException(ErrorCode.CART_EMPTY);
-        }
+            // 2. 验证购物车非空
+            if (cart.isEmpty()) {
+                orderMetricsPort.recordCreateOrderFailure(source, "business");
+                throw new BusinessException(ErrorCode.CART_EMPTY);
+            }
 
-        // 3. 创建订单
-        CustomerId customerId = new CustomerId(command.getCustomerId());
-        Order order = Order.create(customerId);
+            // 3. 创建订单
+            CustomerId customerId = new CustomerId(command.getCustomerId());
+            Order order = Order.create(customerId);
 
-        // 4. 将购物车项转换为订单项
-        List<CartItem> cartItems = cart.getItems();
-        for (CartItem cartItem : cartItems) {
-            OrderItem orderItem = OrderItem.create(
-                    cartItem.getProductId(),
-                    cartItem.getProductName(),
-                    cartItem.getQuantity().getValue(),
-                    new Money(cartItem.getUnitPrice().getAmount(), cartItem.getUnitPrice().getCurrency())
+            // 4. 将购物车项转换为订单项
+            List<CartItem> cartItems = cart.getItems();
+            for (CartItem cartItem : cartItems) {
+                OrderItem orderItem = OrderItem.create(
+                        cartItem.getProductId(),
+                        cartItem.getProductName(),
+                        cartItem.getQuantity().getValue(),
+                        new Money(cartItem.getUnitPrice().getAmount(), cartItem.getUnitPrice().getCurrency())
+                );
+                order.addItem(orderItem);
+            }
+
+            // 5. 处理优惠券
+            if (command.getCouponId() != null && !command.getCouponId().trim().isEmpty()) {
+                applyCouponToOrder(order, command.getCouponId(), command.getCustomerId());
+            }
+
+            // 6. 保存订单
+            order = orderRepository.save(order);
+
+            // 7. 发布订单创建事件（触发库存预占）
+            List<OrderItemInfo> itemInfos = convertToOrderItemInfos(order.getItems());
+            OrderCreatedEvent event = OrderCreatedEvent.create(
+                    order.getOrderIdValue(),
+                    order.getCustomerIdValue(),
+                    itemInfos
             );
-            order.addItem(orderItem);
+            domainEventPublisher.publish(event);
+
+            // 8. 清空购物车并保存
+            cart.clear();
+            cartRepository.save(cart);
+
+            orderMetricsPort.recordCreateOrderSuccess(source);
+            // 9. 返回订单DTO
+            return orderAssembler.toDTO(order);
+        } catch (BusinessException ex) {
+            outcome = "business_error";
+            if (command != null && command.getCustomerId() != null && !command.getCustomerId().trim().isEmpty()) {
+                orderMetricsPort.recordCreateOrderFailure(source, "business");
+            }
+            throw ex;
+        } catch (RuntimeException ex) {
+            outcome = "system_error";
+            orderMetricsPort.recordCreateOrderFailure(source, "system");
+            throw ex;
+        } finally {
+            recordCreateOrderDuration(source, startNanos, outcome);
         }
-
-        // 5. 处理优惠券
-        if (command.getCouponId() != null && !command.getCouponId().trim().isEmpty()) {
-            applyCouponToOrder(order, command.getCouponId(), command.getCustomerId());
-        }
-
-        // 6. 保存订单
-        order = orderRepository.save(order);
-
-        // 7. 发布订单创建事件（触发库存预占）
-        List<OrderItemInfo> itemInfos = convertToOrderItemInfos(order.getItems());
-        OrderCreatedEvent event = OrderCreatedEvent.create(
-                order.getOrderIdValue(),
-                order.getCustomerIdValue(),
-                itemInfos
-        );
-        domainEventPublisher.publish(event);
-
-        // 8. 清空购物车并保存
-        cart.clear();
-        cartRepository.save(cart);
-
-        // 9. 返回订单DTO
-        return orderAssembler.toDTO(order);
     }
 
     /**
@@ -320,6 +367,11 @@ public class OrderApplicationService {
         order.refund();
         order = orderRepository.save(order);
         return orderAssembler.toDTO(order);
+    }
+
+    private void recordCreateOrderDuration(String source, long startNanos, String outcome) {
+        long duration = System.nanoTime() - startNanos;
+        orderMetricsPort.recordCreateOrderDuration(source, outcome, duration);
     }
 
     /**

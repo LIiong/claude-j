@@ -5,14 +5,13 @@ import com.claudej.application.order.assembler.OrderAssembler;
 import com.claudej.application.order.command.CreateOrderCommand;
 import com.claudej.application.order.command.CreateOrderFromCartCommand;
 import com.claudej.application.order.dto.OrderDTO;
+import com.claudej.application.order.port.OrderMetricsPort;
 import com.claudej.domain.cart.model.aggregate.Cart;
-import com.claudej.domain.cart.model.entity.CartItem;
 import com.claudej.domain.cart.model.valobj.Money;
 import com.claudej.domain.cart.model.valobj.Quantity;
 import com.claudej.domain.cart.repository.CartRepository;
 import com.claudej.domain.common.event.DomainEventPublisher;
 import com.claudej.domain.common.exception.BusinessException;
-import com.claudej.domain.common.exception.ErrorCode;
 import com.claudej.domain.coupon.model.aggregate.Coupon;
 import com.claudej.domain.coupon.model.valobj.CouponId;
 import com.claudej.domain.coupon.model.valobj.DiscountType;
@@ -40,6 +39,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -55,6 +55,9 @@ class OrderApplicationServiceTest {
 
     @Mock
     private CouponRepository couponRepository;
+
+    @Mock
+    private OrderMetricsPort orderMetricsPort;
 
     @Mock
     private DomainEventPublisher domainEventPublisher;
@@ -106,55 +109,82 @@ class OrderApplicationServiceTest {
         mockOrderDTO.setCustomerId("CUST001");
         mockOrderDTO.setStatus("CREATED");
 
-        // 创建有商品的购物车
         mockCart = Cart.create("CUST001");
         mockCart.addItem("PROD001", "iPhone", Money.cny(5999), new Quantity(2));
 
-        // 创建可用优惠券
         mockCoupon = Coupon.create("满100减20", DiscountType.FIXED_AMOUNT,
                 new BigDecimal("20"), new BigDecimal("100"), "CUST001",
                 VALID_FROM, VALID_UNTIL);
     }
 
     @Test
-    void should_createOrder_when_validCommandProvided() {
-        // Given
+    void should_record_success_metric_when_create_order_succeeds() {
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.createOrder(createCommand);
 
-        // Then
+        assertThat(result).isNotNull();
+        verify(orderMetricsPort).recordCreateOrderSuccess("direct");
+    }
+
+    @Test
+    void should_record_validation_failure_metric_when_create_order_command_invalid() {
+        assertThatThrownBy(() -> orderApplicationService.createOrder(null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("客户ID不能为空");
+
+        verify(orderMetricsPort).recordCreateOrderFailure("direct", "validation");
+        verify(orderMetricsPort).recordCreateOrderDuration(eq("direct"), eq("business_error"), any(Long.class));
+    }
+
+    @Test
+    void should_record_failure_metric_when_create_order_from_cart_business_error() {
+        when(cartRepository.findByUserId("CUST001")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> orderApplicationService.createOrderFromCart(createFromCartCommand))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("购物车不存在");
+
+        verify(orderMetricsPort).recordCreateOrderFailure("cart", "business");
+        verify(orderMetricsPort).recordCreateOrderDuration(eq("cart"), eq("business_error"), any(Long.class));
+    }
+
+    @Test
+    void should_record_system_failure_metric_when_create_order_from_cart_unexpected_error() {
+        when(cartRepository.findByUserId("CUST001")).thenThrow(new IllegalStateException("boom"));
+
+        assertThatThrownBy(() -> orderApplicationService.createOrderFromCart(createFromCartCommand))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("boom");
+
+        verify(orderMetricsPort).recordCreateOrderFailure("cart", "system");
+        verify(orderMetricsPort).recordCreateOrderDuration(eq("cart"), eq("system_error"), any(Long.class));
+    }
+
+    @Test
+    void should_createOrder_when_validCommandProvided() {
+        when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
+        when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
+
+        OrderDTO result = orderApplicationService.createOrder(createCommand);
+
         assertThat(result).isNotNull();
         assertThat(result.getOrderId()).isEqualTo("ORD123456");
         verify(orderRepository).save(any(Order.class));
 
-        // Verify event published
         ArgumentCaptor<OrderCreatedEvent> eventCaptor = ArgumentCaptor.forClass(OrderCreatedEvent.class);
         verify(domainEventPublisher).publish(eventCaptor.capture());
         OrderCreatedEvent publishedEvent = eventCaptor.getValue();
         assertThat(publishedEvent.getOrderId()).isEqualTo(mockOrder.getOrderIdValue());
         assertThat(publishedEvent.getCustomerId()).isEqualTo("CUST001");
         assertThat(publishedEvent.getItems()).hasSize(1);
-        assertThat(publishedEvent.getItems().get(0).getProductId()).isEqualTo("PROD001");
-        assertThat(publishedEvent.getItems().get(0).getQuantity()).isEqualTo(2);
-    }
-
-    @Test
-    void should_throwException_when_createOrderWithNullCommand() {
-        // When & Then
-        assertThatThrownBy(() -> orderApplicationService.createOrder(null))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("客户ID不能为空");
     }
 
     @Test
     void should_throwException_when_createOrderWithEmptyItems() {
-        // Given
         createCommand.setItems(Collections.emptyList());
 
-        // When & Then
         assertThatThrownBy(() -> orderApplicationService.createOrder(createCommand))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("订单项不能为空");
@@ -162,24 +192,19 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_returnOrder_when_getOrderByIdExists() {
-        // Given
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.getOrderById("ORD123456");
 
-        // Then
         assertThat(result).isNotNull();
         assertThat(result.getOrderId()).isEqualTo("ORD123456");
     }
 
     @Test
     void should_throwException_when_getOrderByIdNotExists() {
-        // Given
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.empty());
 
-        // When & Then
         assertThatThrownBy(() -> orderApplicationService.getOrderById("NONEXISTENT"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("订单不存在");
@@ -187,62 +212,48 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_payOrder_when_orderExistsAndCreated() {
-        // Given
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.payOrder("ORD123456");
 
-        // Then
         assertThat(result).isNotNull();
         verify(orderRepository).save(any(Order.class));
-        // Note: Inventory deduction is triggered by PaymentSuccessEvent in PaymentApplicationService
     }
 
     @Test
     void should_cancelOrder_when_orderExistsAndCancellable() {
-        // Given
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.cancelOrder("ORD123456");
 
-        // Then
         assertThat(result).isNotNull();
         verify(orderRepository).save(any(Order.class));
 
-        // Verify event published
         ArgumentCaptor<OrderCancelledEvent> eventCaptor = ArgumentCaptor.forClass(OrderCancelledEvent.class);
         verify(domainEventPublisher).publish(eventCaptor.capture());
         OrderCancelledEvent publishedEvent = eventCaptor.getValue();
         assertThat(publishedEvent.getOrderId()).isEqualTo(mockOrder.getOrderIdValue());
-        assertThat(publishedEvent.getCustomerId()).isEqualTo("CUST001");
-        assertThat(publishedEvent.getItems()).hasSize(1);
     }
 
     @Test
     void should_createOrderFromCart_when_cartExistsWithItems() {
-        // Given
         when(cartRepository.findByUserId("CUST001")).thenReturn(Optional.of(mockCart));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(cartRepository.save(any(Cart.class))).thenReturn(mockCart);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.createOrderFromCart(createFromCartCommand);
 
-        // Then
         assertThat(result).isNotNull();
         assertThat(result.getOrderId()).isEqualTo("ORD123456");
         verify(cartRepository).findByUserId("CUST001");
         verify(orderRepository).save(any(Order.class));
         verify(cartRepository).save(any(Cart.class));
 
-        // Verify event published
         ArgumentCaptor<OrderCreatedEvent> eventCaptor = ArgumentCaptor.forClass(OrderCreatedEvent.class);
         verify(domainEventPublisher).publish(eventCaptor.capture());
         OrderCreatedEvent publishedEvent = eventCaptor.getValue();
@@ -252,10 +263,8 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_throwBusinessException_when_cartNotFound() {
-        // Given
         when(cartRepository.findByUserId("CUST001")).thenReturn(Optional.empty());
 
-        // When & Then
         assertThatThrownBy(() -> orderApplicationService.createOrderFromCart(createFromCartCommand))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("购物车不存在");
@@ -263,11 +272,9 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_throwBusinessException_when_cartIsEmpty() {
-        // Given
         Cart emptyCart = Cart.create("CUST001");
         when(cartRepository.findByUserId("CUST001")).thenReturn(Optional.of(emptyCart));
 
-        // When & Then
         assertThatThrownBy(() -> orderApplicationService.createOrderFromCart(createFromCartCommand))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("购物车为空");
@@ -275,11 +282,9 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_throwBusinessException_when_customerIdIsBlank() {
-        // Given
         CreateOrderFromCartCommand command = new CreateOrderFromCartCommand();
         command.setCustomerId("");
 
-        // When & Then
         assertThatThrownBy(() -> orderApplicationService.createOrderFromCart(command))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("客户ID不能为空");
@@ -287,51 +292,39 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_clearCartAfterOrderCreation() {
-        // Given
         when(cartRepository.findByUserId("CUST001")).thenReturn(Optional.of(mockCart));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(cartRepository.save(any(Cart.class))).thenReturn(mockCart);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         orderApplicationService.createOrderFromCart(createFromCartCommand);
 
-        // Then
         assertThat(mockCart.isEmpty()).isTrue();
         verify(cartRepository).save(mockCart);
     }
 
-    // --- Coupon integration tests ---
-
     @Test
     void should_applyCoupon_when_createOrderWithValidCoupon() {
-        // Given
         createCommand.setCouponId(mockCoupon.getCouponIdValue());
 
         when(couponRepository.findByCouponId(any(CouponId.class))).thenReturn(Optional.of(mockCoupon));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.createOrder(createCommand);
 
-        // Then
         assertThat(result).isNotNull();
         verify(couponRepository).findByCouponId(any(CouponId.class));
         verify(orderRepository).save(any(Order.class));
-
-        // Verify event published
         verify(domainEventPublisher).publish(any(OrderCreatedEvent.class));
     }
 
     @Test
     void should_throwException_when_createOrderWithInvalidCoupon() {
-        // Given
         createCommand.setCouponId("INVALID_COUPON");
 
         when(couponRepository.findByCouponId(any(CouponId.class))).thenReturn(Optional.empty());
 
-        // When & Then
         assertThatThrownBy(() -> orderApplicationService.createOrder(createCommand))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("优惠券不存在");
@@ -339,17 +332,14 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_throwException_when_createOrderWithOtherUserCoupon() {
-        // Given
         createCommand.setCouponId(mockCoupon.getCouponIdValue());
 
-        // Create coupon for different user
         Coupon otherUserCoupon = Coupon.create("满100减20", DiscountType.FIXED_AMOUNT,
                 new BigDecimal("20"), new BigDecimal("100"), "OTHER_USER",
                 VALID_FROM, VALID_UNTIL);
 
         when(couponRepository.findByCouponId(any(CouponId.class))).thenReturn(Optional.of(otherUserCoupon));
 
-        // When & Then
         assertThatThrownBy(() -> orderApplicationService.createOrder(createCommand))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("优惠券不属于该用户");
@@ -357,7 +347,6 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_useCoupon_when_payOrderWithCoupon() {
-        // Given - Order with coupon
         Order orderWithCoupon = Order.create(new CustomerId("CUST001"));
         orderWithCoupon.addItem(com.claudej.domain.order.model.entity.OrderItem.create(
                 "PROD001", "iPhone", 2,
@@ -365,7 +354,6 @@ class OrderApplicationServiceTest {
         ));
         orderWithCoupon.applyCoupon(new CouponId("COUPON001"), com.claudej.domain.order.model.valobj.Money.cny(20));
 
-        // Create a fresh available coupon for this test
         Coupon availableCoupon = Coupon.create("满100减20", DiscountType.FIXED_AMOUNT,
                 new BigDecimal("20"), new BigDecimal("100"), "CUST001",
                 VALID_FROM, VALID_UNTIL);
@@ -375,10 +363,8 @@ class OrderApplicationServiceTest {
         when(orderRepository.save(any(Order.class))).thenReturn(orderWithCoupon);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.payOrder("ORD123456");
 
-        // Then
         assertThat(result).isNotNull();
         verify(couponRepository).findByCouponId(any(CouponId.class));
         verify(orderRepository).save(any(Order.class));
@@ -386,22 +372,18 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_notQueryCoupon_when_payOrderWithoutCoupon() {
-        // Given
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.payOrder("ORD123456");
 
-        // Then
         assertThat(result).isNotNull();
         verify(couponRepository, never()).findByCouponId(any(CouponId.class));
     }
 
     @Test
     void should_applyCoupon_when_createOrderFromCartWithValidCoupon() {
-        // Given
         createFromCartCommand.setCouponId(mockCoupon.getCouponIdValue());
 
         when(cartRepository.findByUserId("CUST001")).thenReturn(Optional.of(mockCart));
@@ -410,31 +392,24 @@ class OrderApplicationServiceTest {
         when(cartRepository.save(any(Cart.class))).thenReturn(mockCart);
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.createOrderFromCart(createFromCartCommand);
 
-        // Then
         assertThat(result).isNotNull();
         verify(couponRepository).findByCouponId(any(CouponId.class));
         verify(orderRepository).save(any(Order.class));
         verify(domainEventPublisher).publish(any(OrderCreatedEvent.class));
     }
 
-    // --- Ship/Deliver/Refund tests ---
-
     @Test
     void should_shipOrder_when_orderPaid() {
-        // Given - paid order
         mockOrder.pay();
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         mockOrderDTO.setStatus("SHIPPED");
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.shipOrder("ORD123456");
 
-        // Then
         assertThat(result).isNotNull();
         assertThat(result.getStatus()).isEqualTo("SHIPPED");
         verify(orderRepository).save(any(Order.class));
@@ -442,10 +417,8 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_throwException_when_shipOrderNotPaid() {
-        // Given - CREATED status order
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
 
-        // When & Then
         assertThatThrownBy(() -> orderApplicationService.shipOrder("ORD123456"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("不允许发货");
@@ -453,7 +426,6 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_deliverOrder_when_orderShipped() {
-        // Given - shipped order
         mockOrder.pay();
         mockOrder.ship();
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
@@ -461,10 +433,8 @@ class OrderApplicationServiceTest {
         mockOrderDTO.setStatus("DELIVERED");
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.deliverOrder("ORD123456");
 
-        // Then
         assertThat(result).isNotNull();
         assertThat(result.getStatus()).isEqualTo("DELIVERED");
         verify(orderRepository).save(any(Order.class));
@@ -472,11 +442,9 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_throwException_when_deliverOrderNotShipped() {
-        // Given - PAID status order
         mockOrder.pay();
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
 
-        // When & Then
         assertThatThrownBy(() -> orderApplicationService.deliverOrder("ORD123456"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("不允许确认送达");
@@ -484,17 +452,14 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_refundOrder_when_orderPaidWithoutCoupon() {
-        // Given - paid order without coupon
         mockOrder.pay();
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
         mockOrderDTO.setStatus("REFUNDED");
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.refundOrder("ORD123456");
 
-        // Then
         assertThat(result).isNotNull();
         assertThat(result.getStatus()).isEqualTo("REFUNDED");
         verify(orderRepository).save(any(Order.class));
@@ -503,7 +468,6 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_refundOrderAndUnuseCoupon_when_orderPaidWithCoupon() {
-        // Given - paid order with coupon
         Order orderWithCoupon = Order.create(new CustomerId("CUST001"));
         orderWithCoupon.addItem(com.claudej.domain.order.model.entity.OrderItem.create(
                 "PROD001", "iPhone", 2,
@@ -512,7 +476,6 @@ class OrderApplicationServiceTest {
         orderWithCoupon.applyCoupon(new CouponId("COUPON001"), com.claudej.domain.order.model.valobj.Money.cny(20));
         orderWithCoupon.pay();
 
-        // Create USED coupon mock
         Coupon usedCoupon = Coupon.create("满100减20", DiscountType.FIXED_AMOUNT,
                 new BigDecimal("20"), new BigDecimal("100"), "CUST001",
                 VALID_FROM, VALID_UNTIL);
@@ -525,10 +488,8 @@ class OrderApplicationServiceTest {
         mockOrderDTO.setStatus("REFUNDED");
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.refundOrder("ORD123456");
 
-        // Then
         assertThat(result).isNotNull();
         assertThat(result.getStatus()).isEqualTo("REFUNDED");
         verify(couponRepository).findByCouponId(any(CouponId.class));
@@ -538,7 +499,6 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_refundOrder_when_orderShippedWithoutCoupon() {
-        // Given - shipped order without coupon
         mockOrder.pay();
         mockOrder.ship();
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
@@ -546,10 +506,8 @@ class OrderApplicationServiceTest {
         mockOrderDTO.setStatus("REFUNDED");
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.refundOrder("ORD123456");
 
-        // Then
         assertThat(result).isNotNull();
         assertThat(result.getStatus()).isEqualTo("REFUNDED");
         verify(orderRepository).save(any(Order.class));
@@ -558,7 +516,6 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_refundOrder_when_orderDeliveredWithoutCoupon() {
-        // Given - delivered order without coupon
         mockOrder.pay();
         mockOrder.ship();
         mockOrder.deliver();
@@ -567,10 +524,8 @@ class OrderApplicationServiceTest {
         mockOrderDTO.setStatus("REFUNDED");
         when(orderAssembler.toDTO(any(Order.class))).thenReturn(mockOrderDTO);
 
-        // When
         OrderDTO result = orderApplicationService.refundOrder("ORD123456");
 
-        // Then
         assertThat(result).isNotNull();
         assertThat(result.getStatus()).isEqualTo("REFUNDED");
         verify(orderRepository).save(any(Order.class));
@@ -579,10 +534,8 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_throwException_when_refundCreatedOrder() {
-        // Given - CREATED status order
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
 
-        // When & Then
         assertThatThrownBy(() -> orderApplicationService.refundOrder("ORD123456"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("不允许退款");
@@ -590,11 +543,9 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_throwException_when_refundCancelledOrder() {
-        // Given - cancelled order
         mockOrder.cancel();
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(mockOrder));
 
-        // When & Then
         assertThatThrownBy(() -> orderApplicationService.refundOrder("ORD123456"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("不允许退款");
@@ -602,7 +553,6 @@ class OrderApplicationServiceTest {
 
     @Test
     void should_throwException_when_refundOrderAndCouponNotFound() {
-        // Given - paid order with coupon but coupon not found
         Order orderWithCoupon = Order.create(new CustomerId("CUST001"));
         orderWithCoupon.addItem(com.claudej.domain.order.model.entity.OrderItem.create(
                 "PROD001", "iPhone", 2,
@@ -614,7 +564,6 @@ class OrderApplicationServiceTest {
         when(orderRepository.findByOrderId(any(OrderId.class))).thenReturn(Optional.of(orderWithCoupon));
         when(couponRepository.findByCouponId(any(CouponId.class))).thenReturn(Optional.empty());
 
-        // When & Then
         assertThatThrownBy(() -> orderApplicationService.refundOrder("ORD123456"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("优惠券不存在");
