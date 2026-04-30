@@ -1,21 +1,21 @@
 ---
 task-id: "027-prometheus-metrics"
-from: dev
+from: qa
 to: qa
-status: pending-review
-timestamp: "2026-04-30T10:29:24-04:00"
+status: approved
+timestamp: "2026-04-30T10:39:00-04:00"
 pre-flight:
-  order-application-test: pass  # `mvn -s /private/tmp/maven-settings-no-proxy.xml test -pl claude-j-application -am -DfailIfNoTests=false -Dtest=OrderApplicationServiceTest` -> Tests run: 32, Failures: 0, Errors: 0, Skipped: 0
-  prometheus-integration-test: pass  # `mvn -s /private/tmp/maven-settings-no-proxy.xml test -pl claude-j-start -am -DfailIfNoTests=false -Dtest=ActuatorPrometheusIntegrationTest` -> Tests run: 2, Failures: 0, Errors: 0, Skipped: 0; reactor BUILD SUCCESS
-  mvn-test: pass  # `mvn -s /private/tmp/maven-settings-no-proxy.xml test` -> start Tests run: 68, Failures: 0, Errors: 0, Skipped: 0; reactor BUILD SUCCESS
-  checkstyle: pass  # `mvn -s /private/tmp/maven-settings-no-proxy.xml checkstyle:check -B` -> BUILD SUCCESS, You have 0 Checkstyle violations.
+  prometheus-integration-test: pass  # `mvn -s /private/tmp/maven-settings-no-proxy.xml test -pl claude-j-start -am -DfailIfNoTests=false -Dtest=ActuatorPrometheusIntegrationTest` -> Exposing 5 endpoint(s) beneath base path '/actuator'; Running com.claudej.actuator.ActuatorPrometheusIntegrationTest; Tests run: 2, Failures: 0, Errors: 0, Skipped: 0; BUILD SUCCESS
+  order-application-test: pass  # `mvn -s /private/tmp/maven-settings-no-proxy.xml test -pl claude-j-application -am -DfailIfNoTests=false -Dtest=OrderApplicationServiceTest` -> Running com.claudej.application.order.service.OrderApplicationServiceTest; Tests run: 32, Failures: 0, Errors: 0, Skipped: 0; BUILD SUCCESS
+  mvn-test: pass  # `mvn -s /private/tmp/maven-settings-no-proxy.xml test` -> Tests run: 673/133/111/110/68 across domain/application/adapter/infrastructure/start; reactor BUILD SUCCESS
+  checkstyle: pass  # `mvn -s /private/tmp/maven-settings-no-proxy.xml checkstyle:check -B` -> You have 0 Checkstyle violations.; BUILD SUCCESS
   entropy-check: pass  # `./scripts/entropy-check.sh` -> issues: 0, warnings: 14, status: PASS
 artifacts:
   - /Users/macro.li/aiProject/claude-j/docs/exec-plan/active/027-prometheus-metrics/requirement-design.md
   - /Users/macro.li/aiProject/claude-j/docs/exec-plan/active/027-prometheus-metrics/task-plan.md
   - /Users/macro.li/aiProject/claude-j/docs/exec-plan/active/027-prometheus-metrics/dev-log.md
   - /Users/macro.li/aiProject/claude-j/docs/exec-plan/active/027-prometheus-metrics/handoff.md
-summary: "Fixed the remaining Prometheus blocker by changing OrderMetricsConfiguration to choose the metrics port at bean creation time via ObjectProvider<MeterRegistry>, so start test contexts with a real registry now wire MicrometerOrderMetricsRecorder instead of NoOpOrderMetricsPort. QA blockers are closed: OrderApplicationService failure durations now keep non-success outcomes, and ActuatorPrometheusIntegrationTest now proves the start context uses the Micrometer implementation and exposes the three required order metric names."
+summary: "QA re-verify passed. I independently reran the Prometheus integration test, OrderApplicationService metrics tests, full `mvn test`, full Checkstyle, and `./scripts/entropy-check.sh`. `/actuator/prometheus` now exposes `claudej_order_create_total`, `claudej_order_create_failure_total`, and `claudej_order_create_duration_seconds`; the start test context wires `MicrometerOrderMetricsRecorder` instead of `NoOpOrderMetricsPort`; and application tests verify failure-path duration outcomes remain `business_error` / `system_error` rather than `success`."
 ---
 
 # 交接文档
@@ -40,7 +40,10 @@ Build 阻塞已解除并重新交付 QA：
 - 结论：changes-requested。`OrderRepositoryImplTest` 已真实执行 9 个测试，但当前仍有 2 个阻塞问题：`ActuatorPrometheusIntegrationTest` 未验证订单指标名，且 `OrderApplicationService` 在失败路径把耗时指标错误记录为 `outcome=success`。
 - 2026-04-30 @architect 复评：当前唯一剩余 blocker 更像 `OrderMetricsConfiguration` 的条件装配问题，而不是 Prometheus 方案本身失效。`ActuatorPrometheusIntegrationTest` 已明确断言 start 上下文拿到的是 `NoOpOrderMetricsPort` 而非 `MicrometerOrderMetricsRecorder`，说明 `/actuator/prometheus` 端点已暴露，但 `@ConditionalOnBean(MeterRegistry.class)` 在该测试上下文未命中，导致 fallback no-op bean 抢先成为唯一 `OrderMetricsPort`。推荐最小修复方向是收紧/改写该条件装配，让“存在可用 Prometheus/Micrometer registry 的 start 上下文”稳定落到 Micrometer 实现，再保留当前测试对真实 bean 类型和指标文本的断言；不要把测试改成接受 `NoOpOrderMetricsPort`，也不要把 `MeterRegistry` 直接注入 application。此问题仍属当前设计成立下的实现装配问题，不需要改架构边界或新增 ADR。另已独立运行 `/Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh`，退出码 0，结果 `FAIL=0 / WARN=14 / status=PASS`。
 
-## 交接历史
+### 2026-04-30 — @qa → @qa
+- 状态：approved
+- 说明：QA 独立复跑 `mvn -s /private/tmp/maven-settings-no-proxy.xml test -pl claude-j-start -am -DfailIfNoTests=false -Dtest=ActuatorPrometheusIntegrationTest`、`mvn -s /private/tmp/maven-settings-no-proxy.xml test -pl claude-j-application -am -DfailIfNoTests=false -Dtest=OrderApplicationServiceTest`、`mvn -s /private/tmp/maven-settings-no-proxy.xml test`、`mvn -s /private/tmp/maven-settings-no-proxy.xml checkstyle:check -B`、`./scripts/entropy-check.sh` 全部通过；确认 start 上下文使用 `MicrometerOrderMetricsRecorder`、Prometheus endpoint 暴露 3 个订单指标名，且失败路径 duration outcome 分类已修复。
+
 
 ### 2026-04-29 — @dev → @architect
 - 状态：pending-review

@@ -16,8 +16,8 @@
 | 8 | 全量 `mvn test` | dev | 单测通过 | `mvn -s /private/tmp/maven-settings-no-proxy.xml clean test` 通过，reactor BUILD SUCCESS |
 | 9 | 全量 `mvn checkstyle:check` | dev | 单测通过 | 0 Checkstyle violations |
 | 10 | 全量 `./scripts/entropy-check.sh` | dev | 单测通过 | FAIL=0，WARN=13，status=PASS |
-| 11 | QA: 测试用例设计 | qa | 待办 | |
-| 12 | QA: 验收测试 + 代码审查 | qa | 待办 | |
+| 11 | QA: 测试用例设计 | qa | 完成 | 已完成测试设计并据此执行 re-verify |
+| 12 | QA: 验收测试 + 代码审查 | qa | 完成 | 2026-04-30 独立复跑专项回归、全量测试、Checkstyle、entropy-check 均通过；结论：验收通过 |
 
 ## 执行顺序
 domain 边界确认 → application 端口 → application 服务 + 测试 → infrastructure 指标实现 → adapter 回归测试 → start 配置与集成测试 → 全量测试 → QA 验收
