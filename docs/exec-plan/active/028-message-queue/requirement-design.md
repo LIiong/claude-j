@@ -110,8 +110,9 @@
 ### 五、消息可靠性边界
 本任务作为 D1 最小闭环，可靠性策略限定为：
 - 生产端：事务提交后再发消息，避免订单回滚后仍发通知
-- 消费端：基于 `orderId` 查询 `NotificationRepository` 做幂等保护，重复消息不重复创建 SENT 记录
-- 失败处理：消费异常时记录 FAILED 状态并交由 RabbitMQ 默认重试/拒绝策略处理
+- 消费端：基于 `orderId + channel` 唯一约束与 `NotificationRepository` 查询做幂等保护，重复消息不重复创建 SENT 记录
+- 失败处理：消费异常时记录 FAILED 状态，并由后续独立任务定义重试、死信或人工补偿策略
+- 已知边界：事务提交成功但 RabbitMQ publish 失败时，D1 接受“订单已创建、消息未送达”的窗口风险；该可靠投递缺口由 D2 的 Transactional Outbox 关闭
 
 **明确不在本任务实现的内容**：
 - Transactional Outbox（留给 D2）
@@ -135,8 +136,9 @@
 - **假设 1**：通知示例允许以内置日志/数据库记录代替真实邮件发送，只要能证明消息被成功消费并完成通知处理即可。
 - **假设 2**：本任务不要求把现有库存/优惠券事件链路全部迁移到 MQ，只对“订单创建后通知”做新增异步示例。
 - **假设 3**：本地演示以 `docs/devops/docker-compose.yml` 为统一入口，而非仓库根目录新增第二份 compose 文件。
-- **待 architect 确认 1**：是否接受新增 `notification` 轻量聚合作为消费侧落点；若认为过重，可退化为 infrastructure 级日志消费者，但这会削弱 DDD 示范价值。
-- **待 architect 确认 2**：是否需要在 Build 阶段一并预留死信队列/重试配置骨架，还是坚持本次只做 happy path + 基础失败记录。
+- **架构确认 1**：接受新增 `notification` 轻量聚合作为消费侧落点，但其边界限定为“通知处理结果与幂等记录”，不得在 D1 扩展真实多渠道编排、模板管理或用户触达偏好等新子域能力。
+- **架构确认 2**：D1 仅做 happy path + 基础失败记录，不预留死信队列/重试配置骨架；若后续引入重试策略、死信队列、人工补偿或投递观测面板，应在 D2 通过独立设计与 ADR 明确。
+- **架构确认 3**：Build 阶段默认不新增 `notification` 查询 API；若仅为验证异步闭环，可通过 repository 集成测试与 start 模块单个全链路测试举证，避免为演示目的扩张对外契约。
 
 ## API 设计
 
@@ -151,7 +153,7 @@
 
 | 方法 | 路径 | 描述 | 请求体 | 响应体 |
 |------|------|------|--------|--------|
-| GET | /api/v1/notifications/orders/{orderId} | 查询订单通知处理结果（可选） | — | `{ "success": true, "data": { ... } }` |
+| GET | /api/v1/notifications/orders/{orderId} | 查询订单通知处理结果（仅在需求新增对外观测要求时启用） | — | `{ "success": true, "data": { ... } }` |
 
 ## 数据库设计（如有）
 ```sql
@@ -174,25 +176,54 @@ CREATE TABLE IF NOT EXISTS t_notification (
 - `payload_json` 保存最小通知快照，便于本地演示和问题追踪
 - 暂不新增 outbox 表；若后续做 D2，再单独引入 `t_outbox`
 
-## 影响范围
-- **domain**:
-  - 新增 `com.claudej.domain.notification.model.aggregate.Notification`
-  - 新增 `com.claudej.domain.notification.model.valueobject.*`
-  - 新增 `com.claudej.domain.notification.repository.NotificationRepository`
-- **application**:
-  - 新增 `com.claudej.application.order.port.OrderMessagePublisher`
-  - 新增 `com.claudej.application.order.dto.OrderCreatedMessage`（或 `mq` 子包）
-  - 新增 `com.claudej.application.notification.service.NotificationApplicationService`
-  - 可能新增 `NotificationDTO` / `NotificationAssembler`
-- **infrastructure**:
-  - 新增 RabbitMQ publisher / listener / config / message converter
-  - 新增 notification 持久化 DO / Mapper / Converter / RepositoryImpl
-  - 新增领域事件桥接监听器
-- **adapter**:
-  - 默认无变更；如需通知查询示例，新增 notification controller/request/response/test
-- **start**:
-  - 更新 `pom.xml` 装配依赖
-  - 更新 `application*.yml`
-  - 更新 `claude-j-start/src/main/resources/db/schema.sql`
-  - 更新 `docs/devops/docker-compose.yml`
-  - 新增/更新集成测试与交付文档
+## 架构评审
+
+**评审人**：@architect
+**日期**：2026-04-30
+**结论**：✅ 通过
+
+### 评审检查项（15 维四类）
+
+**架构合规（7 项）**
+- [x] 聚合根边界合理（遵循事务一致性原则）
+- [x] 值对象识别充分（金额、标识符等应为 VO）
+- [x] Repository 端口粒度合适（方法不多不少）
+- [x] 与已有聚合无循环依赖
+- [x] DDL 设计与领域模型一致（字段映射、索引合理）
+- [x] API 设计符合 RESTful 规范
+- [x] 对象转换链正确（DO ↔ Domain ↔ DTO ↔ Request/Response）
+
+**需求质量（3 项）**
+- [x] 需求无歧义：核心名词、流程、异常分支均有明确定义
+- [x] 验收条件可验证：每条 AC 可转化为 `should_xxx_when_yyy` 测试用例
+- [x] 业务规则完备：状态机/不变量/边界值在需求中已列明
+
+**计划可执行性（2 项）**
+- [x] task-plan 粒度合格：按层任务已分解到原子级（10–15 分钟/步），每步含文件路径 + 验证命令 + 预期输出（详见 `docs/exec-plan/templates/task-plan.template.md` 原子任务章节）
+- [x] 依赖顺序正确：domain → application → infrastructure → adapter → start 自下而上，层间依赖无倒置
+
+**可测性保障（3 项 — 010 复盘后新增）**
+- [x] **AC 自动化全覆盖**：`test-case-design.md` 的「AC 自动化覆盖矩阵」每条 AC 都有对应自动化测试方法；任一标「手动」但无替代自动化测试 → **打回**
+- [x] **可测的注入方式**：若引入新 Spring Bean，使用构造函数注入而非字段注入（避免测试反射）；详见 `java-dev.md` 依赖注入规则
+- [x] **配置校验方式合规**：若涉及敏感/跨环境配置校验，使用 `@ConfigurationProperties + @Validated`，不得用 `ApplicationRunner`/`@PostConstruct`；详见 ADR-005
+
+**心智原则（Karpathy — 动手前自检）**
+- [x] **简洁性**：需求未要求的抽象/配置/工厂已移除；任何单一实现的 `XxxStrategy`/`XxxFactory` 需说明存在理由
+- [x] **外科性**：设计仅改动任务直接相关的文件；若涉及跨聚合大改，在评审意见说明理由
+- [x] **假设显性**：需求里含糊的字段/边界/异常，requirement-design 已在「假设与待确认」列出
+
+> 完整原则与反模式：`.claude/rules/karpathy-guidelines.md`
+
+### 评审意见
+1. **RabbitMQ 作为 D1 选型合理，且与 ADR-006 不冲突。** ADR-006 只是为 025 任务选择了进程内 `@TransactionalEventListener` 作为当时最轻的跨聚合协作方案，并明确写明未来可平滑迁移到 MQ。028 设计继续保留进程内领域事件作为 application/domain 边界，再由 infrastructure 做 MQ 桥接，符合“端口在内、适配在外”的六边形约束，也避免让现有库存监听链路一次性迁移到分布式消息。
+2. **`notification` 聚合作为消费侧示例落点合适，但边界必须收窄。** 我已在正文确认：D1 中它只负责“通知处理结果 + 幂等记录”，不扩展多渠道策略、模板编排、用户偏好等真实通知子域。相比退化成 infrastructure 级日志消费者，这样更能保持 DDD 示例完整，同时不会与现有 `order`/`user`/`auth` 聚合形成循环依赖。
+3. **D1 只做“事务后发布 + 消费幂等 + 失败记录”，把 Transactional Outbox 留到 D2 是合理切分，但必须显式承认可靠性缺口。** 我已补充 D1 的已知边界：事务提交成功但 RabbitMQ publish 失败时，仍存在“订单已创建、消息未送达”的窗口风险。这一缺口不应被“事务后发布”表述掩盖，后续 D2 应用 Outbox 关闭该窗口；在 D1 范围内接受它，符合简洁优先和阶段性交付。
+4. **Build 阶段不建议预留 `notification` 查询 API。** 当前需求目标是演示异步链路接入，而不是新增用户可见通知查询能力。已有订单创建 API + repository/H2 测试 + start 模块单个全链路测试，足以证明闭环；如果为了“看得见”而新增 controller，会把适配器契约、DTO、测试、鉴权与文档一起拉进范围，违反外科式变更。仅当后续需求明确要求对外观测时，再单开任务补查询接口。
+5. **task-plan 可执行性通过，但第 8 项应按“默认跳过”理解。** 我无法按角色边界修改 `task-plan.md`，因此仅在此注明：`/Users/macro.li/aiProject/claude-j/docs/exec-plan/active/028-message-queue/task-plan.md` 中“8.1 Adapter Notification 查询接口”在 Build 时默认不做，除非需求新增对外观测要求。
+6. **架构基线已真实运行通过。** 执行命令：`/Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh`；退出码 `0`。结果：`0 FAIL / 13 WARN / status PASS`。WARN 为仓库既有测试缺失、部分 ADR 状态节提示和归档目录历史提示，不构成 028 当前设计阻塞。
+
+### 需要新增的 ADR
+本轮**不新增 ADR**。原因：
+- MQ 选型是 028 D1 的任务级技术选择，目前仅为“订单创建后通知”提供最小演示闭环，尚未上升为全项目统一消息基础设施决策；
+- 现有 ADR-006 已允许未来从进程内事件平滑迁移到 MQ，本次设计仍处于其兼容路径内；
+- 待 D2 明确 Transactional Outbox、重试/死信、统一消息模型或更多聚合接入时，再新增“消息基础设施策略” ADR 更合适。

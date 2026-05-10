@@ -2,7 +2,7 @@
 task-id: "028-message-queue"
 from: dev
 to: architect
-status: pending-review
+status: approved
 timestamp: "2026-04-30T00:00:00"
 pre-flight:
   mvn-test: pending
@@ -35,7 +35,12 @@ summary: "Spec completed for D1 message queue integration. Request architect rev
 - 是否需要在 Build 阶段预留 notification 查询 API，还是保持纯异步内部闭环即可
 
 ## 评审回复
-待 architect 填写。
+- 结论：approved。
+- RabbitMQ 作为 D1 选型合理，保持“进程内领域事件 + infrastructure 桥接 MQ”即可，与 ADR-006 兼容。
+- 接受 `notification` 轻量聚合作为消费侧示例落点，但边界限定为“通知处理结果与幂等记录”，不在 D1 扩展真实通知子域能力。
+- 接受 D1 只做事务后发布、消费幂等与失败记录，但已在 `requirement-design.md` 明确记录已知可靠性缺口：事务提交后 publish 失败窗口由 D2 Transactional Outbox 关闭。
+- Build 阶段默认不新增 notification 查询 API；仅当需求新增对外观测要求时再补 adapter 契约。
+- 架构基线检查已真实执行：`/Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh`，退出码 0，结果 `0 FAIL / 13 WARN / status PASS`。
 
 ---
 
@@ -46,8 +51,8 @@ summary: "Spec completed for D1 message queue integration. Request architect rev
 - 说明：提交 028-message-queue Spec，请评审 MQ 选型、notification 聚合边界与事件桥接方案。
 
 ### 2026-04-30 — @architect → @dev
-- 状态：待填写
-- 说明：待评审
+- 状态：approved
+- 说明：RabbitMQ D1 选型、notification 轻量聚合边界、D2 Outbox 切分均通过；Build 阶段默认不新增 notification 查询 API。
 
 ### 2026-04-30 — @dev → @qa
 - 状态：待填写
