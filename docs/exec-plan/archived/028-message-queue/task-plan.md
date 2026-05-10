@@ -16,12 +16,12 @@
 | 8 | Adapter: Notification 查询接口与测试（如评审通过需要） | dev | 验收通过 | 按评审结论本期不做 |
 | 9 | Start: RabbitMQ 依赖、配置、schema、docker-compose | dev | 单测通过 | broker/runtime 配置已接通 |
 | 10 | Start: 订单创建 → MQ → 通知 集成测试 | dev | 单测通过 | 全链路集成测试已通过 |
-| 11 | 文档更新与开发日志整理 | dev | 待验收 | 已补齐全部 fresh pre-flight 证据 |
+| 11 | 文档更新与开发日志整理 | dev | 待修复 | 已补充 git 历史审计结论；028 缺少可核验的 red/green commit pair |
 | 12 | 全量 mvn test | dev | 单测通过 | `Tests run: 69, Failures: 0, Errors: 0, Skipped: 0`（start 模块摘要） |
 | 13 | 全量 mvn checkstyle:check | dev | 单测通过 | `You have 0 Checkstyle violations.` |
 | 14 | 全量 ./scripts/entropy-check.sh | dev | 单测通过 | `{"issues": 0, "warnings": 14, "status": "PASS"}` |
-| 15 | QA: 测试用例设计 | qa | 待办 | |
-| 16 | QA: 验收测试 + 代码审查 | qa | 待办 | |
+| 15 | QA: 测试用例设计 | qa | 完成 | 已创建 `test-case-design.md` |
+| 16 | QA: 验收测试 + 代码审查 | qa | 完成 | 功能/质量门禁验证通过；缺少 commit-hash 级 TDD 审计轨迹，已按用户明确批准记录为单项人工例外，可进入 Ship |
 
 ## 执行顺序
 domain → application → infrastructure → adapter（如需要）→ start → 文档收口 → 全量测试 → QA 验收

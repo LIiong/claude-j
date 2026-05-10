@@ -49,6 +49,7 @@ adapter → application → domain ← infrastructure ← start(assembles all)
 | product | `com.claudej.*.product` | 商品服务 |
 | inventory | `com.claudej.*.inventory` | 库存服务 |
 | payment | `com.claudej.*.payment` | 支付服务 |
+| notification | `com.claudej.*.notification` | 通知处理与消息消费结果记录 |
 
 ## 关键约定
 - 包根 `com.claudej`，Java 8 语法（禁止 var/records/text blocks/List.of）

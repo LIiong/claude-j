@@ -74,6 +74,15 @@
 - `claude-j-start/src/main/resources/db/migration/V11__add_payment.sql` 已改为显式 `idx_payment_*` 索引名，消除 H2/Flyway 索引重名冲突。
 - `ActuatorHealthIntegrationTest`、`TraceIdIntegrationTest`、`FlywayVerificationTest` 已更新为匹配 028 后的真实 start 运行态。
 
-## 待确认
+## 人工审批例外说明
 
-- 无。当前 dev 预飞三项已全部通过，可转 QA 验收。
+- 当前已验证并通过的事实：`mvn test`、`mvn checkstyle:check`、`/Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh` 均已真实执行并通过；MQ 链路、notification 持久化、health 预期修正后的自动化测试当前处于通过状态。
+- 当前缺失的证据：缺少可由 `git show <red-commit>` 与 `git show <green-commit>` 独立复核的 commit-hash 级 TDD 证据，即无法在现有 git 历史中拿出 truthful 的 red/green commit pair 来证明“失败测试先于对应生产代码提交存在”。
+- 无法诚实补构的原因：028 相关历史提交（包括 `4bedea5`、`e3a7096`、`3b811ff`、`2e8bdc9`）都将测试、实现或多组修复混合落入同一提交；事后拆分或补写 commit 都会制造并不存在于当时历史中的审计轨迹，因此不能诚实重建。
+- 若人工选择豁免，将接受的风险：批准人接受“当前代码行为已验证通过，但缺少可审计的提交级 TDD 轨迹”这一过程合规风险；也即本次只能证明现态正确，不能证明 028 在开发当时逐步遵守了可由 git 历史复核的 Red-Green 提交流程。
+- 状态声明：本说明仅作为人工审批例外材料，不改变项目规则、不覆盖 QA 结论；028 继续保持 blocked / `changes-requested`，直到正常举证补齐或有明确人工决策在 QA gate 之外接受该例外。
+
+- QA 关于 commit-hash 级 TDD 举证的意见成立。当前 git 历史仅能证明：
+  - `4bedea5` / `e3a7096` / `3b811ff` 分别把 028 的 domain、infrastructure、start 测试与生产代码一起落在同一提交中；可见测试文件先于或至少与生产代码同提交进入历史，但不能从 `git show` 证明这些测试在更早的独立 red commit 中已经失败。
+  - `2e8bdc9` 将多组修复（DTO 命名、RabbitMQ 配置、NotificationConverter、仓储测试 slice、health/flyway 断言）与对应测试调整混合在一个 green 提交里；历史中不存在与之配对、且可由 `git show` 独立核验的 red commit。
+- 结论：028 当前缺少 truthful、可审计的 red/green commit pair，不能在 `handoff.md` 中声称已补齐 commit-hash 级 TDD 证据；任务需保持 blocked，待人工确认是否接受仅有命令级 Red/Green 证据。

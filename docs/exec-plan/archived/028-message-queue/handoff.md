@@ -2,7 +2,7 @@
 task-id: "028-message-queue"
 from: dev
 to: qa
-status: pending-review
+status: approved
 timestamp: "2026-05-06T10:30:00-04:00"
 pre-flight:
   mvn-test: pass       # BUILD SUCCESS; claude-j-start summary: Tests run: 69, Failures: 0, Errors: 0, Skipped: 0
@@ -15,7 +15,7 @@ artifacts:
   - requirement-design.md
   - task-plan.md
   - dev-log.md
-summary: "028 的 MQ/notification 实现、repository H2 slice 收敛、DTO 命名、RabbitMQ 配置绑定、Flyway payment 索引冲突与 start 层 stale 测试预期均已修复；dev 预飞三项已全部通过，可提交 QA 验收。"
+summary: "QA 已独立验证 `mvn test`、`mvn checkstyle:check`、`./scripts/entropy-check.sh` 通过，028 的 MQ/notification 行为、架构与风格门禁均满足；标准 QA gate 唯一未满足项仍是缺少可由 `git show <red-commit>` / `git show <green-commit>` 复核的 commit-hash 级 TDD red/green 审计轨迹。用户/审批人已明确接受该单一过程合规缺口的人工作业例外，因此本任务获准进入 Ship；此批准系 human exception，不代表提交级 TDD 证据已补齐或标准 QA gate 已完整满足。"
 ---
 
 # 交接文档
@@ -65,6 +65,22 @@ summary: "028 的 MQ/notification 实现、repository H2 slice 收敛、DTO 命�
 - 状态：changes-requested（Build blocker triage）
 - 说明：028 当前阻塞归类为“旧 infrastructure 集成测试装配范围过宽 + 模块测试依赖不完整”的叠加问题，不是 RabbitMQ/notification 领域设计错误。既有 repository 集成测试使用 `@SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure", "com.claudej.application"})`，把新增 `com.claudej.infrastructure.order.mq` Bean 一并拉起，导致与本测试无关的 MQ 配置绑定在 infrastructure 模块测试上下文中提前失败；同时失败链已经给出 `javax.validation.NoProviderFoundException`，说明 infrastructure 模块测试类路径缺少配置绑定所需的 Bean Validation provider。推荐最小修复方向：先收窄旧 repository 集成测试的扫描/装配边界，只保留目标 repository、mapper、最小数据源与必须 converter，避免让新增 MQ adapter 进入既有 H2 repository slice；若 028 的 notification repository 测试确实需要跑 `@Validated @ConfigurationProperties`，再补齐 infrastructure 测试类路径对 Bean Validation provider 的显式依赖。该阻塞仍属实现/测试装配问题，现有 requirement-design 与已批准架构边界可保持不变。
 
+### 2026-05-06 — @qa → @dev
+- 状态：changes-requested
+- Pre-flight：
+  - `mvn -f /Users/macro.li/aiProject/claude-j/pom.xml test` → pass，`Tests run: 69, Failures: 0, Errors: 0, Skipped: 0`，`BUILD SUCCESS`
+  - `mvn -f /Users/macro.li/aiProject/claude-j/pom.xml checkstyle:check` → pass，`You have 0 Checkstyle violations.`
+  - `/Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh` → pass，`{"issues": 0, "warnings": 14, "status": "PASS"}`；含 `WARN: 聚合 notification 在 domain 层存在但未在 CLAUDE.md 聚合列表中记录`
+- 说明：MQ 链路、通知持久化与 health 预期自动化验证均通过；但 `pre-flight.tdd-evidence` 未提供 red/green commit hash，无法执行 `git show {red-commit}` / `git show {green-commit}` 进行 TDD 铁律校验，按 QA gate 打回补齐举证。
+
+### 2026-05-06 — @dev history audit after QA TDD evidence request
+- 状态：changes-requested
+- 说明：已复查 `6043bc6..2e8bdc9` 的 028 相关提交。`4bedea5`、`e3a7096`、`3b811ff` 都将测试与生产代码一并提交，`2e8bdc9` 也将多组修复与测试调整混合在同一 green 提交；当前历史中不存在可供 QA 用 `git show {red}` / `git show {green}` 独立核验的 truthful red/green commit pair。维持 blocked，不虚构 TDD 证据。
+
+### 2026-05-06 — @dev manual-approval exception context
+- 状态：changes-requested
+- 说明：已补充人工审批例外材料。当前可真实举证的范围仅包括：`mvn test`、`mvn checkstyle:check`、`/Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh` 均通过，以及 MQ/notification 行为测试当前为绿；当前仍缺少可由 `git show <red-commit>` / `git show <green-commit>` 复核的 commit-hash 级 TDD 证据。由于 028 相关历史提交将测试、实现或多组修复混合落在同一提交中，无法诚实重建独立 red/green commit pair。若人工决定豁免，接受的是“现态通过但过程审计缺口仍在”的合规风险；本记录仅供人工例外审批参考，不改变 QA gate 结论，任务继续 blocked。
+
 ### 2026-05-06 — @dev → @qa
 - 状态：pending-review
 - Pre-flight：
@@ -88,6 +104,14 @@ summary: "028 的 MQ/notification 实现、repository H2 slice 收敛、DTO 命�
   - `mvn checkstyle:check` → pass，`You have 0 Checkstyle violations.`
   - `/Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh` → pass，`{"issues": 0, "warnings": 14, "status": "PASS"}`
 - 说明：028 的 notification payload 回归问题已通过 Red-Green 修复，`NotificationRepositoryImplTest` 与 `MessageQueueOrderIntegrationTest` 均通过；但全量测试被既有 coupon 用例阻塞，当前不满足交给 QA 的门槛。
+
+### 2026-05-06 — @qa → Ship
+- 状态：approved（human exception）
+- Pre-flight：
+  - `mvn -f /Users/macro.li/aiProject/claude-j/pom.xml test` → pass，`Tests run: 69, Failures: 0, Errors: 0, Skipped: 0`，`BUILD SUCCESS`
+  - `mvn -f /Users/macro.li/aiProject/claude-j/pom.xml checkstyle:check` → pass，`You have 0 Checkstyle violations.`
+  - `/Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh` → pass，`{"issues": 0, "warnings": 14, "status": "PASS"}`
+- 说明：QA 对代码行为、架构与风格门禁的独立验证已通过；标准 QA gate 唯一未满足项仍是缺少可由 `git show <red-commit>` / `git show <green-commit>` 核验的 commit-hash 级 TDD red/green 审计轨迹。用户/审批人已明确接受该单一过程合规缺口的人工作业例外，因此允许进入 Ship；该批准依据为人工例外，不表示 TDD 提交级证据已补齐。
 
 ### 2026-04-30 — @qa → (Ship)
 - 状态：待填写
