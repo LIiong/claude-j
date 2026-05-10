@@ -1,5 +1,6 @@
 package com.claudej.infrastructure.shortlink.persistence.repository;
 
+import com.claudej.infrastructure.test.MySqlRepositoryIntegrationTestSupport;
 import com.claudej.domain.shortlink.model.aggregate.ShortLink;
 import com.claudej.domain.shortlink.model.valobj.OriginalUrl;
 import com.claudej.domain.shortlink.model.valobj.ShortCode;
@@ -15,14 +16,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:h2:mem:shortlink_repo_test;DB_CLOSE_DELAY=-1;MODE=MySQL",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.datasource.username=sa",
-        "spring.datasource.password="
-})
+@SpringBootTest
 @Transactional
-class ShortLinkRepositoryImplTest {
+class ShortLinkRepositoryImplTest extends MySqlRepositoryIntegrationTestSupport {
 
     @SpringBootApplication(scanBasePackageClasses = {
             ShortLinkRepositoryImpl.class,

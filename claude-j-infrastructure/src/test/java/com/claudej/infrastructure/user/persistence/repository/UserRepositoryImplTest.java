@@ -1,5 +1,6 @@
 package com.claudej.infrastructure.user.persistence.repository;
 
+import com.claudej.infrastructure.test.MySqlRepositoryIntegrationTestSupport;
 import com.claudej.domain.user.model.aggregate.User;
 import com.claudej.domain.user.model.valobj.InviteCode;
 import com.claudej.domain.user.model.valobj.UserId;
@@ -18,14 +19,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:h2:mem:user_repo_test;DB_CLOSE_DELAY=-1;MODE=MySQL",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.datasource.username=sa",
-        "spring.datasource.password="
-})
+@SpringBootTest
 @Transactional
-class UserRepositoryImplTest {
+class UserRepositoryImplTest extends MySqlRepositoryIntegrationTestSupport {
 
     @SpringBootApplication(scanBasePackageClasses = {
             UserRepositoryImpl.class,

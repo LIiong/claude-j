@@ -1,5 +1,6 @@
 package com.claudej.infrastructure.cart.persistence.repository;
 
+import com.claudej.infrastructure.test.MySqlRepositoryIntegrationTestSupport;
 import com.claudej.domain.cart.model.aggregate.Cart;
 import com.claudej.domain.cart.model.valobj.Money;
 import com.claudej.domain.cart.model.valobj.Quantity;
@@ -24,15 +25,10 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * CartRepositoryImpl SpringBootTest
  */
-@SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:h2:mem:cart_repo_test;DB_CLOSE_DELAY=-1;MODE=MySQL",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.datasource.username=sa",
-        "spring.datasource.password="
-})
+@SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Transactional
-class CartRepositoryImplTest {
+class CartRepositoryImplTest extends MySqlRepositoryIntegrationTestSupport {
 
     @SpringBootApplication(scanBasePackageClasses = {
             CartRepositoryImpl.class,

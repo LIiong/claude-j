@@ -1,5 +1,6 @@
 package com.claudej.infrastructure.inventory.persistence.repository;
 
+import com.claudej.infrastructure.test.MySqlRepositoryIntegrationTestSupport;
 import com.claudej.domain.inventory.model.aggregate.Inventory;
 import com.claudej.domain.inventory.model.valobj.InventoryId;
 import com.claudej.domain.inventory.model.valobj.SkuCode;
@@ -22,15 +23,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * InventoryRepositoryImpl SpringBootTest
  */
-@SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:h2:mem:inventory_repo_test;DB_CLOSE_DELAY=-1;MODE=MySQL",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.datasource.username=sa",
-        "spring.datasource.password="
-})
+@SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Transactional
-class InventoryRepositoryImplTest {
+class InventoryRepositoryImplTest extends MySqlRepositoryIntegrationTestSupport {
 
     @SpringBootApplication(scanBasePackageClasses = {
             InventoryRepositoryImpl.class,

@@ -1,5 +1,6 @@
 package com.claudej.infrastructure.notification.persistence.repository;
 
+import com.claudej.infrastructure.test.MySqlRepositoryIntegrationTestSupport;
 import com.claudej.domain.notification.model.aggregate.Notification;
 import com.claudej.domain.notification.model.valueobject.NotificationChannel;
 import com.claudej.domain.notification.model.valueobject.NotificationPayload;
@@ -20,15 +21,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(properties = {
-        "spring.flyway.enabled=false",
-        "spring.datasource.url=jdbc:h2:mem:notification_repo_test;DB_CLOSE_DELAY=-1;MODE=MySQL",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.datasource.username=sa",
-        "spring.datasource.password="
-})
+@SpringBootTest
 @Transactional
-class NotificationRepositoryImplTest {
+class NotificationRepositoryImplTest extends MySqlRepositoryIntegrationTestSupport {
 
     @SpringBootApplication(scanBasePackageClasses = {
             NotificationRepositoryImpl.class,
@@ -41,26 +36,6 @@ class NotificationRepositoryImplTest {
         @org.springframework.context.annotation.Bean
         ObjectMapper objectMapper() {
             return new ObjectMapper();
-        }
-
-        @org.springframework.context.annotation.Bean
-        org.springframework.boot.CommandLineRunner notificationTableInitializer(javax.sql.DataSource dataSource) {
-            return args -> {
-                try (java.sql.Connection connection = dataSource.getConnection();
-                     java.sql.Statement statement = connection.createStatement()) {
-                    statement.execute("CREATE TABLE IF NOT EXISTS t_notification (" +
-                            "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
-                            "notification_id VARCHAR(64) NOT NULL, " +
-                            "order_id VARCHAR(64) NOT NULL, " +
-                            "channel VARCHAR(32) NOT NULL, " +
-                            "status VARCHAR(32) NOT NULL, " +
-                            "payload_json CLOB NOT NULL, " +
-                            "sent_at TIMESTAMP NULL, " +
-                            "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
-                            "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
-                    statement.execute("CREATE UNIQUE INDEX IF NOT EXISTS uk_notification_order_channel ON t_notification(order_id, channel)");
-                }
-            };
         }
     }
 

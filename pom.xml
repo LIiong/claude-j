@@ -36,7 +36,7 @@
         <lombok.version>1.18.30</lombok.version>
         <jacoco.version>0.8.11</jacoco.version>
         <jjwt.version>0.12.3</jjwt.version>
-        <flyway.version>8.5.13</flyway.version>
+        <flyway.version>9.22.3</flyway.version>
         <springdoc.version>1.7.0</springdoc.version>
     </properties>
 
@@ -130,7 +130,7 @@
             <dependency>
                 <groupId>mysql</groupId>
                 <artifactId>mysql-connector-java</artifactId>
-                <version>8.0.33</version>
+                <version>8.0.31</version>
             </dependency>
 
             <!-- SpringDoc OpenAPI -->

@@ -1,5 +1,6 @@
 package com.claudej.infrastructure.link.persistence.repository;
 
+import com.claudej.infrastructure.test.MySqlRepositoryIntegrationTestSupport;
 import com.claudej.domain.common.model.valobj.PageRequest;
 import com.claudej.domain.common.model.valobj.Page;
 import com.claudej.domain.common.model.valobj.SortDirection;
@@ -21,14 +22,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:h2:mem:link_repo_test;DB_CLOSE_DELAY=-1;MODE=MySQL",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.datasource.username=sa",
-        "spring.datasource.password="
-})
+@SpringBootTest
 @Transactional
-class LinkRepositoryImplTest {
+class LinkRepositoryImplTest extends MySqlRepositoryIntegrationTestSupport {
 
     @SpringBootApplication(scanBasePackageClasses = {
             LinkRepositoryImpl.class,
