@@ -1,6 +1,6 @@
 package com.claudej.infrastructure.order.mq;
 
-import com.claudej.application.order.dto.OrderCreatedMessage;
+import com.claudej.application.order.dto.OrderCreatedMessageDTO;
 import com.claudej.application.order.port.OrderMessagePublisher;
 import com.claudej.domain.order.event.OrderCreatedEvent;
 import org.junit.jupiter.api.Test;
@@ -32,11 +32,11 @@ class OrderCreatedEventBridgeListenerTest {
                 new com.claudej.domain.order.event.OrderItemInfo("PROD-401", "Phone", 1)
         ));
         org.mockito.Mockito.when(orderCreatedMessageAssembler.toMessage(any(OrderCreatedEvent.class), any(java.math.BigDecimal.class), any(String.class)))
-                .thenReturn(new OrderCreatedMessage());
+                .thenReturn(new OrderCreatedMessageDTO());
 
         orderCreatedEventBridgeListener.onOrderCreated(event);
 
         verify(orderCreatedMessageAssembler).toMessage(any(OrderCreatedEvent.class), any(java.math.BigDecimal.class), any(String.class));
-        verify(orderMessagePublisher).publishOrderCreated(any(OrderCreatedMessage.class));
+        verify(orderMessagePublisher).publishOrderCreated(any(OrderCreatedMessageDTO.class));
     }
 }

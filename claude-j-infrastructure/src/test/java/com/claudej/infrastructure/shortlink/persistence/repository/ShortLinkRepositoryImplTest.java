@@ -3,21 +3,33 @@ package com.claudej.infrastructure.shortlink.persistence.repository;
 import com.claudej.domain.shortlink.model.aggregate.ShortLink;
 import com.claudej.domain.shortlink.model.valobj.OriginalUrl;
 import com.claudej.domain.shortlink.model.valobj.ShortCode;
+import com.claudej.infrastructure.shortlink.persistence.converter.ShortLinkConverter;
 import com.claudej.infrastructure.shortlink.persistence.mapper.ShortLinkMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.datasource.url=jdbc:h2:mem:shortlink_repo_test;DB_CLOSE_DELAY=-1;MODE=MySQL",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password="
+})
+@Transactional
 class ShortLinkRepositoryImplTest {
 
-    @SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure", "com.claudej.application"})
-    @org.mybatis.spring.annotation.MapperScan("com.claudej.infrastructure.**.mapper")
+    @SpringBootApplication(scanBasePackageClasses = {
+            ShortLinkRepositoryImpl.class,
+            ShortLinkConverter.class,
+            ShortLinkMapper.class
+    })
+    @org.mybatis.spring.annotation.MapperScan(basePackageClasses = ShortLinkMapper.class)
     static class TestConfig {
     }
 

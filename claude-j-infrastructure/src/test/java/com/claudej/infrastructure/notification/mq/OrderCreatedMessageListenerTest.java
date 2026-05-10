@@ -1,7 +1,7 @@
 package com.claudej.infrastructure.notification.mq;
 
 import com.claudej.application.notification.service.NotificationApplicationService;
-import com.claudej.application.order.dto.OrderCreatedMessage;
+import com.claudej.application.order.dto.OrderCreatedMessageDTO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,7 +24,7 @@ class OrderCreatedMessageListenerTest {
 
     @Test
     void should_delegateToNotificationApplicationService_when_messageReceived() {
-        OrderCreatedMessage message = new OrderCreatedMessage();
+        OrderCreatedMessageDTO message = new OrderCreatedMessageDTO();
         message.setEventId("evt-1");
         message.setOrderId("ORD-301");
         message.setCustomerId("CUST-301");

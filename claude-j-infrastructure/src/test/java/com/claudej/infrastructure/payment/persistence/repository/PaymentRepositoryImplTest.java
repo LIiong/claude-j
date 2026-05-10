@@ -7,6 +7,8 @@ import com.claudej.domain.payment.model.aggregate.Payment;
 import com.claudej.domain.payment.model.valobj.PaymentId;
 import com.claudej.domain.payment.model.valobj.PaymentMethod;
 import com.claudej.domain.payment.model.valobj.PaymentStatus;
+import com.claudej.infrastructure.payment.persistence.converter.PaymentConverter;
+import com.claudej.infrastructure.payment.persistence.mapper.PaymentMapper;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,18 +16,53 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.flyway.enabled=false",
+        "spring.datasource.url=jdbc:h2:mem:payment_repo_test;DB_CLOSE_DELAY=-1;MODE=MySQL",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password="
+})
 @Transactional
 class PaymentRepositoryImplTest {
 
-    @SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure", "com.claudej.application"})
-    @MapperScan("com.claudej.infrastructure.**.mapper")
+    @SpringBootApplication(scanBasePackageClasses = {
+            PaymentRepositoryImpl.class,
+            PaymentConverter.class,
+            PaymentMapper.class
+    })
+    @MapperScan(basePackageClasses = PaymentMapper.class)
     static class TestConfig {
+
+        @org.springframework.context.annotation.Bean
+        org.springframework.boot.CommandLineRunner paymentTableInitializer(javax.sql.DataSource dataSource) {
+            return args -> {
+                try (java.sql.Connection connection = dataSource.getConnection();
+                     java.sql.Statement statement = connection.createStatement()) {
+                    statement.execute("CREATE TABLE IF NOT EXISTS t_payment ("
+                            + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+                            + "payment_id VARCHAR(64) NOT NULL, "
+                            + "order_id VARCHAR(64) NOT NULL, "
+                            + "customer_id VARCHAR(64) NOT NULL, "
+                            + "amount DECIMAL(12,2) NOT NULL, "
+                            + "currency VARCHAR(16) NOT NULL, "
+                            + "status VARCHAR(32) NOT NULL, "
+                            + "method VARCHAR(32) NOT NULL, "
+                            + "transaction_no VARCHAR(128), "
+                            + "deleted TINYINT NOT NULL DEFAULT 0, "
+                            + "create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                            + "update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+                    statement.execute("CREATE UNIQUE INDEX IF NOT EXISTS uk_payment_payment_id ON t_payment(payment_id)");
+                    statement.execute("CREATE INDEX IF NOT EXISTS idx_payment_order_id ON t_payment(order_id)");
+                    statement.execute("CREATE INDEX IF NOT EXISTS idx_payment_customer_id ON t_payment(customer_id)");
+                }
+            };
+        }
     }
 
     @Autowired

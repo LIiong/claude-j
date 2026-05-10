@@ -1,7 +1,7 @@
 package com.claudej.application.notification.service;
 
 import com.claudej.application.notification.port.NotificationSender;
-import com.claudej.application.order.dto.OrderCreatedMessage;
+import com.claudej.application.order.dto.OrderCreatedMessageDTO;
 import com.claudej.domain.notification.model.aggregate.Notification;
 import com.claudej.domain.notification.model.valueobject.NotificationChannel;
 import com.claudej.domain.notification.model.valueobject.NotificationPayload;
@@ -26,7 +26,7 @@ public class NotificationApplicationService {
     }
 
     @Transactional
-    public void handleOrderCreated(OrderCreatedMessage message) {
+    public void handleOrderCreated(OrderCreatedMessageDTO message) {
         OrderId orderId = new OrderId(message.getOrderId());
         NotificationChannel channel = NotificationChannel.INTERNAL;
         Optional<Notification> existing = notificationRepository.findByOrderIdAndChannel(orderId, channel);

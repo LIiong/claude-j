@@ -3,7 +3,7 @@ package com.claudej.mq;
 import com.claudej.application.notification.port.NotificationSender;
 import com.claudej.application.notification.service.NotificationApplicationService;
 import com.claudej.application.order.command.CreateOrderCommand;
-import com.claudej.application.order.dto.OrderCreatedMessage;
+import com.claudej.application.order.dto.OrderCreatedMessageDTO;
 import com.claudej.application.order.dto.OrderDTO;
 import com.claudej.application.order.service.OrderApplicationService;
 import com.claudej.domain.notification.model.aggregate.Notification;
@@ -51,7 +51,7 @@ class MessageQueueOrderIntegrationTest {
             return new RabbitTemplate(new CachingConnectionFactory("localhost")) {
                 @Override
                 public void convertAndSend(String exchange, String routingKey, Object object) {
-                    notificationApplicationService.handleOrderCreated((OrderCreatedMessage) object);
+                    notificationApplicationService.handleOrderCreated((OrderCreatedMessageDTO) object);
                 }
             };
         }

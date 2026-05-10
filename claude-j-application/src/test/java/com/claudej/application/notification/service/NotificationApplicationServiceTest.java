@@ -1,7 +1,7 @@
 package com.claudej.application.notification.service;
 
 import com.claudej.application.notification.port.NotificationSender;
-import com.claudej.application.order.dto.OrderCreatedMessage;
+import com.claudej.application.order.dto.OrderCreatedMessageDTO;
 import com.claudej.domain.notification.model.aggregate.Notification;
 import com.claudej.domain.notification.model.valueobject.NotificationChannel;
 import com.claudej.domain.notification.model.valueobject.NotificationStatus;
@@ -38,7 +38,7 @@ class NotificationApplicationServiceTest {
 
     @Test
     void should_saveSentNotification_when_messageConsumedSuccessfully() {
-        OrderCreatedMessage message = createMessage();
+        OrderCreatedMessageDTO message = createMessage();
         when(notificationRepository.findByOrderIdAndChannel(new OrderId("ORD-001"), NotificationChannel.INTERNAL))
                 .thenReturn(Optional.empty());
 
@@ -52,7 +52,7 @@ class NotificationApplicationServiceTest {
 
     @Test
     void should_skipWhen_notificationAlreadyExistsForOrder() {
-        OrderCreatedMessage message = createMessage();
+        OrderCreatedMessageDTO message = createMessage();
         Notification existing = Notification.createPending(
                 new OrderId("ORD-001"),
                 NotificationChannel.INTERNAL,
@@ -70,7 +70,7 @@ class NotificationApplicationServiceTest {
 
     @Test
     void should_saveFailedNotification_when_senderThrowsException() {
-        OrderCreatedMessage message = createMessage();
+        OrderCreatedMessageDTO message = createMessage();
         when(notificationRepository.findByOrderIdAndChannel(new OrderId("ORD-001"), NotificationChannel.INTERNAL))
                 .thenReturn(Optional.empty());
         when(notificationRepository.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -85,8 +85,8 @@ class NotificationApplicationServiceTest {
         assertThat(captor.getValue().getStatus()).isEqualTo(NotificationStatus.FAILED);
     }
 
-    private OrderCreatedMessage createMessage() {
-        OrderCreatedMessage message = new OrderCreatedMessage();
+    private OrderCreatedMessageDTO createMessage() {
+        OrderCreatedMessageDTO message = new OrderCreatedMessageDTO();
         message.setEventId("evt-001");
         message.setOrderId("ORD-001");
         message.setCustomerId("CUST-001");

@@ -1,6 +1,6 @@
 package com.claudej.infrastructure.order.mq;
 
-import com.claudej.application.order.dto.OrderCreatedMessage;
+import com.claudej.application.order.dto.OrderCreatedMessageDTO;
 import com.claudej.application.order.port.OrderMessagePublisher;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
@@ -18,7 +18,7 @@ public class RabbitMqOrderMessagePublisher implements OrderMessagePublisher {
     }
 
     @Override
-    public void publishOrderCreated(OrderCreatedMessage message) {
+    public void publishOrderCreated(OrderCreatedMessageDTO message) {
         rabbitTemplate.convertAndSend(
                 rabbitMqProperties.getOrderCreatedExchange(),
                 rabbitMqProperties.getOrderCreatedRoutingKey(),

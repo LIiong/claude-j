@@ -8,6 +8,7 @@ import com.claudej.domain.notification.model.valueobject.NotificationStatus;
 import com.claudej.domain.order.model.valobj.OrderId;
 import com.claudej.infrastructure.notification.persistence.dataobject.NotificationDO;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 
@@ -57,7 +58,7 @@ public class NotificationConverter {
         Map<String, Object> payloadMap = new HashMap<String, Object>();
         payloadMap.put("orderId", payload.getOrderId());
         payloadMap.put("customerId", payload.getCustomerId());
-        payloadMap.put("totalAmount", payload.getTotalAmount());
+        payloadMap.put("totalAmount", payload.getTotalAmount().toPlainString());
         payloadMap.put("message", payload.getMessage());
         try {
             return objectMapper.writeValueAsString(payloadMap);
@@ -66,15 +67,17 @@ public class NotificationConverter {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private NotificationPayload toPayload(String payloadJson) {
         try {
-            Map<String, Object> payloadMap = objectMapper.readValue(payloadJson, Map.class);
+            Map<String, String> payloadMap = objectMapper.readValue(
+                    payloadJson,
+                    new TypeReference<Map<String, String>>() { }
+            );
             return NotificationPayload.of(
-                    new OrderId((String) payloadMap.get("orderId")),
-                    (String) payloadMap.get("customerId"),
-                    new java.math.BigDecimal(String.valueOf(payloadMap.get("totalAmount"))),
-                    (String) payloadMap.get("message")
+                    new OrderId(payloadMap.get("orderId")),
+                    payloadMap.get("customerId"),
+                    new java.math.BigDecimal(payloadMap.get("totalAmount")),
+                    payloadMap.get("message")
             );
         } catch (IOException ex) {
             throw new IllegalStateException("Failed to deserialize notification payload", ex);

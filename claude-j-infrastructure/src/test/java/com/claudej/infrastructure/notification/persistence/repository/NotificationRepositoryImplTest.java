@@ -99,4 +99,27 @@ class NotificationRepositoryImplTest {
         assertThat(found.get().getPayload().getCustomerId()).isEqualTo("CUST-101");
         assertThat(found.get().getPayload().getTotalAmount()).isEqualByComparingTo("77.00");
     }
+
+    @Test
+    void should_preservePayloadMessage_when_payloadContainsComma() {
+        Notification notification = Notification.createPending(
+                new OrderId("ORD-102"),
+                NotificationChannel.INTERNAL,
+                NotificationPayload.of(
+                        new OrderId("ORD-102"),
+                        "CUST-102",
+                        new BigDecimal("88.00"),
+                        "created, notify warehouse"
+                )
+        );
+        notificationRepository.save(notification);
+
+        Optional<Notification> found = notificationRepository.findByOrderIdAndChannel(
+                new OrderId("ORD-102"),
+                NotificationChannel.INTERNAL
+        );
+
+        assertThat(found).isPresent();
+        assertThat(found.get().getPayload().getMessage()).isEqualTo("created, notify warehouse");
+    }
 }

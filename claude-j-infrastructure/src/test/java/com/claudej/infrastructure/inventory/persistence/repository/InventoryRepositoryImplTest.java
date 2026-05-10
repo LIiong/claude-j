@@ -4,6 +4,8 @@ import com.claudej.domain.inventory.model.aggregate.Inventory;
 import com.claudej.domain.inventory.model.valobj.InventoryId;
 import com.claudej.domain.inventory.model.valobj.SkuCode;
 import com.claudej.domain.inventory.repository.InventoryRepository;
+import com.claudej.infrastructure.inventory.persistence.converter.InventoryConverter;
+import com.claudej.infrastructure.inventory.persistence.mapper.InventoryMapper;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,13 +22,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * InventoryRepositoryImpl SpringBootTest
  */
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.datasource.url=jdbc:h2:mem:inventory_repo_test;DB_CLOSE_DELAY=-1;MODE=MySQL",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password="
+})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Transactional
 class InventoryRepositoryImplTest {
 
-    @SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure", "com.claudej.application"})
-    @MapperScan("com.claudej.infrastructure.**.mapper")
+    @SpringBootApplication(scanBasePackageClasses = {
+            InventoryRepositoryImpl.class,
+            InventoryConverter.class,
+            InventoryMapper.class
+    })
+    @MapperScan(basePackageClasses = InventoryMapper.class)
     static class TestConfig {
     }
 

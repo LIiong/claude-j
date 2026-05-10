@@ -1,8 +1,8 @@
 package com.claudej.application.order.port;
 
-import com.claudej.application.order.dto.OrderCreatedMessage;
+import com.claudej.application.order.dto.OrderCreatedMessageDTO;
 
 public interface OrderMessagePublisher {
 
-    void publishOrderCreated(OrderCreatedMessage message);
+    void publishOrderCreated(OrderCreatedMessageDTO message);
 }

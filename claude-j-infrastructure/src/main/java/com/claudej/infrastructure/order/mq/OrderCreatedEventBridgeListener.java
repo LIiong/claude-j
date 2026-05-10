@@ -1,6 +1,6 @@
 package com.claudej.infrastructure.order.mq;
 
-import com.claudej.application.order.dto.OrderCreatedMessage;
+import com.claudej.application.order.dto.OrderCreatedMessageDTO;
 import com.claudej.application.order.port.OrderMessagePublisher;
 import com.claudej.domain.order.event.OrderCreatedEvent;
 import org.springframework.stereotype.Component;
@@ -23,7 +23,7 @@ public class OrderCreatedEventBridgeListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onOrderCreated(OrderCreatedEvent event) {
-        OrderCreatedMessage message = orderCreatedMessageAssembler.toMessage(event, BigDecimal.ZERO, "CNY");
+        OrderCreatedMessageDTO message = orderCreatedMessageAssembler.toMessage(event, BigDecimal.ZERO, "CNY");
         orderMessagePublisher.publishOrderCreated(message);
     }
 }

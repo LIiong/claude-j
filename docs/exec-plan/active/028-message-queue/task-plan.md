@@ -6,20 +6,20 @@
 
 | # | 任务 | 负责人 | 状态 | 备注 |
 |---|------|--------|------|------|
-| 1 | Domain: Notification 聚合 + 值对象 + 测试 | dev | 待办 | 新增最小通知消费落点 |
-| 2 | Domain: NotificationRepository 端口 | dev | 待办 | 支撑消费幂等与结果查询 |
-| 3 | Application: OrderCreatedMessage DTO + Publisher 端口 + Assembler | dev | 待办 | application 只定义 MQ 端口 |
-| 4 | Application: NotificationApplicationService + 测试 | dev | 待办 | mock Repository / Sender |
-| 5 | Infrastructure: RabbitMQ 配置 + Publisher + 事件桥接测试 | dev | 待办 | 基于现有 SpringDomainEventPublisher 桥接 |
-| 6 | Infrastructure: Notification 持久化实现 + H2 测试 | dev | 待办 | DO ↔ Domain 往返 |
-| 7 | Infrastructure: RabbitMQ Consumer + 消费测试 | dev | 待办 | 订单创建消息消费为通知记录 |
-| 8 | Adapter: Notification 查询接口与测试（如评审通过需要） | dev | 待办 | 默认可选 |
-| 9 | Start: RabbitMQ 依赖、配置、schema、docker-compose | dev | 待办 | broker 本地可启动 |
-| 10 | Start: 订单创建 → MQ → 通知 集成测试 | dev | 待办 | 单任务内控制 1 个全链路集成测试 |
-| 11 | 文档更新与开发日志整理 | dev | 待办 | requirement/task-plan/dev-log/handoff |
-| 12 | 全量 mvn test | dev | 待办 | 预飞 1/3 |
-| 13 | 全量 mvn checkstyle:check | dev | 待办 | 预飞 2/3 |
-| 14 | 全量 ./scripts/entropy-check.sh | dev | 待办 | 预飞 3/3 |
+| 1 | Domain: Notification 聚合 + 值对象 + 测试 | dev | 单测通过 | 已完成最小通知消费落点 |
+| 2 | Domain: NotificationRepository 端口 | dev | 单测通过 | 已支撑消费幂等与结果查询 |
+| 3 | Application: OrderCreatedMessage DTO + Publisher 端口 + Assembler | dev | 单测通过 | application 仅保留消息契约 |
+| 4 | Application: NotificationApplicationService + 测试 | dev | 单测通过 | Mockito 用例覆盖成功/幂等/失败 |
+| 5 | Infrastructure: RabbitMQ 配置 + Publisher + 事件桥接测试 | dev | 单测通过 | 事件桥接与 publisher 装配已覆盖 |
+| 6 | Infrastructure: Notification 持久化实现 + H2 测试 | dev | 单测通过 | 新增 payload 含逗号回归测试并修复 converter |
+| 7 | Infrastructure: RabbitMQ Consumer + 消费测试 | dev | 单测通过 | 消费监听委派通知应用服务 |
+| 8 | Adapter: Notification 查询接口与测试（如评审通过需要） | dev | 验收通过 | 按评审结论本期不做 |
+| 9 | Start: RabbitMQ 依赖、配置、schema、docker-compose | dev | 单测通过 | broker/runtime 配置已接通 |
+| 10 | Start: 订单创建 → MQ → 通知 集成测试 | dev | 单测通过 | 全链路集成测试已通过 |
+| 11 | 文档更新与开发日志整理 | dev | 待验收 | 已补齐全部 fresh pre-flight 证据 |
+| 12 | 全量 mvn test | dev | 单测通过 | `Tests run: 69, Failures: 0, Errors: 0, Skipped: 0`（start 模块摘要） |
+| 13 | 全量 mvn checkstyle:check | dev | 单测通过 | `You have 0 Checkstyle violations.` |
+| 14 | 全量 ./scripts/entropy-check.sh | dev | 单测通过 | `{"issues": 0, "warnings": 14, "status": "PASS"}` |
 | 15 | QA: 测试用例设计 | qa | 待办 | |
 | 16 | QA: 验收测试 + 代码审查 | qa | 待办 | |
 

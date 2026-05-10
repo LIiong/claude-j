@@ -78,9 +78,9 @@ class OrderApplicationServiceTest {
     private Cart mockCart;
     private Coupon mockCoupon;
 
-    private static final LocalDateTime NOW = LocalDateTime.of(2026, 4, 19, 12, 0, 0);
-    private static final LocalDateTime VALID_FROM = LocalDateTime.of(2026, 4, 1, 0, 0, 0);
-    private static final LocalDateTime VALID_UNTIL = LocalDateTime.of(2026, 5, 1, 23, 59, 59);
+    private static final LocalDateTime NOW = LocalDateTime.now();
+    private static final LocalDateTime VALID_FROM = NOW.minusDays(7);
+    private static final LocalDateTime VALID_UNTIL = NOW.plusDays(7);
 
     @BeforeEach
     void setUp() {

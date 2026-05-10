@@ -1,19 +1,21 @@
 ---
 task-id: "028-message-queue"
 from: dev
-to: architect
-status: approved
-timestamp: "2026-04-30T00:00:00"
+to: qa
+status: pending-review
+timestamp: "2026-05-06T10:30:00-04:00"
 pre-flight:
-  mvn-test: pending
-  checkstyle: pending
-  entropy-check: pending
-  tdd-evidence: []
+  mvn-test: pass       # BUILD SUCCESS; claude-j-start summary: Tests run: 69, Failures: 0, Errors: 0, Skipped: 0
+  checkstyle: pass     # You have 0 Checkstyle violations.
+  entropy-check: pass  # {"issues": 0, "warnings": 14, "status": "PASS"}
+  tdd-evidence:
+    - "Red: mvn -f /Users/macro.li/aiProject/claude-j/pom.xml -pl claude-j-start -am -DfailIfNoTests=false -Dtest=ActuatorHealthIntegrationTest test -> Tests run: 6, Failures: 2, Errors: 0; expected 200 OK but was 503 SERVICE_UNAVAILABLE"
+    - "Green: mvn -f /Users/macro.li/aiProject/claude-j/pom.xml -pl claude-j-start -am -DfailIfNoTests=false -Dtest=ActuatorHealthIntegrationTest,OrderFromCartIntegrationTest,MessageQueueOrderIntegrationTest test -> Tests run: 13, Failures: 0, Errors: 0, Skipped: 0"
 artifacts:
   - requirement-design.md
   - task-plan.md
   - dev-log.md
-summary: "Spec completed for D1 message queue integration. Request architect review on MQ selection, notification aggregate boundary, and event-to-MQ bridge design."
+summary: "028 的 MQ/notification 实现、repository H2 slice 收敛、DTO 命名、RabbitMQ 配置绑定、Flyway payment 索引冲突与 start 层 stale 测试预期均已修复；dev 预飞三项已全部通过，可提交 QA 验收。"
 ---
 
 # 交接文档
@@ -58,6 +60,34 @@ summary: "Spec completed for D1 message queue integration. Request architect rev
 - 状态：待填写
 - Pre-flight：待填写
 - 说明：待构建完成后填写
+
+### 2026-04-30 — @architect blocker re-review
+- 状态：changes-requested（Build blocker triage）
+- 说明：028 当前阻塞归类为“旧 infrastructure 集成测试装配范围过宽 + 模块测试依赖不完整”的叠加问题，不是 RabbitMQ/notification 领域设计错误。既有 repository 集成测试使用 `@SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure", "com.claudej.application"})`，把新增 `com.claudej.infrastructure.order.mq` Bean 一并拉起，导致与本测试无关的 MQ 配置绑定在 infrastructure 模块测试上下文中提前失败；同时失败链已经给出 `javax.validation.NoProviderFoundException`，说明 infrastructure 模块测试类路径缺少配置绑定所需的 Bean Validation provider。推荐最小修复方向：先收窄旧 repository 集成测试的扫描/装配边界，只保留目标 repository、mapper、最小数据源与必须 converter，避免让新增 MQ adapter 进入既有 H2 repository slice；若 028 的 notification repository 测试确实需要跑 `@Validated @ConfigurationProperties`，再补齐 infrastructure 测试类路径对 Bean Validation provider 的显式依赖。该阻塞仍属实现/测试装配问题，现有 requirement-design 与已批准架构边界可保持不变。
+
+### 2026-05-06 — @dev → @qa
+- 状态：pending-review
+- Pre-flight：
+  - `mvn test` → pass，`BUILD SUCCESS`；`claude-j-start` 摘要 `Tests run: 69, Failures: 0, Errors: 0, Skipped: 0`
+  - `mvn checkstyle:check` → pass，`You have 0 Checkstyle violations.`
+  - `/Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh` → pass，`{"issues": 0, "warnings": 14, "status": "PASS"}`
+- 说明：028 的 MQ/notification 实现、测试装配收敛与 start 层 stale 断言修复已完成，提交 QA 验收。
+
+### 2026-05-05 — @dev build re-check (phase 2)
+- 状态：changes-requested
+- Pre-flight：
+  - `mvn test` → fail，`Tests run: 116, Failures: 0, Errors: 61, Skipped: 0`；阻塞集中在 infrastructure 仓储测试：`UserRepositoryImplTest`、`CartRepositoryImplTest`、`CouponRepositoryImplTest`、`InventoryRepositoryImplTest`、`LinkRepositoryImplTest`、`ProductRepositoryImplTest`
+  - `mvn checkstyle:check` → 未重跑；本轮新增了测试范围修复，且 `mvn test` 仍失败，不能沿用旧证据
+  - `/Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh` → 未重跑；本轮新增了测试范围修复，且 `mvn test` 仍失败，不能沿用旧证据
+- 说明：`OrderApplicationServiceTest` 的 coupon 时间夹具问题已修复，`PaymentRepositoryImplTest` 也已按最小 H2 slice 收敛；但 028 新增 `NotificationConverter(ObjectMapper)` 后，既有 infrastructure 宽扫描仓储测试大面积暴露相同的装配边界问题。本轮保持 truthfully blocked，不转 QA。
+
+### 2026-05-05 — @dev build re-check
+- 状态：changes-requested
+- Pre-flight：
+  - `mvn test` → fail，`Tests run: 136, Failures: 0, Errors: 3, Skipped: 0`；阻塞用例：`OrderApplicationServiceTest.should_applyCoupon_when_createOrderWithValidCoupon`、`should_useCoupon_when_payOrderWithCoupon`、`should_applyCoupon_when_createOrderFromCartWithValidCoupon`
+  - `mvn checkstyle:check` → pass，`You have 0 Checkstyle violations.`
+  - `/Users/macro.li/aiProject/claude-j/scripts/entropy-check.sh` → pass，`{"issues": 0, "warnings": 14, "status": "PASS"}`
+- 说明：028 的 notification payload 回归问题已通过 Red-Green 修复，`NotificationRepositoryImplTest` 与 `MessageQueueOrderIntegrationTest` 均通过；但全量测试被既有 coupon 用例阻塞，当前不满足交给 QA 的门槛。
 
 ### 2026-04-30 — @qa → (Ship)
 - 状态：待填写

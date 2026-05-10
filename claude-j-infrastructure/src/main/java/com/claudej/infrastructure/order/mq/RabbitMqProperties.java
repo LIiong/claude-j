@@ -10,13 +10,13 @@ import javax.validation.constraints.NotBlank;
 public class RabbitMqProperties {
 
     @NotBlank
-    private String orderCreatedExchange;
+    private String orderCreatedExchange = "order.created.exchange";
 
     @NotBlank
-    private String orderCreatedQueue;
+    private String orderCreatedQueue = "order.created.queue";
 
     @NotBlank
-    private String orderCreatedRoutingKey;
+    private String orderCreatedRoutingKey = "order.created";
 
     public String getOrderCreatedExchange() {
         return orderCreatedExchange;
