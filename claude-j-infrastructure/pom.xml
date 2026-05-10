@@ -36,6 +36,12 @@
             <artifactId>mapstruct</artifactId>
         </dependency>
 
+        <!-- Spring AMQP -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
         <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

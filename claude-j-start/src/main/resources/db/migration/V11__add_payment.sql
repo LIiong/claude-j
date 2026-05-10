@@ -11,9 +11,9 @@ CREATE TABLE IF NOT EXISTS t_payment (
     transaction_no VARCHAR(128) COMMENT '第三方交易号',
     create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    deleted INT NOT NULL DEFAULT 0 COMMENT '逻辑删除标记',
-
-    INDEX idx_order_id (order_id),
-    INDEX idx_customer_id (customer_id),
-    INDEX idx_transaction_no (transaction_no)
+    deleted INT NOT NULL DEFAULT 0 COMMENT '逻辑删除标记'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付表';
+
+CREATE INDEX IF NOT EXISTS idx_payment_order_id ON t_payment(order_id);
+CREATE INDEX IF NOT EXISTS idx_payment_customer_id ON t_payment(customer_id);
+CREATE INDEX IF NOT EXISTS idx_payment_transaction_no ON t_payment(transaction_no);

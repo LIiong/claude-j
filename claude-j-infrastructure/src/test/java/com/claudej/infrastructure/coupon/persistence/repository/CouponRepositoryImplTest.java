@@ -4,11 +4,14 @@ import com.claudej.domain.coupon.model.aggregate.Coupon;
 import com.claudej.domain.coupon.model.valobj.CouponId;
 import com.claudej.domain.coupon.model.valobj.CouponStatus;
 import com.claudej.domain.coupon.model.valobj.DiscountType;
+import com.claudej.infrastructure.coupon.persistence.converter.CouponConverter;
+import com.claudej.infrastructure.coupon.persistence.mapper.CouponMapper;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,11 +20,21 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.datasource.url=jdbc:h2:mem:coupon_repo_test;DB_CLOSE_DELAY=-1;MODE=MySQL",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password="
+})
+@Transactional
 class CouponRepositoryImplTest {
 
-    @SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure", "com.claudej.application"})
-    @MapperScan("com.claudej.infrastructure.**.mapper")
+    @SpringBootApplication(scanBasePackageClasses = {
+            CouponRepositoryImpl.class,
+            CouponConverter.class,
+            CouponMapper.class
+    })
+    @MapperScan(basePackageClasses = CouponMapper.class)
     static class TestConfig {
     }
 

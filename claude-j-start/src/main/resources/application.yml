@@ -24,6 +24,12 @@ jwt:
   access-token-expiration: 60  # Access Token 有效期（分钟）
   refresh-token-expiration: 7  # Refresh Token 有效期（天）
 
+claudej:
+  rabbitmq:
+    orderCreatedExchange: order.created.exchange
+    orderCreatedQueue: order.created.queue
+    orderCreatedRoutingKey: order.created
+
 logging:
   level:
     com.claudej: debug

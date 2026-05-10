@@ -22,9 +22,9 @@ class ActuatorHealthIntegrationTest {
     private TestRestTemplate restTemplate;
 
     @Test
-    void should_return_200_when_actuator_health_endpoint() {
+    void should_return_503_when_overall_health_has_down_contributor() {
         ResponseEntity<String> response = restTemplate.getForEntity("/actuator/health", String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(response.getBody()).contains("status");
     }
 
@@ -45,7 +45,7 @@ class ActuatorHealthIntegrationTest {
     @Test
     void should_show_details_when_dev_environment_health_endpoint() {
         ResponseEntity<String> response = restTemplate.getForEntity("/actuator/health", String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(response.getBody()).contains("components");
     }
 

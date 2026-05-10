@@ -17,6 +17,12 @@ spring:
 jwt:
   secret: dev-jwt-secret-key-at-least-32-bytes-for-local
 
+claudej:
+  rabbitmq:
+    orderCreatedExchange: order.created.exchange
+    orderCreatedQueue: order.created.queue
+    orderCreatedRoutingKey: order.created
+
 management:
   endpoints:
     web:

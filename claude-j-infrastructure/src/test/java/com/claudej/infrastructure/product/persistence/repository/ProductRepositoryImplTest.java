@@ -9,11 +9,14 @@ import com.claudej.domain.product.model.valobj.ProductName;
 import com.claudej.domain.product.model.valobj.ProductStatus;
 import com.claudej.domain.product.model.valobj.SKU;
 import com.claudej.domain.product.repository.ProductRepository;
+import com.claudej.infrastructure.product.persistence.converter.ProductConverter;
+import com.claudej.infrastructure.product.persistence.mapper.ProductMapper;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -21,11 +24,21 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.datasource.url=jdbc:h2:mem:product_repo_test;DB_CLOSE_DELAY=-1;MODE=MySQL",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password="
+})
+@Transactional
 class ProductRepositoryImplTest {
 
-    @SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure", "com.claudej.application"})
-    @MapperScan("com.claudej.infrastructure.**.mapper")
+    @SpringBootApplication(scanBasePackageClasses = {
+            ProductRepositoryImpl.class,
+            ProductConverter.class,
+            ProductMapper.class
+    })
+    @MapperScan(basePackageClasses = ProductMapper.class)
     static class TestConfig {
     }
 

@@ -4,6 +4,9 @@ import com.claudej.domain.cart.model.aggregate.Cart;
 import com.claudej.domain.cart.model.valobj.Money;
 import com.claudej.domain.cart.model.valobj.Quantity;
 import com.claudej.domain.cart.repository.CartRepository;
+import com.claudej.infrastructure.cart.persistence.converter.CartConverter;
+import com.claudej.infrastructure.cart.persistence.mapper.CartItemMapper;
+import com.claudej.infrastructure.cart.persistence.mapper.CartMapper;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,13 +24,23 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * CartRepositoryImpl SpringBootTest
  */
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.datasource.url=jdbc:h2:mem:cart_repo_test;DB_CLOSE_DELAY=-1;MODE=MySQL",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password="
+})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Transactional
 class CartRepositoryImplTest {
 
-    @SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure", "com.claudej.application"})
-    @MapperScan("com.claudej.infrastructure.**.mapper")
+    @SpringBootApplication(scanBasePackageClasses = {
+            CartRepositoryImpl.class,
+            CartConverter.class,
+            CartMapper.class,
+            CartItemMapper.class
+    })
+    @MapperScan(basePackageClasses = {CartMapper.class, CartItemMapper.class})
     static class TestConfig {
     }
 

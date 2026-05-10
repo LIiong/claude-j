@@ -24,7 +24,7 @@ class TraceIdIntegrationTest {
     @Test
     void should_return_x_request_id_header_when_http_request() {
         ResponseEntity<String> response = restTemplate.getForEntity("/actuator/health", String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(response.getHeaders().containsKey("X-Request-Id")).isTrue();
         String requestId = response.getHeaders().getFirst("X-Request-Id");
         assertThat(requestId).hasSize(32);

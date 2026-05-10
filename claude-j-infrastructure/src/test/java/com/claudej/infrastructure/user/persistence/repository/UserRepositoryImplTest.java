@@ -4,22 +4,35 @@ import com.claudej.domain.user.model.aggregate.User;
 import com.claudej.domain.user.model.valobj.InviteCode;
 import com.claudej.domain.user.model.valobj.UserId;
 import com.claudej.domain.user.model.valobj.Username;
+import com.claudej.infrastructure.user.persistence.converter.UserConverter;
+import com.claudej.infrastructure.user.persistence.mapper.UserMapper;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.datasource.url=jdbc:h2:mem:user_repo_test;DB_CLOSE_DELAY=-1;MODE=MySQL",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password="
+})
+@Transactional
 class UserRepositoryImplTest {
 
-    @SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure", "com.claudej.application"})
-    @MapperScan("com.claudej.infrastructure.**.mapper")
+    @SpringBootApplication(scanBasePackageClasses = {
+            UserRepositoryImpl.class,
+            UserConverter.class,
+            UserMapper.class
+    })
+    @MapperScan(basePackageClasses = UserMapper.class)
     static class TestConfig {
     }
 

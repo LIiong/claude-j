@@ -7,22 +7,35 @@ import com.claudej.domain.link.model.aggregate.Link;
 import com.claudej.domain.link.model.valobj.LinkCategory;
 import com.claudej.domain.link.model.valobj.LinkName;
 import com.claudej.domain.link.model.valobj.LinkUrl;
+import com.claudej.infrastructure.link.persistence.converter.LinkConverter;
+import com.claudej.infrastructure.link.persistence.mapper.LinkMapper;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.datasource.url=jdbc:h2:mem:link_repo_test;DB_CLOSE_DELAY=-1;MODE=MySQL",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password="
+})
+@Transactional
 class LinkRepositoryImplTest {
 
-    @SpringBootApplication(scanBasePackages = {"com.claudej.infrastructure", "com.claudej.application"})
-    @MapperScan("com.claudej.infrastructure.**.mapper")
+    @SpringBootApplication(scanBasePackageClasses = {
+            LinkRepositoryImpl.class,
+            LinkConverter.class,
+            LinkMapper.class
+    })
+    @MapperScan(basePackageClasses = LinkMapper.class)
     static class TestConfig {
     }
 
