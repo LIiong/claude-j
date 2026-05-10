@@ -141,6 +141,12 @@ Ralph（编排主 Agent — 只做决策和调度）
 - **@qa** — 测试与审查（详见 `.claude/agents/qa.md`）
 - **@architect** — 设计评审（详见 `.claude/agents/architect.md`）
 
+### Ralph 编排纪律
+- Ralph 只做：读取交接产物、判断阶段、设置角色标记、调度/续跑子 Agent、验证阶段结果。
+- Ralph **不得**直接接管 Build/Debug：禁止主 Agent 直接编辑业务代码、测试、POM、YAML、schema，禁止主 Agent 为“帮忙排障”而下场实现。
+- 若 `@dev` 在 Build 阶段连续 3 轮仍未形成稳定闭环（根因反复、修复对象漂移、三项验证始终无法收敛），Ralph 必须停止直接返工链，先调度 `@architect` 做**架构复评**，确认是否为设计/边界/装配问题，再将结论交回 `@dev` 继续实现。
+- 若 `@architect` 基于同一 Build 阻塞连续给出 2 轮复评/修复方案后，问题仍未解决，Ralph 必须终止当前任务推进：向用户反馈问题清单、停止继续派发，并要求将该阻塞与已尝试方案记录进 `dev-log.md`。
+
 协作流程、上下文隔离规则、返工限制见 `.claude/rules/agent-collaboration.md`
 
 ## Skill 打包结构

@@ -29,6 +29,8 @@ Ralph（编排主 Agent — 只做决策和调度）
 
 ### 编排职责
 - Ralph 主 Agent 只做调度与决策，不直接承担业务编码与测试实现。
+- Ralph 允许做的动作仅限：读取 `handoff.md` / `dev-log.md` / `test-report.md` / `task-plan.md`、设置 `.claude-current-role`、调度/续跑子 Agent、验证阶段产物。
+- Ralph 禁止直接编辑 `src/main/java`、`src/test/java`、`pom.xml`、`application*.yml`、`schema.sql` 等实现文件；一旦需要修改这些内容，必须交由对应子 Agent 执行。
 - 每个阶段必须通过子 Agent 执行，确保上下文隔离。
 - 阶段推进前必须验证前一阶段产物与 `handoff.md` 状态。
 
@@ -60,12 +62,20 @@ echo "{dev|qa|architect}" > .claude-current-role
 - 开发进入验收前必须通过三项预飞：`mvn test`、`mvn checkstyle:check`、`./scripts/entropy-check.sh`。
 - `@qa` 验收时必须独立重跑三项检查，不直接信任上游 `pre-flight` 标记。
 
+### Build 阶段阻塞升级
+- `@dev` 在 Build 阶段若连续 3 轮仍未形成稳定闭环（同类失败反复出现、根因判断多次变化、修复对象持续漂移、三项预飞始终无法收敛），Ralph 不得自己下场调试或改代码。
+- 遇到上述情况，Ralph 必须整理当前证据（失败命令、错误摘要、已尝试修复、当前最小阻塞点），调度 `@architect` 做一次**架构复评**。
+- `@architect` 复评目标不是代替编码，而是确认：是否存在阶段设计遗漏、分层边界错误、测试装配策略错误、模块依赖/Bean 装配错误、需求切分错误。
+- `@architect` 给出复评结论后，Ralph 再将结论和约束交回 `@dev` 继续修复；未经复评，不得让主 Agent 直接接管 Build。
+- 若 `@architect` 围绕同一 Build 阻塞连续给出 2 轮复评/修复方案后，`@dev` 仍无法完成闭环，Ralph 必须终止当前任务推进，向用户反馈问题清单，并要求将阻塞经过、架构结论、已尝试方案记录进 `dev-log.md`。
+
 ### 返工循环限制
 - `@qa changes-requested → @dev fix → @qa re-verify` 最多 3 轮。
 - 超过 3 轮必须终止自动化，输出问题清单，请求人工介入。
 
 ## MUST NOT（禁止）
 - 禁止子 Agent 修改其职责外文件（由 Hook + 人工双重确认）。
+- 禁止 Ralph 主 Agent 以“验证”“帮忙排障”“快速修一下”为由直接修改实现文件或接管 Build/Debug。
 - 禁止在 `pending-review + to:architect` 状态下继续编码。
 - 禁止跳过 `handoff.md` 直接推进到下一阶段。
 - 禁止无限返工循环（超过 3 轮必须升级）。
@@ -75,5 +85,6 @@ echo "{dev|qa|architect}" > .claude-current-role
 1. 检查写作域是否越权（Hook + 人工双重确认）。
 2. 检查 `handoff.md` 状态是否合法并与当前阶段匹配。
 3. 检查三项预飞是否通过并可复现。
-4. 若为 Ralph Loop，更新 `progress.md` 并保证本轮产物可追溯。
-5. 清理 `.claude-current-role`（Ship 完成后）。
+4. 若为 Build 阶段，检查是否已出现“连续 3 轮 @dev 仍未收敛”的信号；若是，先升级到 `@architect` 架构复评，再决定是否回到 `@dev`；若同一阻塞已消耗 2 轮 `@architect` 方案仍无解，则终止任务并反馈用户。
+5. 若为 Ralph Loop，更新 `progress.md` 并保证本轮产物可追溯。
+6. 清理 `.claude-current-role`（Ship 完成后）。
