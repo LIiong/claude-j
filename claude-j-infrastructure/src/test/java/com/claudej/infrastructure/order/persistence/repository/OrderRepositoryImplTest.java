@@ -1,5 +1,6 @@
 package com.claudej.infrastructure.order.persistence.repository;
 
+import com.claudej.infrastructure.test.MySqlRepositoryIntegrationTestSupport;
 import com.claudej.domain.order.model.aggregate.Order;
 import com.claudej.domain.order.model.entity.OrderItem;
 import com.claudej.domain.order.model.valobj.CustomerId;
@@ -22,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @Transactional
-class OrderRepositoryImplTest {
+class OrderRepositoryImplTest extends MySqlRepositoryIntegrationTestSupport {
 
     @SpringBootApplication(scanBasePackageClasses = {
             OrderRepositoryImpl.class,
